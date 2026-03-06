@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plantilla de Percusión - BSMH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background-color: white !important;
+                padding: 0 !important;
+            }
+            .container {
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            header {
+                padding-bottom: 0.5rem !important;
+                margin-bottom: 0 !important;
+            }
+            #seccion-reporte {
+                margin-top: 0 !important;
+                padding-top: 0.5rem !important;
+                border-top: none !important;
+            }
+            .card-reporte {
+                break-inside: avoid;
+                border: 1px solid #e5e7eb !important;
+            }
+        }
+        
+        .card-transition {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .instrument-selected {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.1), 0 2px 4px -1px rgba(37, 99, 235, 0.06) !important;
+        }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .unselectable {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .uppercase-input {
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto container bg-white shadow-xl rounded-lg overflow-hidden border border-gray-200">
+        
+        <!-- Cabecera / Formulario de Concierto -->
+        <header class="p-6 border-b border-gray-200 bg-gray-50">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6 border-l-4 border-blue-600 pl-3 uppercase tracking-tight">Plantilla de Percusión - BSMH</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Concierto</label>
+                    <input type="text" id="input-concierto" class="uppercase-input w-full border-b-2 border-gray-300 focus:border-blue-500 outline-none py-1 bg-transparent" placeholder="">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Lugar</label>
+                    <input type="text" id="input-lugar" class="uppercase-input w-full border-b-2 border-gray-300 focus:border-blue-500 outline-none py-1 bg-transparent" placeholder="">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Fecha</label>
+                    <input type="date" id="input-fecha" class="w-full border-b-2 border-gray-300 focus:border-blue-500 outline-none py-1 bg-transparent">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Hora</label>
+                    <input type="time" id="input-hora" class="w-full border-b-2 border-gray-300 focus:border-blue-500 outline-none py-1 bg-transparent">
+                </div>
+            </div>
+
+            <!-- Datos para Impresión y visualización formateada -->
+            <div class="hidden print-only py-4 grid grid-cols-2 gap-4 border-b border-gray-300 mb-2 uppercase">
+                <p><strong>CONCIERTO:</strong> <span id="print-concierto"></span></p>
+                <p><strong>LUGAR:</strong> <span id="print-lugar"></span></p>
+                <p><strong>FECHA:</strong> <span id="print-fecha"></span></p>
+                <p><strong>HORA:</strong> <span id="print-hora"></span></p>
+            </div>
+            
+            <!-- Vista previa de fecha en interfaz (no-print) para confirmar formato -->
+            <div class="no-print mt-2 text-sm font-bold text-blue-700 uppercase" id="preview-fecha-full"></div>
+        </header>
+
+        <main class="p-6">
+            <!-- Sección de Selección -->
+            <div class="no-print">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-700 uppercase tracking-tight">Inventario de Instrumentos</h2>
+                        <p class="text-sm text-gray-500">Pulsa la tarjeta para seleccionar y ajusta la cantidad:</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="reestablecerPagina()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2.5 rounded-lg border border-gray-300 flex items-center gap-2 transition-all active:scale-95 text-sm font-bold">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Nuevo Concierto
+                        </button>
+                        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg shadow-md flex items-center gap-2 transition-all active:scale-95 text-sm font-bold">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Generar Reporte PDF
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="grid-seleccion" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 unselectable">
+                    <!-- Las tarjetas se generan vía JS -->
+                </div>
+            </div>
+
+            <!-- Sección de Reporte Final -->
+            <div id="seccion-reporte" class="mt-8 md:border-t md:pt-8">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="h-6 w-1 bg-blue-600"></div>
+                    <h2 class="text-xl font-bold text-gray-800 uppercase">Resumen de Carga</h2>
+                </div>
+                
+                <div id="lista-seleccionados" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div id="msg-vacio" class="col-span-full flex flex-col items-center py-12 text-gray-400 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <p class="italic uppercase text-xs font-bold tracking-widest">Esperando selección de instrumentos</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="p-6 bg-gray-50 text-center text-gray-400 text-[10px] uppercase tracking-widest no-print border-t border-gray-100">
+            Banda Sinfónica Municipal de Huelva &copy; <span id="footer-year"></span>
+        </footer>
+    </div>
+
+    <script>
+        const instrumentos = [
+            { id: 1, nombre: "Timbales", defecto: 4 },
+            { id: 2, nombre: "Bombo" },
+            { id: 3, nombre: "Platos" },
+            { id: 4, nombre: "Caja" },
+            { id: 5, nombre: "Cortinillas" },
+            { id: 6, nombre: "Lira" },
+            { id: 7, nombre: "Campanólogo" },
+            { id: 8, nombre: "Gong" },
+            { id: 9, nombre: "Batería" },
+            { id: 10, nombre: "Xilófono" },
+            { id: 11, nombre: "Vibráfono" },
+            { id: 12, nombre: "Toms de concierto" },
+            { id: 13, nombre: "Temple Block" },
+            { id: 14, nombre: "Congas" },
+            { id: 15, nombre: "Bongo" },
+            { id: 16, nombre: "Cajón Flamenco" }
+        ];
+
+        let estado = instrumentos.map(ins => ({ ...ins, seleccionado: false, cantidad: ins.defecto || 1 }));
+
+        const gridSeleccion = document.getElementById('grid-seleccion');
+        const listaSeleccionados = document.getElementById('lista-seleccionados');
+        const msgVacio = document.getElementById('msg-vacio');
+        const previewFecha = document.getElementById('preview-fecha-full');
+
+        function formatearFecha(isoDate) {
+            if (!isoDate) return "";
+            // Forzamos la creación del objeto fecha para evitar problemas de zona horaria (YYYY-MM-DD + Hora local)
+            const [year, month, day] = isoDate.split('-');
+            const fechaObj = new Date(year, month - 1, day);
+            
+            const diasSemana = ["DOMINGO", "LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
+            const diaSemana = diasSemana[fechaObj.getDay()];
+            
+            const dd = String(day).padStart(2, '0');
+            const mm = String(month).padStart(2, '0');
+            const yyyy = year;
+
+            return `${diaSemana} ${dd}/${mm}/${yyyy}`;
+        }
+
+        const campos = ['concierto', 'lugar', 'fecha', 'hora'];
+        campos.forEach(id => {
+            const inputEl = document.getElementById(`input-${id}`);
+            const printEl = document.getElementById(`print-${id}`);
+            
+            inputEl.addEventListener('input', () => {
+                let value = inputEl.value;
+                if (id === 'fecha') {
+                    const fechaFormateada = formatearFecha(value);
+                    printEl.textContent = fechaFormateada;
+                    previewFecha.textContent = fechaFormateada;
+                } else {
+                    printEl.textContent = value.toUpperCase();
+                }
+            });
+        });
+
+        function renderizarPanel() {
+            gridSeleccion.innerHTML = '';
+            estado.forEach((ins, index) => {
+                const card = document.createElement('div');
+                card.id = `card-ins-${ins.id}`;
+                card.className = `instrument-card border-2 border-gray-200 rounded-xl p-6 flex flex-col gap-4 card-transition cursor-pointer ${ins.seleccionado ? 'instrument-selected ring-2 ring-blue-500 ring-opacity-20' : 'bg-white hover:border-gray-300'}`;
+                
+                card.onclick = (e) => {
+                    if (!e.target.closest('.qty-control')) {
+                        toggleSeleccion(index);
+                    }
+                };
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-400 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-full">${ins.id}</span>
+                        ${ins.seleccionado ? `
+                            <div class="text-blue-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="flex flex-col items-center">
+                        <span class="text-lg md:text-xl font-black text-gray-800 mb-6 text-center leading-tight uppercase tracking-tight">${ins.nombre}</span>
+                        
+                        <div class="qty-control flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden shadow-inner ${!ins.seleccionado ? 'opacity-30 pointer-events-none' : ''}">
+                            <button onclick="cambiarCantidad(${index}, -1)" class="btn-qty px-4 py-2 hover:bg-white hover:text-blue-600 text-gray-600 font-bold transition-colors">-</button>
+                            <input type="number" 
+                                   value="${ins.cantidad}" 
+                                   min="1"
+                                   onchange="actualizarCifraTeclado(${index}, this.value)"
+                                   onblur="validarCantidad(${index}, this.value)"
+                                   class="w-14 text-center text-lg font-black text-gray-900 border-x border-gray-200 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset">
+                            <button onclick="cambiarCantidad(${index}, 1)" class="btn-qty px-4 py-2 hover:bg-white hover:text-blue-600 text-gray-600 font-bold transition-colors">+</button>
+                        </div>
+                    </div>
+                `;
+                gridSeleccion.appendChild(card);
+            });
+            actualizarReporte();
+        }
+
+        function toggleSeleccion(index) {
+            estado[index].seleccionado = !estado[index].seleccionado;
+            renderizarPanel();
+        }
+
+        function cambiarCantidad(index, delta) {
+            const nuevaCantidad = parseInt(estado[index].cantidad) + delta;
+            if (nuevaCantidad >= 1) {
+                estado[index].cantidad = nuevaCantidad;
+                renderizarPanel();
+            }
+        }
+
+        function actualizarCifraTeclado(index, valor) {
+            const num = parseInt(valor);
+            if (!isNaN(num) && num >= 1) {
+                estado[index].cantidad = num;
+                actualizarReporte();
+            }
+        }
+
+        function validarCantidad(index, valor) {
+            const num = parseInt(valor);
+            if (isNaN(num) || num < 1) {
+                estado[index].cantidad = estado[index].defecto || 1;
+                renderizarPanel();
+            }
+        }
+
+        function actualizarReporte() {
+            listaSeleccionados.innerHTML = '';
+            const seleccionados = estado.filter(ins => ins.seleccionado);
+
+            if (seleccionados.length === 0) {
+                listaSeleccionados.appendChild(msgVacio);
+                return;
+            }
+
+            seleccionados.forEach(ins => {
+                const cardReporte = document.createElement('div');
+                cardReporte.className = 'card-reporte border border-gray-200 rounded-xl p-4 flex items-center bg-white shadow-sm';
+                cardReporte.innerHTML = `
+                    <div class="bg-white text-black text-lg font-black w-10 h-10 flex items-center justify-center rounded-lg mr-4 border border-gray-400">
+                        ${ins.cantidad}
+                    </div>
+                    <div class="flex-grow">
+                        <span class="font-bold text-gray-900 text-base uppercase tracking-tight">${ins.nombre}</span>
+                    </div>
+                `;
+                listaSeleccionados.appendChild(cardReporte);
+            });
+        }
+
+        function reestablecerPagina() {
+            campos.forEach(id => {
+                const inputEl = document.getElementById(`input-${id}`);
+                const printEl = document.getElementById(`print-${id}`);
+                inputEl.value = '';
+                printEl.textContent = '';
+                if (id === 'fecha') {
+                    const defaultDate = "2026-03-01";
+                    inputEl.value = defaultDate;
+                    const fechaF = formatearFecha(defaultDate);
+                    printEl.textContent = fechaF;
+                    previewFecha.textContent = fechaF;
+                }
+            });
+
+            estado = instrumentos.map(ins => ({ ...ins, seleccionado: false, cantidad: ins.defecto || 1 }));
+            renderizarPanel();
+        }
+
+        window.onload = () => {
+            renderizarPanel();
+            const dateInput = document.getElementById('input-fecha');
+            const defaultDate = "2026-03-01";
+            dateInput.value = defaultDate;
+            const fechaF = formatearFecha(defaultDate);
+            document.getElementById('print-fecha').textContent = fechaF;
+            previewFecha.textContent = fechaF;
+            document.getElementById('footer-year').textContent = new Date().getFullYear();
+        };
+    </script>
+</body>
+</html>

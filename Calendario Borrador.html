@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Eventos - BSMH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            touch-action: manipulation;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background-color: #e2e8f0;
+            border: 1px solid #e2e8f0;
+        }
+
+        .calendar-day {
+            height: 140px;
+            background-color: white;
+            padding: 8px;
+            transition: background-color 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .day-passed::before {
+            content: "✕";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            color: rgba(239, 68, 68, 0.12);
+            pointer-events: none;
+            z-index: 1;
+            font-weight: 100;
+        }
+
+        .calendar-day.today .day-number {
+            background-color: #1e40af;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .event-container {
+            flex-grow: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            z-index: 10;
+        }
+
+        .day-number {
+            z-index: 10;
+            position: relative;
+        }
+
+        .event-item {
+            cursor: grab;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+            user-select: none;
+            touch-action: none;
+            flex-shrink: 0;
+        }
+
+        .more-events {
+            font-size: 0.65rem;
+            color: #1e40af;
+            font-weight: 600;
+            padding: 2px 4px;
+            cursor: pointer;
+            text-align: center;
+            background: #eff6ff;
+            border-radius: 4px;
+            margin-top: auto;
+            z-index: 10;
+        }
+
+        .cat-ensayo { background-color: #dbeafe; color: #1e40af; border-left: 3px solid #1e40af; }
+        .cat-concierto { background-color: #fef3c7; color: #92400e; border-left: 3px solid #92400e; }
+        .cat-transporte { background-color: #dcfce7; color: #166534; border-left: 3px solid #166534; }
+        .cat-administracion { background-color: #f3e8ff; color: #6b21a8; border-left: 3px solid #6b21a8; }
+        .cat-otro { background-color: #f1f5f9; color: #475569; border-left: 3px solid #475569; }
+
+        @media print {
+            @page {
+                size: landscape;
+                margin: 0.5cm;
+            }
+            
+            body {
+                background-color: white !important;
+                padding: 0 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 10px;
+            }
+
+            .max-w-6xl {
+                max-width: 100% !important;
+                width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+
+            .calendar-day {
+                height: auto !important;
+                min-height: 80px !important;
+                page-break-inside: avoid;
+            }
+
+            .day-passed::before {
+                display: none;
+            }
+
+            body.print-full-calendar {
+                height: 99%;
+                overflow: hidden;
+            }
+
+            .print-day-report {
+                display: block !important;
+            }
+        }
+
+        .print-header {
+            display: none;
+        }
+
+        .print-day-report {
+            display: none;
+        }
+
+        .drag-over { background-color: #eff6ff !important; }
+
+        input, select, textarea {
+            min-height: 44px;
+        }
+    </style>
+</head>
+<body class="p-2 md:p-8">
+
+    <!-- Cabecera de impresión general (Calendario) -->
+    <div id="printHeaderCalendar" class="print-header">
+        <h1 class="text-xl font-bold text-slate-900 uppercase">Banda Sinfónica Municipal de Huelva</h1>
+        <h2 id="printMonthYear" class="text-lg font-semibold text-slate-700 capitalize"></h2>
+    </div>
+
+    <!-- Contenedor de impresión de día individual -->
+    <div id="dayPrintReport" class="print-day-report p-8">
+        <div class="text-center border-b-2 border-slate-200 pb-4 mb-6">
+            <h1 class="text-2xl font-bold text-slate-900 uppercase">Banda Sinfónica Municipal de Huelva</h1>
+            <h2 id="dayPrintDate" class="text-xl font-semibold text-blue-800 mt-1"></h2>
+        </div>
+        <div id="dayPrintContent" class="space-y-6"></div>
+    </div>
+
+    <div id="mainContainer" class="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200">
+        <!-- Cabecera App -->
+        <div class="p-4 md:p-6 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+            <div class="flex items-center justify-center md:justify-start gap-3">
+                <div class="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                    <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 transition-colors border-r border-slate-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <button onclick="goToToday()" class="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors border-r border-slate-200">Hoy</button>
+                    <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                </div>
+                <h1 id="currentMonthDisplay" class="text-xl md:text-2xl font-bold text-slate-800 min-w-[180px] text-center capitalize tracking-tight">Marzo 2026</h1>
+            </div>
+            
+            <div class="flex gap-2 justify-center">
+                <button onclick="openModalWithDate(null)" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm active:scale-95 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                    Añadir Evento
+                </button>
+                <button onclick="printFullCalendar()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm active:scale-95 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    PDF Mes
+                </button>
+                <button onclick="confirmResetCalendar()" class="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-sm active:scale-95 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    Limpiar
+                </button>
+            </div>
+        </div>
+
+        <div class="calendar-grid text-xs md:text-sm">
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-500 border-b border-slate-200">LUN</div>
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-500 border-b border-slate-200">MAR</div>
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-500 border-b border-slate-200">MIÉ</div>
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-500 border-b border-slate-200">JUE</div>
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-500 border-b border-slate-200">VIE</div>
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-500 border-b border-slate-200 text-blue-600">SÁB</div>
+            <div class="bg-slate-100 p-2 font-bold text-center text-slate-600 border-b border-slate-200 text-red-600">DOM</div>
+
+            <div id="calendarDays" class="contents"></div>
+        </div>
+    </div>
+
+    <!-- Modal Formulario -->
+    <div id="eventModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-[200] p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                <h3 id="modalTitle" class="font-semibold text-slate-800 text-lg">Detalles del Evento</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <form id="eventForm" class="p-6 space-y-5 overflow-y-auto max-h-[85vh]">
+                <input type="hidden" id="eventId">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Título</label>
+                    <input type="text" id="eventTitle" placeholder="Ej. Ensayo Parcial" required class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Ubicación (Punto A)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </span>
+                            <input type="text" id="eventLocationA" placeholder="Salida/Ensayo" class="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Ubicación (Punto B)</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            </span>
+                            <input type="text" id="eventLocationB" placeholder="Llegada/Concierto" class="w-full border border-slate-300 rounded-lg pl-9 pr-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dateTypeSelector" class="flex gap-4 p-1 bg-slate-100 rounded-lg">
+                    <button type="button" onclick="toggleDateRange(false)" id="btnSingleDate" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-700">Fecha Única</button>
+                    <button type="button" onclick="toggleDateRange(true)" id="btnRangeDate" class="flex-1 py-1.5 text-xs font-bold rounded-md text-slate-500">Varios Días</button>
+                </div>
+
+                <div class="space-y-4">
+                    <div id="singleDateContainer">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Fecha</label>
+                        <input type="date" id="eventDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div id="rangeDateContainer" class="hidden space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Desde</label>
+                                <input type="date" id="eventDateStart" class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Hasta</label>
+                                <input type="date" id="eventDateEnd" class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Hora del evento</label>
+                        <input type="time" id="eventTime" class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Categoría</label>
+                    <select id="eventCategory" class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="ensayo">Ensayo</option>
+                        <option value="concierto">Concierto</option>
+                        <option value="transporte">Transporte</option>
+                        <option value="administracion">Administración</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Descripción</label>
+                    <textarea id="eventDescription" rows="2" placeholder="Detalles adicionales..." class="w-full border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t">
+                    <button type="button" id="deleteBtn" onclick="deleteCurrentEvent()" class="text-red-600 text-sm font-medium hover:underline hidden">Eliminar</button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeModal()" class="px-5 py-2 text-sm font-medium text-slate-600">Cancelar</button>
+                        <button type="submit" class="bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-800 transition-colors">Guardar</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmación Reset -->
+    <div id="confirmResetModal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-[300] p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2">¿Limpiar calendario?</h3>
+            <p class="text-slate-500 text-sm mb-6">Esta acción borrará permanentemente todos los eventos guardados.</p>
+            <div class="flex gap-3">
+                <button onclick="closeResetModal()" class="flex-1 px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancelar</button>
+                <button onclick="resetCalendar()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 shadow-md transition-colors">Borrar todo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista Detallada Día -->
+    <div id="dayDetailModal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[150] p-4 no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b bg-blue-50 flex justify-between items-center">
+                <h3 id="dayDetailTitle" class="font-bold text-blue-900">Eventos del día</h3>
+                <button onclick="closeDayDetail()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div id="dayEventsList" class="p-4 overflow-y-auto space-y-3 flex-grow bg-slate-50"></div>
+            <div class="p-4 border-t bg-white flex justify-between gap-3">
+                <button id="printDayBtn" class="bg-slate-700 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-slate-800 transition-all flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Imprimir Día
+                </button>
+                <button id="addEventFromDay" class="bg-blue-700 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-800 transition-all flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 4v16m8-8H4" /></svg>
+                    Nuevo Evento
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentViewDate = new Date();
+        let events = JSON.parse(localStorage.getItem('bsmh_events')) || [];
+        let draggedEventId = null;
+        let isRangeMode = false;
+
+        const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+        function init() {
+            renderCalendar();
+            setupForm();
+        }
+
+        function renderCalendar() {
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth();
+            const monthLabel = `${months[month]} ${year}`;
+            
+            document.getElementById('currentMonthDisplay').textContent = monthLabel;
+            document.getElementById('printMonthYear').textContent = monthLabel;
+
+            const firstDayOfMonth = new Date(year, month, 1).getDay(); 
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const adjustedStart = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+            for (let i = adjustedStart; i > 0; i--) {
+                calendarDays.appendChild(createDayElement(prevMonthLastDay - i + 1, true));
+            }
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateOfCell = new Date(year, month, i);
+                const isToday = dateOfCell.getTime() === today.getTime();
+                const isPast = dateOfCell.getTime() < today.getTime();
+                calendarDays.appendChild(createDayElement(i, false, isToday, year, month, isPast));
+            }
+
+            const totalCells = 42;
+            const remaining = totalCells - (adjustedStart + daysInMonth);
+            for (let i = 1; i <= remaining; i++) {
+                calendarDays.appendChild(createDayElement(i, true));
+            }
+        }
+
+        function createDayElement(day, isOutside, isToday, year, month, isPast) {
+            const div = document.createElement('div');
+            div.className = `calendar-day ${isOutside ? 'bg-slate-50 text-slate-300' : 'text-slate-700'} ${isToday ? 'today' : ''} ${(!isOutside && isPast) ? 'day-passed' : ''}`;
+            
+            if (!isOutside) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                div.dataset.date = dateStr;
+                div.onclick = () => openDayDetail(dateStr);
+                
+                div.ondragover = (e) => { e.preventDefault(); div.classList.add('drag-over'); };
+                div.ondragleave = () => { div.classList.remove('drag-over'); };
+                div.ondrop = (e) => {
+                    e.preventDefault();
+                    div.classList.remove('drag-over');
+                    if (draggedEventId) moveEvent(draggedEventId, dateStr);
+                };
+
+                const dayNum = document.createElement('span');
+                dayNum.className = 'day-number font-semibold text-xs mb-1';
+                dayNum.textContent = day;
+                div.appendChild(dayNum);
+
+                const container = document.createElement('div');
+                container.className = 'event-container';
+                
+                const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+                dayEvents.slice(0, 3).forEach(event => {
+                    const evDiv = document.createElement('div');
+                    evDiv.className = `event-item cat-${event.category}`;
+                    evDiv.innerHTML = `${event.time ? `<span class="font-bold mr-1">${event.time}</span>` : ''}${event.title}`;
+                    evDiv.draggable = true;
+                    evDiv.ondragstart = () => { draggedEventId = event.id; evDiv.classList.add('dragging'); };
+                    evDiv.ondragend = () => evDiv.classList.remove('dragging');
+                    evDiv.onclick = (e) => { e.stopPropagation(); openModalWithDate(event); };
+                    container.appendChild(evDiv);
+                });
+
+                if (dayEvents.length > 3) {
+                    const more = document.createElement('div');
+                    more.className = 'more-events';
+                    more.textContent = `+${dayEvents.length - 3} más`;
+                    container.appendChild(more);
+                }
+                div.appendChild(container);
+            } else {
+                div.innerHTML = `<span class="day-number text-xs opacity-50">${day}</span>`;
+            }
+            return div;
+        }
+
+        function openDayDetail(dateStr) {
+            const modal = document.getElementById('dayDetailModal');
+            const list = document.getElementById('dayEventsList');
+            const [y, m, d] = dateStr.split('-');
+            const displayDate = `${d} de ${months[parseInt(m)-1]} de ${y}`;
+            document.getElementById('dayDetailTitle').textContent = `Actividades del ${d}/${m}/${y}`;
+            list.innerHTML = '';
+
+            const dayEvents = events.filter(e => e.date === dateStr).sort((a,b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
+            
+            if (dayEvents.length === 0) {
+                list.innerHTML = `<p class="text-center text-slate-400 py-10 italic">No hay eventos para este día.</p>`;
+            } else {
+                dayEvents.forEach(event => {
+                    const item = document.createElement('div');
+                    item.className = `p-4 rounded-xl border bg-white shadow-sm cat-${event.category} border-l-4 flex justify-between items-start`;
+                    
+                    let locationsHtml = '';
+                    if (event.locationA || event.locationB) {
+                        locationsHtml = `<div class="mt-1 space-y-0.5">`;
+                        if (event.locationA) locationsHtml += `<p class="text-[10px] text-blue-700 font-medium flex items-center gap-1"><span class="bg-blue-100 text-[8px] px-1 rounded">A</span> ${event.locationA}</p>`;
+                        if (event.locationB) locationsHtml += `<p class="text-[10px] text-emerald-700 font-medium flex items-center gap-1"><span class="bg-emerald-100 text-[8px] px-1 rounded">B</span> ${event.locationB}</p>`;
+                        locationsHtml += `</div>`;
+                    }
+
+                    item.innerHTML = `
+                        <div class="flex-grow cursor-pointer" onclick="closeDayDetail(); openModalWithDate(${JSON.stringify(event).replace(/"/g, '&quot;')})">
+                            <div class="flex items-center gap-2 mb-1">
+                                ${event.time ? `<span class="text-[10px] font-bold bg-slate-100 px-1.5 py-0.5 rounded border">${event.time}</span>` : ''}
+                                <h4 class="font-bold text-sm text-slate-800">${event.title}</h4>
+                            </div>
+                            ${locationsHtml}
+                            <p class="text-xs text-slate-500 line-clamp-2 mt-1">${event.description || 'Sin descripción adicional'}</p>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            document.getElementById('addEventFromDay').onclick = () => { closeDayDetail(); openModalWithDate(null, dateStr); };
+            document.getElementById('printDayBtn').onclick = () => printDay(dateStr, displayDate, dayEvents);
+            modal.classList.remove('hidden');
+        }
+
+        function printDay(dateStr, displayDate, dayEvents) {
+            if (dayEvents.length === 0) return;
+            const printDateEl = document.getElementById('dayPrintDate');
+            const printContentEl = document.getElementById('dayPrintContent');
+            printDateEl.textContent = displayDate;
+            printContentEl.innerHTML = '';
+
+            dayEvents.forEach(event => {
+                const block = document.createElement('div');
+                block.className = `p-6 border-2 rounded-xl bg-slate-50 cat-${event.category}`;
+                
+                let locationsPrint = '';
+                if (event.locationA) locationsPrint += `<p class="text-blue-800 font-bold text-sm flex items-center gap-2 mt-1">PUNTO A: ${event.locationA}</p>`;
+                if (event.locationB) locationsPrint += `<p class="text-blue-800 font-bold text-sm flex items-center gap-2 mt-1">PUNTO B: ${event.locationB}</p>`;
+
+                block.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-900 uppercase">${event.title}</h3>
+                        <span class="px-3 py-1 bg-white border border-slate-300 rounded-lg font-bold text-slate-700">${event.time || '--:--'}</span>
+                    </div>
+                    ${locationsPrint}
+                    <div class="text-slate-700 whitespace-pre-wrap leading-relaxed border-t border-slate-200 pt-3 mt-3">
+                        ${event.description || 'Sin descripción adicional disponible.'}
+                    </div>
+                    <div class="mt-4 text-[10px] uppercase text-slate-400 font-bold tracking-widest">Categoría: ${event.category}</div>
+                `;
+                printContentEl.appendChild(block);
+            });
+
+            document.getElementById('mainContainer').classList.add('no-print');
+            document.getElementById('printHeaderCalendar').classList.add('no-print');
+            document.getElementById('dayPrintReport').classList.remove('no-print');
+            document.body.classList.remove('print-full-calendar');
+            window.print();
+            document.getElementById('mainContainer').classList.remove('no-print');
+            document.getElementById('printHeaderCalendar').classList.remove('no-print');
+            document.getElementById('dayPrintReport').classList.add('no-print');
+        }
+
+        function printFullCalendar() {
+            document.getElementById('mainContainer').classList.remove('no-print');
+            document.getElementById('printHeaderCalendar').classList.remove('no-print');
+            document.getElementById('dayPrintReport').classList.add('no-print');
+            document.body.classList.add('print-full-calendar');
+            window.print();
+        }
+
+        function toggleDateRange(range) {
+            isRangeMode = range;
+            const single = document.getElementById('singleDateContainer');
+            const rangeCont = document.getElementById('rangeDateContainer');
+            const btnSingle = document.getElementById('btnSingleDate');
+            const btnRange = document.getElementById('btnRangeDate');
+            if (range) {
+                single.classList.add('hidden');
+                rangeCont.classList.remove('hidden');
+                btnRange.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-700";
+                btnSingle.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-slate-500";
+            } else {
+                single.classList.remove('hidden');
+                rangeCont.classList.add('hidden');
+                btnSingle.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-blue-700";
+                btnRange.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-slate-500";
+            }
+        }
+
+        function openModalWithDate(event = null, prefilledDate = null) {
+            const modal = document.getElementById('eventModal');
+            const form = document.getElementById('eventForm');
+            form.reset();
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('dateTypeSelector').classList.remove('hidden');
+            toggleDateRange(false);
+
+            if (event) {
+                document.getElementById('modalTitle').textContent = "Editar Evento";
+                document.getElementById('eventId').value = event.id;
+                document.getElementById('eventTitle').value = event.title;
+                document.getElementById('eventLocationA').value = event.locationA || '';
+                document.getElementById('eventLocationB').value = event.locationB || '';
+                document.getElementById('eventDate').value = event.date;
+                document.getElementById('eventTime').value = event.time || '';
+                document.getElementById('eventCategory').value = event.category;
+                document.getElementById('eventDescription').value = event.description || '';
+                document.getElementById('deleteBtn').classList.remove('hidden');
+                document.getElementById('dateTypeSelector').classList.add('hidden');
+            } else {
+                document.getElementById('modalTitle').textContent = "Nuevo Evento";
+                document.getElementById('eventId').value = '';
+                const todayStr = prefilledDate || new Date().toISOString().split('T')[0];
+                document.getElementById('eventDate').value = todayStr;
+                document.getElementById('eventDateStart').value = todayStr;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function setupForm() {
+            document.getElementById('eventForm').onsubmit = (e) => {
+                e.preventDefault();
+                const id = document.getElementById('eventId').value;
+                const baseEvent = {
+                    title: document.getElementById('eventTitle').value,
+                    locationA: document.getElementById('eventLocationA').value,
+                    locationB: document.getElementById('eventLocationB').value,
+                    time: document.getElementById('eventTime').value,
+                    category: document.getElementById('eventCategory').value,
+                    description: document.getElementById('eventDescription').value
+                };
+
+                if (id) {
+                    const idx = events.findIndex(ev => ev.id === id);
+                    events[idx] = { ...events[idx], ...baseEvent, date: document.getElementById('eventDate').value };
+                } else {
+                    if (isRangeMode) {
+                        let start = new Date(document.getElementById('eventDateStart').value);
+                        const end = new Date(document.getElementById('eventDateEnd').value);
+                        while (start <= end) {
+                            events.push({ ...baseEvent, id: Date.now().toString() + Math.random(), date: start.toISOString().split('T')[0] });
+                            start.setDate(start.getDate() + 1);
+                        }
+                    } else {
+                        events.push({ ...baseEvent, id: Date.now().toString(), date: document.getElementById('eventDate').value });
+                    }
+                }
+                saveEvents(); renderCalendar(); closeModal();
+            };
+        }
+
+        function moveEvent(id, newDate) {
+            const idx = events.findIndex(e => e.id === id);
+            if (idx !== -1) { events[idx].date = newDate; saveEvents(); renderCalendar(); }
+        }
+
+        function deleteCurrentEvent() {
+            const id = document.getElementById('eventId').value;
+            events = events.filter(e => e.id !== id);
+            saveEvents(); renderCalendar(); closeModal();
+        }
+
+        function confirmResetCalendar() { document.getElementById('confirmResetModal').classList.remove('hidden'); }
+        function closeResetModal() { document.getElementById('confirmResetModal').classList.add('hidden'); }
+        function resetCalendar() { events = []; saveEvents(); renderCalendar(); closeResetModal(); }
+        function saveEvents() { localStorage.setItem('bsmh_events', JSON.stringify(events)); }
+        function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
+        function closeDayDetail() { document.getElementById('dayDetailModal').classList.add('hidden'); }
+        function changeMonth(delta) { currentViewDate.setMonth(currentViewDate.getMonth() + delta); renderCalendar(); }
+        function goToToday() { currentViewDate = new Date(); renderCalendar(); }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Institucional - BSMH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .task-card.dragging { opacity: 0.5; transform: scale(0.98); }
+        .kanban-column { min-height: 250px; transition: all 0.2s ease; }
+        .kanban-column.drag-over { background-color: #f1f5f9; border-color: #94a3b8; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #confirm-modal { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800 flex flex-col">
+
+    <!-- Cabecera Institucional -->
+    <header class="bg-slate-800 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                <h1 class="text-xl font-bold tracking-tight">Banda Sinfónica Municipal de Huelva</h1>
+                <p class="text-sm text-slate-400">Panel de Control de Actividad</p>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+                <button 
+                    id="btn-reset-trigger"
+                    class="bg-slate-600 hover:bg-slate-700 text-white text-[10px] uppercase font-bold py-2 px-4 rounded border border-slate-700 transition-colors shadow-sm focus:outline-none"
+                >
+                    Vaciar Todo el Tablero
+                </button>
+                <div class="bg-slate-700 px-4 py-2 rounded border border-slate-600 min-w-[200px]">
+                    <p id="datetime-display" class="text-xs font-mono text-center"></p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 py-6 w-full flex flex-col">
+        
+        <!-- Formulario de Entrada -->
+        <div class="bg-white p-4 rounded shadow-sm border border-slate-200 mb-6">
+            <form id="task-form" class="flex flex-col sm:flex-row gap-3">
+                <input 
+                    type="text" 
+                    id="new-task-input" 
+                    placeholder="Escribe una nueva tarea..." 
+                    class="flex-grow px-4 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-slate-500"
+                    required
+                >
+                <button type="submit" class="bg-slate-700 hover:bg-slate-900 text-white text-sm font-bold py-2 px-6 rounded transition-colors">
+                    Añadir Tarea
+                </button>
+            </form>
+        </div>
+
+        <!-- Tablero -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+            <!-- PENDIENTE -->
+            <div class="flex flex-col bg-slate-200/50 rounded-lg border border-slate-200 overflow-hidden">
+                <div class="bg-slate-300/50 px-4 py-3 border-b border-slate-300 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-600 uppercase tracking-tighter text-xs">Pendiente</h2>
+                    <span id="count-pending" class="bg-white text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-slate-300">0</span>
+                </div>
+                <div id="column-pending" class="kanban-column p-3 flex-grow overflow-y-auto no-scrollbar" data-status="pending"></div>
+            </div>
+
+            <!-- EN PROCESO -->
+            <div class="flex flex-col bg-slate-200/50 rounded-lg border border-slate-200 overflow-hidden">
+                <div class="bg-amber-50 px-4 py-3 border-b border-amber-200 flex justify-between items-center">
+                    <h2 class="font-bold text-amber-700 uppercase tracking-tighter text-xs">En Proceso</h2>
+                    <span id="count-inprogress" class="bg-white text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-200">0</span>
+                </div>
+                <div id="column-inprogress" class="kanban-column p-3 flex-grow overflow-y-auto no-scrollbar" data-status="inprogress"></div>
+            </div>
+
+            <!-- FINALIZADO -->
+            <div class="flex flex-col bg-slate-200/50 rounded-lg border border-slate-200 overflow-hidden">
+                <div class="bg-emerald-50 px-4 py-3 border-b border-emerald-200 flex justify-between items-center">
+                    <h2 class="font-bold text-emerald-700 uppercase tracking-tighter text-xs">Finalizado</h2>
+                    <span id="count-done" class="bg-white text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200">0</span>
+                </div>
+                <div id="column-done" class="kanban-column p-3 flex-grow overflow-y-auto no-scrollbar" data-status="done"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Confirmación -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[2000] flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-sm w-full p-6 shadow-2xl border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900 mb-2">¿Vaciar el tablero?</h3>
+            <p class="text-sm text-slate-600 mb-6">Se eliminarán permanentemente todas las tareas que hayas anotado.</p>
+            <div class="flex justify-end gap-3">
+                <button id="btn-cancel-reset" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded">Cancelar</button>
+                <button id="btn-confirm-reset" class="px-4 py-2 text-sm font-semibold text-white bg-red-700 hover:bg-red-800 rounded">Eliminar Todo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let tasks = [];
+
+        // Inicializar datos
+        function initData() {
+            const stored = localStorage.getItem('bsmh_kanban_clean');
+            if (stored) {
+                tasks = JSON.parse(stored);
+            } else {
+                tasks = [];
+            }
+            renderTasks();
+        }
+
+        function saveTasks() {
+            localStorage.setItem('bsmh_kanban_clean', JSON.stringify(tasks));
+        }
+
+        // --- MANEJO DEL REINICIO ---
+        const modal = document.getElementById('confirm-modal');
+        
+        document.getElementById('btn-reset-trigger').onclick = () => {
+            modal.style.display = 'flex';
+        };
+
+        document.getElementById('btn-cancel-reset').onclick = () => {
+            modal.style.display = 'none';
+        };
+
+        document.getElementById('btn-confirm-reset').onclick = () => {
+            tasks = [];
+            saveTasks();
+            renderTasks();
+            modal.style.display = 'none';
+        };
+
+        // --- RELOJ ---
+        function updateDateTime() {
+            const now = new Date();
+            const fmt = new Intl.DateTimeFormat('es-ES', { 
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', 
+                hour: '2-digit', minute: '2-digit', second: '2-digit' 
+            }).format(now);
+            document.getElementById('datetime-display').textContent = fmt.toUpperCase();
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        // --- RENDERIZADO ---
+        function renderTasks() {
+            const cols = { 
+                pending: document.getElementById('column-pending'), 
+                inprogress: document.getElementById('column-inprogress'), 
+                done: document.getElementById('column-done') 
+            };
+            const counts = { pending: 0, inprogress: 0, done: 0 };
+            
+            Object.values(cols).forEach(el => el.innerHTML = '');
+
+            tasks.forEach(task => {
+                const el = createTaskElement(task);
+                if (cols[task.status]) {
+                    cols[task.status].appendChild(el);
+                    counts[task.status]++;
+                }
+            });
+
+            document.getElementById('count-pending').textContent = counts.pending;
+            document.getElementById('count-inprogress').textContent = counts.inprogress;
+            document.getElementById('count-done').textContent = counts.done;
+        }
+
+        function createTaskElement(task) {
+            const div = document.createElement('div');
+            div.className = `task-card bg-white p-4 mb-3 rounded border border-slate-200 shadow-sm cursor-move flex flex-col group transition-all hover:border-slate-400`;
+            div.draggable = true;
+            div.id = task.id;
+
+            const content = document.createElement('div');
+            content.className = 'flex justify-between items-start w-full';
+            
+            const text = document.createElement('span');
+            text.className = 'text-sm leading-tight text-slate-700 font-medium';
+            text.textContent = task.text;
+            
+            content.appendChild(text);
+
+            const del = document.createElement('button');
+            del.innerHTML = '&times;';
+            del.className = 'text-slate-300 hover:text-red-500 font-bold ml-2 text-xl leading-none transition-opacity md:opacity-0 md:group-hover:opacity-100 px-1';
+            del.onclick = (e) => { 
+                e.stopPropagation(); 
+                tasks = tasks.filter(t => t.id !== task.id); 
+                saveTasks(); 
+                renderTasks(); 
+            };
+            content.appendChild(del);
+
+            div.appendChild(content);
+
+            // Desktop events
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragend', handleDragEnd);
+
+            // Touch events
+            div.addEventListener('touchstart', handleTouchStart, { passive: false });
+            div.addEventListener('touchmove', handleTouchMove, { passive: false });
+            div.addEventListener('touchend', handleTouchEnd);
+
+            return div;
+        }
+
+        // --- FORMULARIO ---
+        document.getElementById('task-form').onsubmit = (e) => {
+            e.preventDefault();
+            const input = document.getElementById('new-task-input');
+            const val = input.value.trim();
+            if (val) {
+                tasks.push({
+                    id: 'task-' + Date.now(),
+                    text: val,
+                    status: 'pending'
+                });
+                input.value = '';
+                saveTasks();
+                renderTasks();
+            }
+        };
+
+        // --- LÓGICA DRAG & DROP ---
+        let draggedId = null;
+        const columns = document.querySelectorAll('.kanban-column');
+
+        function handleDragStart() { draggedId = this.id; this.classList.add('dragging'); }
+        function handleDragEnd() { this.classList.remove('dragging'); columns.forEach(c => c.classList.remove('drag-over')); }
+
+        columns.forEach(col => {
+            col.ondragover = (e) => { e.preventDefault(); col.classList.add('drag-over'); };
+            col.ondragleave = () => col.classList.remove('drag-over');
+            col.ondrop = () => {
+                moveTask(draggedId, col.dataset.status);
+            };
+        });
+
+        function moveTask(id, newStatus) {
+            const idx = tasks.findIndex(t => t.id === id);
+            if (idx > -1) {
+                tasks[idx].status = newStatus;
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // --- LÓGICA TÁCTIL ---
+        let touchGhost = null;
+        let activeTouchId = null;
+
+        function handleTouchStart(e) {
+            if (e.target.tagName === 'BUTTON') return;
+            activeTouchId = this.id;
+            this.classList.add('opacity-40');
+        }
+
+        function handleTouchMove(e) {
+            if (!activeTouchId) return;
+            const touch = e.touches[0];
+            
+            if (!touchGhost) {
+                const original = document.getElementById(activeTouchId);
+                if (!original) return;
+                touchGhost = original.cloneNode(true);
+                touchGhost.style.position = 'fixed';
+                touchGhost.style.width = original.offsetWidth + 'px';
+                touchGhost.style.zIndex = '3000';
+                touchGhost.style.pointerEvents = 'none';
+                touchGhost.style.opacity = '0.9';
+                touchGhost.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
+                document.body.appendChild(touchGhost);
+            }
+
+            touchGhost.style.left = (touch.clientX - touchGhost.offsetWidth / 2) + 'px';
+            touchGhost.style.top = (touch.clientY - 20) + 'px';
+
+            const under = document.elementFromPoint(touch.clientX, touch.clientY);
+            const col = under?.closest('.kanban-column');
+            columns.forEach(c => c.classList.remove('drag-over'));
+            if (col) {
+                e.preventDefault();
+                col.classList.add('drag-over');
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (touchGhost) {
+                const touch = e.changedTouches[0];
+                const under = document.elementFromPoint(touch.clientX, touch.clientY);
+                const col = under?.closest('.kanban-column');
+                if (col) moveTask(activeTouchId, col.dataset.status);
+                touchGhost.remove();
+                touchGhost = null;
+            }
+            if (activeTouchId) {
+                const el = document.getElementById(activeTouchId);
+                if (el) el.classList.remove('opacity-40');
+                activeTouchId = null;
+            }
+            columns.forEach(c => c.classList.remove('drag-over'));
+        }
+
+        initData();
+    </script>
+</body>
+</html>

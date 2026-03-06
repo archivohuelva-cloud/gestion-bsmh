@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Checklist BSMH - Gestión Profesional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white !important; padding: 0 !important; }
+            .task-card { 
+                border: 1px solid #cbd5e1 !important; 
+                break-inside: avoid; 
+                margin-bottom: 8px; 
+                padding: 10px 12px !important;
+                background: white !important;
+                display: flex !important;
+                align-items: center !important;
+                height: 56px !important;
+            }
+            .status-tab { display: none !important; }
+            .category-group { margin-bottom: 2rem; }
+            .category-header { border-bottom: 1px solid #334155 !important; margin-bottom: 12px !important; }
+            h2 { color: #1e293b !important; font-size: 1.1rem !important; }
+            .print-checkbox {
+                display: inline-block !important;
+                width: 18px;
+                height: 18px;
+                border: 1.5px solid #64748b !important;
+                margin-right: 12px;
+                border-radius: 3px;
+            }
+            .print-number {
+                display: inline-block !important;
+                font-family: monospace;
+                font-weight: bold;
+                color: #64748b;
+                width: 25px;
+            }
+            .category-group:has(.task-list:empty) { display: none !important; }
+            .category-collapsed { display: none !important; }
+        }
+
+        .task-card {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            height: 64px;
+        }
+
+        .status-tab {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 8px;
+        }
+
+        .task-pending { background-color: #ffffff; border-color: #fca5a5; }
+        .task-pending .status-tab { background-color: #ef4444; }
+
+        .task-completed { background-color: #f8fafc; border-color: #cbd5e1; opacity: 0.6; }
+        .task-completed .status-tab { background-color: #22c55e; }
+        .task-completed span.task-text { text-decoration: line-through; color: #94a3b8; }
+
+        .checkbox-custom { width: 24px; height: 24px; cursor: pointer; accent-color: #22c55e; }
+        .drag-handle, .category-drag-handle { cursor: grab; color: #9ca3af; padding-left: 12px; }
+        .category-header { border-bottom: 2px solid #e5e7eb; margin-top: 1.5rem; padding-bottom: 0.5rem; display: flex; align-items: center; }
+
+        .action-btn { color: #94a3b8; transition: color 0.2s; padding: 4px; }
+        .action-btn:hover { color: #3b82f6; }
+        .delete-btn:hover { color: #ef4444; }
+
+        .tag-badge {
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-left: 8px;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .base-tag { background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe; }
+        .manual-tag { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+
+        .config-panel { display: none; }
+        .config-panel.active { display: block; }
+
+        .category-collapsed .task-list { display: none; }
+        .view-toggle-btn { margin-left: auto; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
+        .view-toggle-btn:hover { color: #3b82f6; }
+
+        .edit-input {
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            padding: 2px 8px;
+            width: 100%;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
+
+    <header class="bg-white shadow-sm border-b border-slate-200 p-6 sticky top-0 z-20">
+        <div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 id="main-title" class="text-xl font-bold text-slate-800 tracking-tight">Banda Sinfónica Municipal de Huelva</h1>
+                <p id="current-date" class="text-blue-700 font-medium text-sm uppercase tracking-wider"></p>
+            </div>
+            <div class="flex items-center gap-4 no-print">
+                <button onclick="toggleConfig()" class="p-2 text-slate-500 hover:text-blue-600 transition" title="Configurar Lista Base">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+                <p id="current-time" class="text-3xl font-mono font-bold text-slate-700"></p>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto p-4 md:p-8">
+        
+        <!-- PANEL DE CONFIGURACIÓN -->
+        <div id="config-panel" class="config-panel bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 mb-8 no-print animate-in fade-in duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-blue-800 font-bold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    Panel de Configuración: Lista Base Permanente
+                </h2>
+                <button onclick="toggleConfig()" class="text-blue-600 font-bold hover:underline text-sm">Cerrar y Guardar</button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-3">Nueva Tarea Predefinida</p>
+                    <div class="space-y-3">
+                        <input type="text" id="base-task-input" placeholder="Nombre de tarea fija..." class="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+                        <div class="flex gap-2">
+                            <select id="base-category-select" class="flex-1 border border-slate-200 rounded-lg px-2 py-2 bg-white text-sm outline-none cursor-pointer"></select>
+                            <button onclick="addBaseTask()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition">Añadir a Base</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-3">Nuevas Categorías</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-category-input" placeholder="Nombre categoría..." class="flex-1 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400">
+                        <button onclick="addCategory()" class="bg-slate-700 text-white px-4 py-2 rounded-lg font-bold hover:bg-slate-800 transition">Crear</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-white rounded-xl border border-blue-100 overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-slate-500 font-bold">
+                        <tr>
+                            <th class="px-4 py-2">Tarea Base</th>
+                            <th class="px-4 py-2">Categoría</th>
+                            <th class="px-4 py-2 text-right">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="base-management-list"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- HERRAMIENTAS DIARIAS -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 no-print" id="tools-section">
+            <div class="md:col-span-3">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        Añadir Tarea para hoy
+                    </h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="task-input" placeholder="Ej: Llamar a imprenta..." 
+                            class="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="category-select" class="border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none cursor-pointer"></select>
+                        <button onclick="addTask()" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm">
+                            Añadir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="printPendingReport()" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-red-700 flex items-center justify-center gap-2 transition shadow-sm">
+                    Reporte Pendientes
+                </button>
+                <button onclick="resetDailyTasks()" class="w-full border border-slate-300 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 transition">
+                    Reiniciar y Ordenar A-Z
+                </button>
+            </div>
+        </div>
+
+        <!-- LISTADO PRINCIPAL -->
+        <div id="categories-container" class="space-y-10"></div>
+    </main>
+
+    <script>
+        const initialCategories = ["Administración", "Archivo y Partituras", "Previo al Concierto", "Durante el Concierto", "Otros"];
+        const defaultBaseTasks = [
+            { id: 1, text: "Revisar registro de salida de instrumentos", category: "Administración", completed: false, isBase: true },
+            { id: 2, text: "Verificar estado de las carpetas de concierto", category: "Archivo y Partituras", completed: false, isBase: true },
+            { id: 3, text: "Colocación de atriles y sillas según plano", category: "Previo al Concierto", completed: false, isBase: true },
+            { id: 4, text: "Control de iluminación de los atriles", category: "Previo al Concierto", completed: false, isBase: true },
+            { id: 5, text: "Supervisar cambios de partituras entre obras", category: "Durante el Concierto", completed: false, isBase: true }
+        ];
+
+        let tasks = JSON.parse(localStorage.getItem('bsmh_tasks')) || defaultBaseTasks;
+        let categories = JSON.parse(localStorage.getItem('bsmh_categories')) || initialCategories;
+        let collapsedCategories = JSON.parse(localStorage.getItem('bsmh_collapsed')) || [];
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = now.toLocaleDateString('es-ES', options);
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('es-ES', { hour12: false });
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        function toggleConfig() {
+            const panel = document.getElementById('config-panel');
+            panel.classList.toggle('active');
+            renderBaseManagement();
+        }
+
+        function updateUIElements() {
+            [document.getElementById('category-select'), document.getElementById('base-category-select')].forEach(sel => {
+                sel.innerHTML = '';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat; opt.textContent = cat;
+                    sel.appendChild(opt);
+                });
+            });
+            localStorage.setItem('bsmh_categories', JSON.stringify(categories));
+            renderTasks();
+            renderBaseManagement();
+        }
+
+        function addCategory() {
+            const input = document.getElementById('new-category-input');
+            const newCat = input.value.trim();
+            if (newCat === '' || categories.includes(newCat)) return;
+            categories.push(newCat);
+            input.value = '';
+            updateUIElements();
+        }
+
+        function addBaseTask() {
+            const input = document.getElementById('base-task-input');
+            const cat = document.getElementById('base-category-select').value;
+            if (input.value.trim() === '') return;
+            tasks.push({ id: Date.now(), text: input.value.trim(), category: cat, completed: false, isBase: true });
+            input.value = '';
+            renderTasks();
+            renderBaseManagement();
+        }
+
+        function renderBaseManagement() {
+            const list = document.getElementById('base-management-list');
+            list.innerHTML = '';
+            tasks.filter(t => t.isBase).forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "border-t border-slate-100 hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium" id="base-text-${t.id}">${t.text}</td>
+                    <td class="px-4 py-2 text-slate-500">${t.category}</td>
+                    <td class="px-4 py-2 text-right flex justify-end gap-2">
+                        <button onclick="editTaskText(${t.id}, 'base')" class="text-blue-500 hover:underline">Editar</button>
+                        <button onclick="removeBaseTask(${t.id})" class="text-red-500 hover:underline">Eliminar</button>
+                    </td>`;
+                list.appendChild(tr);
+            });
+        }
+
+        function removeBaseTask(id) {
+            if (confirm("¿Eliminar esta tarea de la lista base?")) {
+                tasks = tasks.filter(t => t.id !== id);
+                renderTasks();
+                renderBaseManagement();
+            }
+        }
+
+        function editTaskText(id, mode) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            const targetId = mode === 'base' ? `base-text-${id}` : `task-text-container-${id}`;
+            const container = document.getElementById(targetId);
+            const originalText = task.text;
+
+            container.innerHTML = `
+                <input type="text" class="edit-input" id="input-edit-${id}" value="${originalText}">
+            `;
+
+            const input = document.getElementById(`input-edit-${id}`);
+            input.focus();
+
+            const saveEdit = () => {
+                const newText = input.value.trim();
+                if (newText && newText !== originalText) {
+                    task.text = newText;
+                    saveTasks();
+                }
+                renderTasks();
+                if (mode === 'base') renderBaseManagement();
+            };
+
+            input.onblur = saveEdit;
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Escape') {
+                    renderTasks();
+                    if (mode === 'base') renderBaseManagement();
+                }
+            };
+        }
+
+        function toggleCategoryVisibility(cat) {
+            if (collapsedCategories.includes(cat)) {
+                collapsedCategories = collapsedCategories.filter(c => c !== cat);
+            } else {
+                collapsedCategories.push(cat);
+            }
+            localStorage.setItem('bsmh_collapsed', JSON.stringify(collapsedCategories));
+            renderTasks();
+        }
+
+        function renderTasks(filterPending = false) {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = '';
+
+            categories.forEach(cat => {
+                let catTasks = tasks.filter(t => t.category === cat);
+                if (filterPending) catTasks = catTasks.filter(t => !t.completed);
+                if (filterPending && collapsedCategories.includes(cat)) return;
+                if (catTasks.length === 0) return;
+
+                const isCollapsed = collapsedCategories.includes(cat);
+                const catSection = document.createElement('section');
+                catSection.className = `category-group ${isCollapsed ? 'category-collapsed' : ''}`;
+                catSection.setAttribute('data-category', cat);
+                
+                catSection.innerHTML = `
+                    <div class="category-header mb-4">
+                        <div class="category-drag-handle no-print mr-2">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
+                        </div>
+                        <h2 class="text-lg font-extrabold text-slate-700 uppercase tracking-tight">${cat}</h2>
+                        <div class="view-toggle-btn no-print" onclick="toggleCategoryVisibility('${cat}')">
+                            ${isCollapsed ? 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>' : 
+                                '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
+                            }
+                        </div>
+                    </div>
+                    <div id="list-${cat.replace(/\s+/g, '-')}" class="task-list space-y-3 min-h-[10px]"></div>
+                `;
+                container.appendChild(catSection);
+
+                const listElement = document.getElementById(`list-${cat.replace(/\s+/g, '-')}`);
+                
+                catTasks.forEach((task, index) => {
+                    const taskDiv = document.createElement('div');
+                    taskDiv.setAttribute('data-id', task.id);
+                    taskDiv.className = `task-card flex items-center p-4 pl-0 rounded-lg border shadow-sm transition-all ${task.completed ? 'task-completed' : 'task-pending'}`;
+                    
+                    taskDiv.innerHTML = `
+                        <div class="status-tab"></div>
+                        <span class="print-number">${index + 1}.</span><div class="print-checkbox"></div>
+                        <div class="drag-handle no-print">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>
+                        </div>
+                        <div class="flex items-center gap-3 flex-1 px-2 relative z-10 overflow-hidden">
+                            <input type="checkbox" ${task.completed ? 'checked' : ''} class="checkbox-custom no-print flex-shrink-0" onclick="toggleTask(${task.id})">
+                            <span id="task-text-container-${task.id}" class="task-text text-base font-semibold text-slate-800 flex items-center truncate">
+                                ${task.text} 
+                                <span class="tag-badge no-print ${task.isBase ? 'base-tag' : 'manual-tag'}">
+                                    ${task.isBase ? 'Base' : 'Manual'}
+                                </span>
+                            </span>
+                        </div>
+                        <div class="no-print flex items-center pr-2 relative z-10 gap-1">
+                            <button onclick="editTaskText(${task.id}, 'main')" class="action-btn" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                            </button>
+                            ${task.isBase ? '' : `
+                            <button onclick="deleteManualTask(${task.id})" class="action-btn delete-btn" title="Eliminar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>`}
+                        </div>
+                    `;
+                    listElement.appendChild(taskDiv);
+                });
+
+                if (!filterPending) {
+                    new Sortable(listElement, { group: 'shared', animation: 150, handle: '.drag-handle', onEnd: reorderTasks });
+                }
+            });
+
+            if (!filterPending) {
+                new Sortable(container, {
+                    animation: 200,
+                    handle: '.category-drag-handle',
+                    onEnd: () => {
+                        const newCategoryOrder = [];
+                        container.querySelectorAll('.category-group').forEach(el => {
+                            newCategoryOrder.push(el.getAttribute('data-category'));
+                        });
+                        categories = newCategoryOrder;
+                        updateUIElements();
+                    }
+                });
+            }
+
+            saveTasks();
+        }
+
+        function sortTasksAlphabetically() {
+            tasks.sort((a, b) => {
+                if (a.category < b.category) return -1;
+                if (a.category > b.category) return 1;
+                return a.text.localeCompare(b.text, 'es', { sensitivity: 'base' });
+            });
+        }
+
+        function reorderTasks() {
+            const newTasks = [];
+            document.querySelectorAll('.task-list').forEach(list => {
+                const listId = list.id.replace('list-', '');
+                const realCategory = categories.find(c => c.replace(/\s+/g, '-') === listId);
+                list.querySelectorAll('.task-card').forEach(el => {
+                    const task = tasks.find(t => t.id === parseInt(el.getAttribute('data-id')));
+                    if (task) { task.category = realCategory; newTasks.push(task); }
+                });
+            });
+            tasks = newTasks;
+            renderTasks();
+        }
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            if (input.value.trim() === '') return;
+            tasks.push({ id: Date.now(), text: input.value.trim(), category: document.getElementById('category-select').value, completed: false, isBase: false });
+            input.value = '';
+            renderTasks();
+        }
+
+        function toggleTask(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            renderTasks();
+        }
+
+        function deleteManualTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+
+        function saveTasks() { localStorage.setItem('bsmh_tasks', JSON.stringify(tasks)); }
+
+        function resetDailyTasks() {
+            if (confirm("¿Reiniciar checklist para hoy?")) {
+                tasks = tasks.map(t => ({ ...t, completed: false }));
+                sortTasksAlphabetically();
+                renderTasks();
+            }
+        }
+
+        function printPendingReport() {
+            renderTasks(true);
+            const title = document.getElementById('main-title');
+            const originalText = title.textContent;
+            title.textContent = "TAREAS PENDIENTES - " + document.getElementById('current-date').textContent;
+            setTimeout(() => { 
+                window.print(); 
+                title.textContent = originalText; 
+                renderTasks(); 
+            }, 100);
+        }
+
+        document.getElementById('task-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
+        document.getElementById('base-task-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') addBaseTask(); });
+
+        updateUIElements();
+    </script>
+</body>
+</html>

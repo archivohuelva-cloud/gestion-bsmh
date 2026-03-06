@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rider - BSMH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .unselectable { -webkit-user-select: none; user-select: none; }
+        
+        #canvas-rider {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background-color: #f1f5f9;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 1rem;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .rider-item {
+            position: absolute;
+            cursor: move;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+        }
+
+        .rider-label {
+            background: white;
+            border: 2px solid #3b82f6;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .rider-label.viento { border-color: #10b981; }
+        .rider-label.percusión { border-color: #3b82f6; }
+        .rider-label.extra { border-color: #f59e0b; }
+
+        .active-tab {
+            background-color: #1d4ed8 !important;
+            color: white !important;
+        }
+
+        /* CONFIGURACIÓN DE IMPRESIÓN VERTICAL */
+        @media print {
+            @page { 
+                size: A4 portrait; 
+                margin: 10mm; 
+            }
+            
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            
+            .print-page {
+                display: block !important;
+                page-break-after: always;
+                width: 100%;
+            }
+
+            #print-rider-area {
+                border: 2px solid #000 !important;
+                height: 250mm; 
+                width: 100%;
+                position: relative;
+                background: white !important;
+                background-image: radial-gradient(#e2e8f0 1px, transparent 1px) !important;
+                background-size: 15px 15px !important;
+            }
+
+            .rider-label {
+                font-size: 9px;
+                padding: 2px 4px;
+                border-width: 1.5px;
+            }
+        }
+
+        .print-only { display: none; }
+        @media print { .print-only { display: block; } }
+
+        /* Mejora visual para inputs de fecha/hora en la interfaz */
+        input[type="date"]::-webkit-calendar-picker-indicator,
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0); /* Asegura que el icono sea oscuro sobre fondo claro */
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4">
+
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 no-print">
+        
+        <!-- HEADER -->
+        <header class="p-6 bg-slate-900 text-white">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h1 class="text-2xl font-black uppercase tracking-tighter">Rider - BSMH</h1>
+                    <p class="text-blue-400 text-[10px] font-bold uppercase tracking-[0.2em]">Banda Sinfónica Municipal de Huelva</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="reestablecerTodo()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Limpiar</button>
+                    <button onclick="prepararEImprimir()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg text-[10px] font-bold uppercase shadow-lg">Generar Reporte PDF</button>
+                </div>
+            </div>
+
+            <!-- Ajuste de colores en inputs para visibilidad de iconos -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <input type="text" id="in-concierto" placeholder="CONCIERTO" class="bg-slate-100 border-none rounded-lg p-2 text-xs uppercase font-bold text-slate-900 focus:ring-2 ring-blue-500 placeholder:text-slate-500">
+                <input type="text" id="in-lugar" placeholder="LUGAR" class="bg-slate-100 border-none rounded-lg p-2 text-xs uppercase font-bold text-slate-900 focus:ring-2 ring-blue-500 placeholder:text-slate-500">
+                <input type="date" id="in-fecha" class="bg-slate-100 border-none rounded-lg p-2 text-xs font-bold text-slate-900 focus:ring-2 ring-blue-500">
+                <input type="time" id="in-hora" class="bg-slate-100 border-none rounded-lg p-2 text-xs font-bold text-slate-900 focus:ring-2 ring-blue-500">
+            </div>
+        </header>
+
+        <main class="p-6">
+            <!-- TABS -->
+            <div class="flex gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
+                <button onclick="cambiarTab('percusión')" id="tab-percusión" class="px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all active-tab">Percusión</button>
+                <button onclick="cambiarTab('viento')" id="tab-viento" class="px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-slate-500 hover:bg-white">Vientos</button>
+            </div>
+
+            <!-- GRID INSTRUMENTOS -->
+            <div id="grid-instrumentos" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8 unselectable"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- LISTADO SELECCIONADOS -->
+                <div class="lg:col-span-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Instrumentos en Escena</h3>
+                        <span id="total-badge" class="bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full font-black">0 TOTAL</span>
+                    </div>
+                    <div id="lista-resumen" class="space-y-2"></div>
+                    
+                    <div class="mt-6 pt-4 border-t border-slate-200">
+                        <input type="text" id="extra-nombre" placeholder="AÑADIR EXTRA..." class="w-full bg-white border rounded-lg p-2 text-[10px] font-bold uppercase mb-2">
+                        <button onclick="añadirExtra()" class="w-full bg-slate-200 hover:bg-slate-300 py-2 rounded-lg text-[10px] font-black uppercase">Añadir a mano</button>
+                    </div>
+                </div>
+
+                <!-- RIDER CANVAS -->
+                <div class="lg:col-span-8">
+                    <div id="canvas-rider">
+                        <div class="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] font-black text-slate-300 uppercase tracking-widest">FONDO DE ESCENARIO</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ESTRUCTURA PARA IMPRESIÓN -->
+    <div class="print-only">
+        <!-- PÁGINA 1: LISTADO DE CARGA -->
+        <section class="print-page">
+            <div class="border-b-4 border-black pb-4 mb-6">
+                <h1 class="text-3xl font-black uppercase">Reporte de Instrumentación</h1>
+                <p class="font-bold text-blue-700 uppercase">Banda Sinfónica Municipal de Huelva</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase mb-8 border p-4">
+                <p>CONCIERTO: <span id="pr-concierto"></span></p>
+                <p>LUGAR: <span id="pr-lugar"></span></p>
+                <p>FECHA: <span id="pr-fecha"></span></p>
+                <p>HORA: <span id="pr-hora"></span></p>
+            </div>
+
+            <h2 class="bg-black text-white p-2 text-xs font-black uppercase mb-4">Inventario de Percusión</h2>
+            <div id="pr-lista-percusion" class="divide-y border-t border-b border-black mb-8"></div>
+
+            <h2 class="bg-slate-200 p-2 text-xs font-black uppercase mb-4">Otros Instrumentos / Vientos</h2>
+            <div id="pr-lista-viento" class="divide-y border-t border-b border-black"></div>
+        </section>
+
+        <!-- PÁGINA 2: RIDER TÉCNICO (SOLO INSTRUMENTOS) -->
+        <section class="print-page">
+            <div class="text-[8px] font-black text-center uppercase mb-2 text-slate-400">FONDO DE ESCENARIO</div>
+            <div id="print-rider-area"></div>
+        </section>
+    </div>
+
+    <script>
+        const DB = [
+            { id: 1, nombre: "Timbales", cat: "percusión", def: 4 },
+            { id: 2, nombre: "Bombo", cat: "percusión", def: 1 },
+            { id: 3, nombre: "Platos", cat: "percusión", def: 1 },
+            { id: 4, nombre: "Caja", cat: "percusión", def: 1 },
+            { id: 5, nombre: "Cortinillas", cat: "percusión", def: 1 },
+            { id: 6, nombre: "Lira", cat: "percusión", def: 1 },
+            { id: 7, nombre: "Campanólogo", cat: "percusión", def: 1 },
+            { id: 8, nombre: "Gong", cat: "percusión", def: 1 },
+            { id: 9, nombre: "Batería", cat: "percusión", def: 1 },
+            { id: 10, nombre: "Toms Concierto", cat: "percusión", def: 1 },
+            { id: 11, nombre: "Temple Block", cat: "percusión", def: 1 },
+            { id: 12, nombre: "Congas", cat: "percusión", def: 1 },
+            { id: 13, nombre: "Xilófono", cat: "percusión", def: 1 },
+            { id: 14, nombre: "Bongo", cat: "percusión", def: 1 },
+            { id: 15, nombre: "Vibráfono", cat: "percusión", def: 1 },
+            { id: 16, nombre: "Cajón Flamenco", cat: "percusión", def: 1 },
+            { id: 101, nombre: "Flauta", cat: "viento", def: 1 },
+            { id: 102, nombre: "Oboe", cat: "viento", def: 1 },
+            { id: 103, nombre: "Requinto", cat: "viento", def: 1 },
+            { id: 104, nombre: "Clarinete", cat: "viento", def: 5 },
+            { id: 105, nombre: "Saxo Alto", cat: "viento", def: 2 },
+            { id: 106, nombre: "Saxo Tenor", cat: "viento", def: 2 },
+            { id: 107, nombre: "Trompa", cat: "viento", def: 1 },
+            { id: 108, nombre: "Trompeta", cat: "viento", def: 2 },
+            { id: 109, nombre: "Fliscorno", cat: "viento", def: 1 },
+            { id: 110, nombre: "Trombón", cat: "viento", def: 2 },
+            { id: 111, nombre: "Tuba", cat: "viento", def: 2 }
+        ];
+
+        let itemsRider = [];
+        let tabActual = 'percusión';
+
+        function cambiarTab(cat) {
+            tabActual = cat;
+            document.getElementById('tab-percusión').classList.toggle('active-tab', cat === 'percusión');
+            document.getElementById('tab-viento').classList.toggle('active-tab', cat === 'viento');
+            
+            if (cat === 'viento') {
+                DB.filter(i => i.cat === 'viento').forEach(inst => {
+                    const yaExiste = itemsRider.some(it => it.idInst === inst.id);
+                    if (!yaExiste) {
+                        setCantidad(inst.id, inst.def, false);
+                    }
+                });
+            }
+            renderAll();
+        }
+
+        function toggleInstrumento(id) {
+            const inst = DB.find(i => i.id === id);
+            const actuales = itemsRider.filter(it => it.idInst === id);
+            if (actuales.length > 0) itemsRider = itemsRider.filter(it => it.idInst !== id);
+            else setCantidad(id, inst.def);
+            renderAll();
+        }
+
+        function setCantidad(id, total, triggerRender = true) {
+            const inst = DB.find(i => i.id === id);
+            itemsRider = itemsRider.filter(it => it.idInst !== id);
+            for(let i=0; i<total; i++) {
+                itemsRider.push({
+                    idInst: inst.id,
+                    nombre: inst.nombre,
+                    cat: inst.cat,
+                    x: 50 + (Math.random()*10 - 5),
+                    y: inst.cat === 'percusión' ? 15 : 65,
+                    uid: Math.random().toString(36).substr(2, 9)
+                });
+            }
+            if(triggerRender) renderAll();
+        }
+
+        function modificarCantidad(e, id, delta) {
+            e.stopPropagation();
+            const actuales = itemsRider.filter(it => it.idInst === id);
+            setCantidad(id, Math.max(0, actuales.length + delta));
+        }
+
+        function añadirExtra() {
+            const val = document.getElementById('extra-nombre').value.trim();
+            if(!val) return;
+            itemsRider.push({ idInst: Date.now(), nombre: val.toUpperCase(), cat: 'extra', x: 50, y: 50, uid: 'e'+Date.now() });
+            document.getElementById('extra-nombre').value = '';
+            renderAll();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('grid-instrumentos');
+            grid.innerHTML = '';
+            DB.filter(i => i.cat === tabActual).forEach(inst => {
+                const canti = itemsRider.filter(it => it.idInst === inst.id).length;
+                const card = document.createElement('div');
+                card.className = `p-3 rounded-xl border transition-all cursor-pointer select-none group ${canti > 0 ? 'bg-blue-50 border-blue-400' : 'bg-white border-slate-200'}`;
+                card.onclick = () => toggleInstrumento(inst.id);
+                card.innerHTML = `
+                    <p class="text-[9px] font-black uppercase mb-2 truncate">${inst.nombre}</p>
+                    <div class="flex items-center justify-between gap-1">
+                        <button onclick="modificarCantidad(event, ${inst.id}, -1)" class="w-6 h-6 bg-white border rounded flex items-center justify-center text-xs font-bold">-</button>
+                        <span class="text-xs font-black">${canti}</span>
+                        <button onclick="modificarCantidad(event, ${inst.id}, 1)" class="w-6 h-6 bg-white border rounded flex items-center justify-center text-xs font-bold">+</button>
+                    </div>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderAll() {
+            renderGrid();
+            renderResumen();
+            renderEscenario();
+        }
+
+        function renderResumen() {
+            const container = document.getElementById('lista-resumen');
+            const badge = document.getElementById('total-badge');
+            container.innerHTML = '';
+            
+            const grupos = itemsRider.reduce((acc, it) => { 
+                acc[it.idInst] = (acc[it.idInst] || 0) + 1; 
+                return acc; 
+            }, {});
+
+            let totalItems = 0;
+
+            DB.forEach(inst => {
+                const can = grupos[inst.id];
+                if (can > 0) {
+                    totalItems += can;
+                    const div = document.createElement('div');
+                    div.className = "flex justify-between items-center bg-white p-2 px-3 rounded-lg border text-[10px] font-bold uppercase shadow-sm";
+                    div.innerHTML = `<span>${inst.nombre}</span><div class="flex items-center gap-3"><span class="text-blue-600 font-black">${can}</span><button onclick="eliminarPorId(${inst.id})" class="text-red-400 hover:text-red-600">✕</button></div>`;
+                    container.appendChild(div);
+                }
+            });
+
+            itemsRider.filter(it => it.cat === 'extra').forEach(extra => {
+                totalItems++;
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-white p-2 px-3 rounded-lg border text-[10px] font-bold uppercase shadow-sm border-orange-200";
+                div.innerHTML = `<span>${extra.nombre}</span><div class="flex items-center gap-3"><span class="text-orange-600 font-black">1</span><button onclick="eliminarPorUid('${extra.uid}')" class="text-red-400 hover:text-red-600">✕</button></div>`;
+                container.appendChild(div);
+            });
+
+            badge.textContent = `${totalItems} TOTAL`;
+        }
+
+        function eliminarPorId(id) {
+            itemsRider = itemsRider.filter(it => it.idInst !== id);
+            renderAll();
+        }
+
+        function eliminarPorUid(uid) {
+            itemsRider = itemsRider.filter(it => it.uid !== uid);
+            renderAll();
+        }
+
+        function renderEscenario() {
+            const zones = [document.getElementById('canvas-rider'), document.getElementById('print-rider-area')];
+            zones.forEach(zone => {
+                if(!zone) return;
+                zone.querySelectorAll('.rider-item').forEach(el => el.remove());
+                itemsRider.forEach(it => {
+                    const el = document.createElement('div');
+                    el.className = 'rider-item';
+                    el.style.left = `${it.x}%`;
+                    el.style.top = `${it.y}%`;
+                    el.innerHTML = `<div class="rider-label ${it.cat}">${it.nombre}</div>`;
+                    if(zone.id === 'canvas-rider') {
+                        let isDragging = false;
+                        const start = () => { isDragging = true; el.style.zIndex = 1000; };
+                        const move = (e) => {
+                            if(!isDragging) return;
+                            const rect = zone.getBoundingClientRect();
+                            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                            it.x = Math.max(5, Math.min(95, ((clientX - rect.left) / rect.width) * 100));
+                            it.y = Math.max(5, Math.min(95, ((clientY - rect.top) / rect.height) * 100));
+                            el.style.left = `${it.x}%`; el.style.top = `${it.y}%`;
+                        };
+                        const end = () => isDragging = false;
+                        el.addEventListener('mousedown', start);
+                        window.addEventListener('mousemove', move);
+                        window.addEventListener('mouseup', end);
+                        el.addEventListener('touchstart', start, {passive:false});
+                        window.addEventListener('touchmove', move, {passive:false});
+                        window.addEventListener('touchend', end);
+                    }
+                    zone.appendChild(el);
+                });
+            });
+        }
+
+        function prepararEImprimir() {
+            ['concierto', 'lugar', 'fecha', 'hora'].forEach(f => {
+                const val = document.getElementById('in-'+f).value.toUpperCase();
+                document.getElementById('pr-'+f).textContent = val || '---';
+            });
+            
+            const listPerc = document.getElementById('pr-lista-percusion');
+            const listVien = document.getElementById('pr-lista-viento');
+            listPerc.innerHTML = ''; listVien.innerHTML = '';
+
+            const resumen = itemsRider.reduce((acc, it) => {
+                acc[it.idInst] = (acc[it.idInst] || 0) + 1;
+                return acc;
+            }, {});
+
+            DB.forEach(inst => {
+                const can = resumen[inst.id];
+                if (can > 0) {
+                    const item = document.createElement('div');
+                    item.className = "flex justify-between py-2 text-[10px] font-bold uppercase";
+                    item.innerHTML = `<span>${inst.nombre}</span> <span>${can} UNIDADES</span>`;
+                    if(inst.cat === 'percusión') listPerc.appendChild(item);
+                    else listVien.appendChild(item);
+                }
+            });
+
+            renderEscenario();
+            setTimeout(() => { window.print(); }, 200);
+        }
+
+        function reestablecerTodo() {
+            itemsRider = [];
+            renderAll();
+        }
+
+        window.onload = renderAll;
+    </script>
+</body>
+</html>

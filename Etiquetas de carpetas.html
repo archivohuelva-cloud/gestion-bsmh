@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSMH - Gestión de Archivo y Etiquetas</title>
+    
+    <!-- Librerías Etiquetas QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        :root {
+            --bsmh-blue: #0000bd; 
+            --bg-gray: #f0f2f5;
+            --border-ui: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-gray);
+            margin: 0;
+            padding: 0;
+            color: #1a1a1a;
+        }
+
+        /* Navegación simplificada */
+        .nav-bar {
+            background-color: #0000a0;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-brand {
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-datetime {
+            font-size: 0.85rem;
+            font-family: monospace;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 12px;
+            border-radius: 4px;
+        }
+
+        /* Vistas */
+        .view-section { padding: 20px; }
+
+        /* Estilos Archivo */
+        .qr-layout { display: grid; grid-template-columns: 450px 1fr; gap: 25px; max-width: 1300px; margin: auto; }
+        .qr-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .qr-h2 { color: #003366; font-size: 1.1rem; border-bottom: 2px solid #003366; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; }
+        .form-group { margin-bottom: 20px; }
+        .qr-label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; font-size: 13px; }
+        .qr-input { width: 100%; padding: 12px; border: 1.5px solid #d1d9e6; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .signature-container { display: flex; align-items: center; justify-content: flex-start; gap: 6px; background: #f1f5f9; padding: 15px; border-radius: 8px; }
+        .sig-box { width: 55px; height: 45px; text-align: center; font-family: monospace; font-weight: bold; font-size: 20px; border: 2px solid var(--border-ui); border-radius: 4px; background: white; text-transform: uppercase; }
+        .sig-box:focus { border-color: var(--bsmh-blue); outline: none; box-shadow: 0 0 0 3px rgba(0,0,189,0.1); }
+        .sig-sep { font-weight: bold; color: #64748b; font-size: 18px; }
+        .btn-qr { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: 10px; }
+        .btn-add-qr { background-color: #16a34a; color: white; }
+        .btn-pdf-qr { background-color: #003366; color: white; margin-top: 15px; }
+        .btn-clear-all { background-color: #94a3b8; color: white; margin-top: 8px; font-size: 12px; padding: 10px; }
+        .btn-clear-all:hover { background-color: #ef4444; }
+        
+        /* Info de persistencia */
+        .last-data-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8fafc;
+            border-left: 4px solid var(--bsmh-blue);
+            font-size: 11px;
+            color: #475569;
+        }
+        .last-data-info strong { color: #0f172a; }
+
+        .table-container { max-height: 600px; overflow-y: auto; }
+        .qr-table { width: 100%; border-collapse: collapse; background: white; }
+        .qr-table th { position: sticky; top: 0; background: #f8fafc; text-align: left; padding: 12px; border-bottom: 2px solid #e2e8f0; font-size: 12px; color: #64748b; }
+        .qr-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .remove-btn { color: #dc2626; background: none; border: none; cursor: pointer; font-weight: bold; }
+        
+        /* Estilo para los inputs editables en la tabla */
+        .editable-cell { border: 1px solid transparent; padding: 4px 8px; border-radius: 4px; width: 90%; font-family: inherit; font-size: 13px; }
+        .editable-cell:hover { border-color: var(--border-ui); background: #f8fafc; }
+        .editable-cell:focus { border-color: var(--bsmh-blue); outline: none; background: white; }
+        .editable-bold { font-weight: bold; }
+
+        .counter-badge { background: #003366; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+
+        #qr-buffer { display: none; }
+
+        @media (max-width: 900px) {
+            .nav-bar { flex-direction: column; gap: 8px; text-align: center; }
+            .qr-layout { grid-template-columns: 1fr; }
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav-bar no-print">
+        <div class="nav-brand">Banda Sinfónica Municipal de Huelva - Archivo</div>
+        <div id="nav-clock" class="nav-datetime">Cargando fecha...</div>
+    </nav>
+
+    <!-- VISTA ARCHIVO ÚNICA -->
+    <section id="view-qr" class="view-section">
+        <div class="qr-layout">
+            <div class="qr-card">
+                <h2 class="qr-h2">Nueva Etiqueta</h2>
+                <div class="form-group">
+                    <label class="qr-label">Título de la Obra:</label>
+                    <input type="text" id="titulo" class="qr-input" oninput="this.value = this.value.toUpperCase()">
+                </div>
+                <div class="form-group">
+                    <label class="qr-label">Signatura:</label>
+                    <div class="signature-container">
+                        <input type="text" id="sig1" class="sig-box" maxlength="1" oninput="autoNext(this, 'sig2')" onpaste="handlePaste(event)">
+                        <span class="sig-sep">-</span>
+                        <input type="text" id="sig2" class="sig-box" maxlength="1" oninput="autoNext(this, 'sig3')">
+                        <input type="text" id="sig3" class="sig-box" maxlength="1" oninput="autoNext(this, 'sig4')">
+                        <span class="sig-sep">/</span>
+                        <input type="text" id="sig4" class="sig-box" maxlength="2" oninput="autoNext(this, 'registro')">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="qr-label">Nº Registro:</label>
+                    <input type="text" id="registro" class="qr-input">
+                </div>
+                <div class="form-group">
+                    <label class="qr-label">Enlace QR (URL):</label>
+                    <input type="text" id="url" class="qr-input">
+                </div>
+                
+                <button class="btn-qr btn-add-qr" onclick="agregarObra()">Añadir a la lista</button>
+                <button class="btn-qr btn-pdf-qr" onclick="generarPDF()">Descargar PDF Etiquetas</button>
+                <button class="btn-qr btn-clear-all" onclick="limpiarTodo()">Limpiar Todo</button>
+
+                <div class="last-data-info" id="last-data-display">
+                    Última Signatura: <strong id="last-sig-val">-</strong><br>
+                    Último Registro: <strong id="last-reg-val">-</strong>
+                </div>
+            </div>
+            <div class="qr-card">
+                <h2 class="qr-h2">
+                    Cola de Impresión
+                    <span id="label-counter" class="counter-badge">0</span>
+                </h2>
+                <div id="tabla-container" class="table-container">
+                    <p style="text-align:center; color:#94a3b8; padding-top:40px;">No hay elementos en la lista.</p>
+                </div>
+            </div>
+        </div>
+        <div id="qr-buffer"></div>
+    </section>
+
+    <script>
+        // --- RELOJ Y FECHA ---
+        function updateClock() {
+            const now = new Date();
+            const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            const dayName = days[now.getDay()];
+            const dateStr = now.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            document.getElementById('nav-clock').innerText = `${dayName}, ${dateStr} - ${timeStr}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- PERSISTENCIA DE ÚLTIMO REGISTRO ---
+        function loadLastValues() {
+            const lastSig = localStorage.getItem('bsmh_last_sig') || "-";
+            const lastReg = localStorage.getItem('bsmh_last_reg') || "-";
+            document.getElementById('last-sig-val').innerText = lastSig;
+            document.getElementById('last-reg-val').innerText = lastReg;
+        }
+
+        function saveLastValues(sig, reg) {
+            localStorage.setItem('bsmh_last_sig', sig);
+            localStorage.setItem('bsmh_last_reg', reg);
+            loadLastValues();
+        }
+
+        // Cargar al iniciar
+        window.onload = loadLastValues;
+
+        // --- LÓGICA DE CONTROL DE CAMPOS ---
+        function autoNext(current, nextId) {
+            current.value = current.value.toUpperCase();
+            if (current.value.length >= current.maxLength) {
+                const next = document.getElementById(nextId);
+                if (next) next.focus();
+            }
+        }
+
+        function handlePaste(event) {
+            const pasteData = (event.clipboardData || window.clipboardData).getData('text').trim().toUpperCase();
+            if (pasteData.length >= 3) {
+                event.preventDefault();
+                let parts = [];
+                if (pasteData.includes('-') || pasteData.includes('/') || pasteData.includes(' ')) {
+                    parts = pasteData.split(/[- /]/).filter(p => p !== "");
+                } else {
+                    parts = [
+                        pasteData.charAt(0),
+                        pasteData.charAt(1),
+                        pasteData.charAt(2),
+                        pasteData.substring(3)
+                    ];
+                }
+
+                if (parts.length > 0) {
+                    document.getElementById('sig1').value = parts[0].charAt(0);
+                    if (parts.length === 3) {
+                        const middle = parts[1];
+                        document.getElementById('sig2').value = middle.charAt(0) || "";
+                        document.getElementById('sig3').value = middle.charAt(1) || "";
+                        document.getElementById('sig4').value = parts[2].substring(0, 2);
+                    } else if (parts.length >= 4) {
+                        document.getElementById('sig2').value = parts[1].charAt(0);
+                        document.getElementById('sig3').value = parts[2].charAt(0);
+                        document.getElementById('sig4').value = parts[3].substring(0, 2);
+                    }
+                }
+                document.getElementById('registro').focus();
+            }
+        }
+
+        // --- GESTIÓN DE LA LISTA ---
+        let obrasList = [];
+
+        function agregarObra() {
+            const t = document.getElementById('titulo').value;
+            const s1 = document.getElementById('sig1').value;
+            const s2 = document.getElementById('sig2').value;
+            const s3 = document.getElementById('sig3').value;
+            const s4 = document.getElementById('sig4').value;
+            const reg = document.getElementById('registro').value;
+            const u = document.getElementById('url').value;
+
+            if (!t || !s1) { 
+                alert("El título y la signatura son necesarios."); 
+                return; 
+            }
+
+            const signaturaCompuesta = `${s1}-${s2}${s3}/${s4}`;
+
+            obrasList.push({ 
+                titulo: t, 
+                signatura: signaturaCompuesta, 
+                registro: reg, 
+                url: u 
+            });
+
+            // Guardar como últimos valores utilizados
+            saveLastValues(signaturaCompuesta, reg);
+
+            actualizarTabla();
+            limpiarCampos();
+        }
+
+        function limpiarCampos() { 
+            ['titulo','sig1','sig2','sig3','sig4','registro','url'].forEach(id => {
+                document.getElementById(id).value = "";
+            }); 
+            document.getElementById('titulo').focus(); 
+        }
+
+        function actualizarTabla() {
+            const container = document.getElementById('tabla-container');
+            const counter = document.getElementById('label-counter');
+            counter.innerText = obrasList.length;
+
+            if (obrasList.length === 0) { 
+                container.innerHTML = '<p style="text-align:center; color:#94a3b8; padding-top:40px;">No hay elementos en la lista.</p>'; 
+                return; 
+            }
+            
+            let html = '<table class="qr-table"><thead><tr><th>OBRA</th><th>SIGNATURA</th><th>REGISTRO</th><th>URL/QR</th><th></th></tr></thead><tbody>';
+            obrasList.forEach((o, i) => { 
+                html += `<tr>
+                    <td>
+                        <input type="text" class="editable-cell editable-bold" value="${o.titulo}" 
+                        onchange="actualizarCampo(${i}, 'titulo', this.value.toUpperCase())">
+                    </td>
+                    <td>
+                        <input type="text" class="editable-cell" value="${o.signatura}" 
+                        onchange="actualizarCampo(${i}, 'signatura', this.value.toUpperCase())">
+                    </td>
+                    <td>
+                        <input type="text" class="editable-cell" value="${o.registro}" 
+                        onchange="actualizarCampo(${i}, 'registro', this.value)">
+                    </td>
+                    <td>
+                        <input type="text" class="editable-cell" value="${o.url || ''}" 
+                        placeholder="Sin URL"
+                        onchange="actualizarCampo(${i}, 'url', this.value)">
+                    </td>
+                    <td><button class="remove-btn" onclick="eliminar(${i})">Eliminar</button></td>
+                </tr>`; 
+            });
+            container.innerHTML = html + '</tbody></table>';
+        }
+
+        function actualizarCampo(index, campo, nuevoValor) {
+            obrasList[index][campo] = nuevoValor;
+            // Si editamos el registro o signatura en la tabla, también actualizamos el "último guardado"
+            if (campo === 'registro' || campo === 'signatura') {
+                saveLastValues(obrasList[index].signatura, obrasList[index].registro);
+            }
+        }
+
+        function eliminar(index) { 
+            obrasList.splice(index, 1); 
+            actualizarTabla(); 
+        }
+
+        function limpiarTodo() {
+            if (obrasList.length === 0) return;
+            if (confirm("¿Estás seguro de que deseas vaciar toda la cola de impresión?")) {
+                obrasList = [];
+                actualizarTabla();
+            }
+        }
+
+        // --- GENERACIÓN PDF ---
+        async function generarPDF() {
+            if (obrasList.length === 0) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const labelW = 100; 
+            const labelH = 60; 
+            const startX = (210 - labelW) / 2; 
+            let currentY = 20; 
+            let counter = 0;
+
+            for (let obra of obrasList) {
+                if (counter > 0 && counter % 4 === 0) { 
+                    doc.addPage(); 
+                    currentY = 20; 
+                }
+
+                doc.setDrawColor(150, 150, 150); 
+                doc.setLineDashPattern([2, 1], 0); 
+                doc.rect(startX, currentY, labelW, labelH); 
+                doc.setLineDashPattern([], 0); 
+
+                doc.setTextColor(0); 
+                doc.setFont("helvetica", "bold"); 
+                let fontSize = 14; 
+                doc.setFontSize(fontSize);
+                while(doc.getTextWidth(obra.titulo) > (labelW - 15) && fontSize > 9) { 
+                    fontSize -= 0.5; 
+                    doc.setFontSize(fontSize); 
+                }
+                doc.text(obra.titulo, 105, currentY + 15, { align: "center" });
+
+                doc.setFont("helvetica", "normal"); 
+                doc.setFontSize(11); 
+                doc.text("Signatura: ", 105 - (doc.getTextWidth(`${obra.signatura}`) / 2) - 3, currentY + 30, { align: "right" });
+                doc.setFont("helvetica", "bold"); 
+                doc.setFontSize(14); 
+                doc.text(obra.signatura, 105, currentY + 30, { align: "center" });
+
+                doc.setFont("helvetica", "normal"); 
+                doc.setFontSize(11); 
+                doc.text(`Registro: ${obra.registro}`, 105, currentY + 40, { align: "center" });
+
+                if (obra.url) { 
+                    const qrImg = await getQrImage(obra.url); 
+                    if(qrImg) doc.addImage(qrImg, 'PNG', startX + labelW - 25, currentY + 32, 20, 20); 
+                }
+
+                currentY += labelH + 8; 
+                counter++;
+            }
+            doc.save("BSMH_Etiquetas_Archivo.pdf");
+        }
+
+        function getQrImage(text) { 
+            return new Promise(res => { 
+                const buffer = document.getElementById('qr-buffer'); 
+                buffer.innerHTML = ""; 
+                new QRCode(buffer, { text: text, width: 128, height: 128 }); 
+                setTimeout(() => { 
+                    const img = buffer.querySelector('img'); 
+                    res(img ? img.src : ""); 
+                }, 200); 
+            }); 
+        }
+    </script>
+</body>
+</html>
