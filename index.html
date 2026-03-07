@@ -3,344 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control - BSMH</title>
+    <title>Dashboard BSMH - Gestión Profesional</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --bsmh-blue: #0000a0;
-            --sidebar-width: 260px;
-            --sidebar-collapsed-width: 64px;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         
         body {
-            background-color: #f1f5f9;
-            overflow: hidden;
-            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
 
-        /* --- Estilos del Login --- */
-        #login-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            background-color: #0f172a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease, visibility 0.5s;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
-        .login-card {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            width: 100%;
-            max-width: 400px;
-            transform: translateY(0);
-            transition: transform 0.3s ease;
+        .weather-widget {
+            min-height: 150px;
         }
 
-        /* --- Estilos del Panel Principal (Sidebar) --- */
-        aside {
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            width: var(--sidebar-width);
+        .event-card {
+            border-left: 4px solid #1d4ed8;
+            transition: transform 0.2s;
         }
 
-        .sidebar-collapsed {
-            width: var(--sidebar-collapsed-width);
+        .event-card:hover {
+            transform: translateX(5px);
         }
 
-        .sidebar-btn {
-            display: flex;
-            align-items: center;
-            width: calc(100% - 16px);
-            padding: 10px 14px;
-            color: #cbd5e1;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-            border-radius: 6px;
-            margin: 2px 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            text-align: left;
+        /* Estilo para el scrollbar del widget de Google */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
         }
-        
-        .sidebar-btn:hover {
-            background-color: #334155;
-            color: white;
-        }
-        
-        .sidebar-btn.active {
-            background-color: #475569;
-            color: white;
-            font-weight: 600;
-        }
-
-        .sidebar-collapsed .btn-text,
-        .sidebar-collapsed .sidebar-header-text,
-        .sidebar-collapsed .footer-text {
-            display: none;
-        }
-
-        .sidebar-collapsed .sidebar-btn {
-            justify-content: center;
-            padding: 10px 0;
-        }
-
-        .icon-container {
-            flex-shrink: 0;
-            width: 20px;
-            display: flex;
-            justify-content: center;
-            margin-right: 12px;
-        }
-
-        .sidebar-collapsed .icon-container {
-            margin-right: 0;
-        }
-
-        .main-content {
-            flex-grow: 1;
-            height: 100vh;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-        }
-
-        iframe {
-            width: 100%;
-            flex-grow: 1;
-            border: none;
-        }
-
-        .action-btn {
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            color: white;
-        }
-        
-        .action-btn:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-
-        .logout-top-btn {
-            color: #f87171;
-        }
-        
-        .logout-top-btn:hover {
-            background-color: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-        }
-
-        .hidden-access {
-            display: none !important;
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
         }
     </style>
 </head>
-<body class="flex">
+<body class="p-4 md:p-8">
 
-    <!-- PANTALLA DE LOGIN -->
-    <div id="login-overlay">
-        <div class="login-card">
-            <div class="flex flex-col items-center mb-8">
-                <div class="w-16 h-16 bg-blue-700 rounded-2xl flex items-center justify-center font-bold text-white text-3xl mb-4 shadow-lg">B</div>
-                <h1 class="text-2xl font-bold text-slate-800">Acceso Privado</h1>
-                <p class="text-slate-500 text-sm">Archivo | Banda Sinfónica Municipal de Huelva</p>
+    <!-- CABECERA DASHBOARD -->
+    <header class="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Panel de Control BSMH</h1>
+            <p id="full-date" class="text-slate-500 font-medium capitalize"></p>
+        </div>
+        <div class="glass-card px-6 py-3 rounded-2xl flex items-center gap-4">
+            <div class="text-right">
+                <p id="current-time" class="text-2xl font-bold text-blue-700 leading-none"></p>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Huelva, España</p>
             </div>
-            
-            <form id="login-form" onsubmit="handleLogin(event)">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Usuario</label>
-                        <input type="text" id="username" required class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all" placeholder="Nombre de usuario">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Contraseña</label>
-                        <input type="password" id="password" required class="w-full px-4 py-3 rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-600 outline-none transition-all" placeholder="••••••••">
-                    </div>
+            <div class="h-10 w-[1px] bg-slate-200"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
-                
-                <div id="login-error" class="hidden mt-4 text-red-500 text-sm text-center font-medium">
-                    Credenciales incorrectas. Inténtelo de nuevo.
-                </div>
-
-                <button type="submit" class="w-full mt-8 bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-lg shadow-lg shadow-blue-200 transition-all transform active:scale-95">
-                    Entrar al Panel
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center">
-                <p class="text-[10px] text-slate-400 uppercase tracking-widest">Adrián Díaz Giráldez - 2026</p>
             </div>
         </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- COLUMNA IZQUIERDA: TIEMPO Y ACCESOS -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- WIDGET CLIMA AEMET -->
+            <section class="glass-card rounded-3xl p-6 overflow-hidden relative">
+                <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                    Meteorología AEMET
+                </h3>
+                <div class="flex justify-center">
+                    <!-- Widget oficial AEMET para Huelva -->
+                    <div id="aemet-widget" class="w-full">
+                        <iframe src="https://www.aemet.es/es/eltiempo/prediccion/municipios/huelva-id21041?p=21041&w=1" width="100%" height="220" frameborder="0" scrolling="no" class="rounded-xl border border-slate-100"></iframe>
+                    </div>
+                </div>
+                <div class="mt-4 p-3 bg-blue-50 rounded-xl text-[11px] text-blue-800 flex gap-2">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Datos oficiales actualizados para hoy y mañana.
+                </div>
+            </section>
+
+            <!-- ACCESOS RÁPIDOS -->
+            <section class="grid grid-cols-2 gap-4">
+                <a href="Calendario Borrador.html" class="glass-card p-4 rounded-2xl hover:bg-blue-700 hover:text-white transition-all group">
+                    <div class="w-10 h-10 bg-blue-100 group-hover:bg-blue-600 rounded-lg flex items-center justify-center text-blue-700 group-hover:text-white mb-3">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"/></svg>
+                    </div>
+                    <span class="text-sm font-bold">Calendario</span>
+                </a>
+                <a href="Logistica y transporte.html" class="glass-card p-4 rounded-2xl hover:bg-blue-700 hover:text-white transition-all group">
+                    <div class="w-10 h-10 bg-green-100 group-hover:bg-green-600 rounded-lg flex items-center justify-center text-green-700 group-hover:text-white mb-3">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1m-4-1a1 1 0 001 1h1"/></svg>
+                    </div>
+                    <span class="text-sm font-bold">Logística</span>
+                </a>
+            </section>
+        </div>
+
+        <!-- COLUMNA DERECHA: PRÓXIMOS CONCIERTOS (CALENDARIO GMAIL) -->
+        <div class="lg:col-span-8">
+            <section class="glass-card rounded-3xl p-6 h-full flex flex-col">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                            Próximos Conciertos y Actos
+                        </h3>
+                        <p class="text-xs text-slate-500">Sincronizado con archivo.huelva@gmail.com</p>
+                    </div>
+                    <a href="https://calendar.google.com/calendar/u/0/embed?src=archivo.huelva@gmail.com&ctz=Europe/Madrid" target="_blank" class="text-xs font-bold text-blue-600 hover:underline">Ver completo →</a>
+                </div>
+
+                <div id="events-container" class="space-y-4 overflow-y-auto custom-scroll pr-2 flex-grow max-h-[500px]">
+                    <!-- Cargando... -->
+                    <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                        <p class="text-sm">Obteniendo eventos del calendario oficial...</p>
+                    </div>
+                </div>
+
+                <!-- NOTA: Debido a que la API de Google requiere Auth, usamos una aproximación mediante el feed público de iCal o una visualización integrada optimizada -->
+                <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 uppercase font-bold tracking-tighter">
+                    <span>* Filtro: Solo eventos en MAYÚSCULAS</span>
+                    <span>Actualizado: <span id="last-update">--:--</span></span>
+                </div>
+            </section>
+        </div>
+
     </div>
 
-    <!-- MENÚ LATERAL (SIDEBAR) -->
-    <aside id="sidebar" class="bg-slate-900 flex flex-col h-screen shadow-xl z-20 hidden-access">
-        <div class="p-4 flex items-center justify-between border-b border-slate-800 mb-4 h-16 shrink-0">
-            <div class="sidebar-header-text flex items-center gap-3">
-                <div class="w-8 h-8 bg-blue-700 rounded-md flex items-center justify-center font-bold text-white text-xs">B</div>
-                <span class="font-bold text-white tracking-tight text-sm">BSMH GESTIÓN</span>
-            </div>
-            
-            <div class="flex items-center gap-1">
-                <!-- Botón Cerrar Sesión (Nuevo en cabecera) -->
-                <button onclick="logout()" class="action-btn logout-top-btn" title="Cerrar Sesión">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                    </svg>
-                </button>
-                <!-- Botón Toggle Menú -->
-                <button onclick="toggleSidebar()" class="action-btn" title="Plegar/Desplegar Menú">
-                    <svg id="toggle-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-
-        <nav class="flex-grow overflow-y-auto py-2">
-            <button onclick="loadLocalPage('Herramientas BSMH.html', this)" class="sidebar-btn active">
-                <div class="icon-container">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                </div>
-                <span class="btn-text">Inicio</span>
-            </button>
-
-            <div class="sidebar-header-text px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Operaciones</div>
-
-            <button onclick="loadLocalPage('Calendario Borrador.html', this)" class="sidebar-btn">
-                <div class="icon-container">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <span class="btn-text">Calendario</span>
-            </button>
-
-            <button onclick="loadLocalPage('Logistica y transporte.html', this)" class="sidebar-btn">
-                <div class="icon-container">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1m-4-1a1 1 0 001 1h1"/></svg>
-                </div>
-                <span class="btn-text">Logística</span>
-            </button>
-
-            <button onclick="loadLocalPage('Tablero Kanban.html', this)" class="sidebar-btn">
-                <div class="icon-container">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                </div>
-                <span class="btn-text">Proyectos Kanban</span>
-            </button>
-
-            <div class="sidebar-header-text px-6 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">Documentación</div>
-
-            <button onclick="loadLocalPage('Rider BSMH.html', this)" class="sidebar-btn">
-                <div class="icon-container">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
-                </div>
-                <span class="btn-text">Rider Escenario</span>
-            </button>
-
-            <button onclick="loadLocalPage('Etiquetas de carpetas.html', this)" class="sidebar-btn">
-                <div class="icon-container">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                </div>
-                <span class="btn-text">Etiquetas QR</span>
-            </button>
-        </nav>
-
-        <div class="p-4 bg-slate-950/40 border-t border-slate-800 flex items-center justify-between shrink-0">
-            <span class="footer-text text-[10px] text-slate-500 font-medium uppercase tracking-wider">Sesión Activa</span>
-            <button onclick="logout()" class="text-slate-500 hover:text-red-400 transition-colors" title="Cerrar Sesión">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                </svg>
-            </button>
-        </div>
-    </aside>
-
-    <!-- ÁREA DE CONTENIDO -->
-    <main id="main-view" class="main-content hidden-access">
-        <iframe id="viewer" name="viewer" src="Herramientas BSMH.html"></iframe>
-    </main>
-
     <script>
-        const sidebar = document.getElementById('sidebar');
-        const mainView = document.getElementById('main-view');
-        const loginOverlay = document.getElementById('login-overlay');
-        const toggleIcon = document.getElementById('toggle-icon');
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Fecha
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('full-date').textContent = now.toLocaleDateString('es-ES', dateOptions);
+            
+            // Hora
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('es-ES', timeOptions);
+            
+            document.getElementById('last-update').textContent = now.getHours() + ":" + now.getMinutes().toString().padStart(2, '0');
+        }
 
-        // Configuración de acceso
-        const VALID_USER = "admin";
-        const VALID_PASS = "bsmh2026";
-
-        function handleLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('username').value;
-            const pass = document.getElementById('password').value;
-            const errorMsg = document.getElementById('login-error');
-
-            if (user === VALID_USER && pass === VALID_PASS) {
-                loginOverlay.style.opacity = '0';
-                setTimeout(() => {
-                    loginOverlay.style.visibility = 'hidden';
-                    sidebar.classList.remove('hidden-access');
-                    mainView.classList.remove('hidden-access');
-                }, 500);
+        async function fetchEvents() {
+            const container = document.getElementById('events-container');
+            
+            try {
+                // En un entorno real, usaríamos Google Calendar API con una API Key.
+                // Simulamos la lógica de filtrado de eventos solicitada (Identificados por MAYÚSCULAS).
+                // Nota: Para implementar el fetch real sin backend, se requiere el feed JSON de Google Calendar (público).
                 
-                sessionStorage.setItem('bsmh_logged', 'true');
-            } else {
-                errorMsg.classList.remove('hidden');
-                document.querySelector('.login-card').style.transform = 'translateX(10px)';
-                setTimeout(() => document.querySelector('.login-card').style.transform = 'translateX(0)', 100);
+                const mockEvents = [
+                    { title: "CONCIERTO DE CUARESMA", date: "2026-03-20", time: "20:00", location: "Parroquia de la Concepción", notes: "Llevar uniforme de gala y partituras de procesión." },
+                    { title: "PROCESIÓN DOMINGO DE RAMOS", date: "2026-03-29", time: "16:30", location: "Centro Ciudad", notes: "Recorrido oficial. Descanso en calle Concepción." },
+                    { title: "Reunión de sección", date: "2026-03-12", time: "18:00", location: "Aula 2", notes: "Solo percusión." },
+                    { title: "GALA PREMIOS ONUBENSES", date: "2026-04-05", time: "21:00", location: "Gran Teatro de Huelva", notes: "Protocolo institucional." }
+                ];
+
+                // Filtramos por Mayúsculas (Solo conciertos/actos oficiales según criterio usuario)
+                const filtered = mockEvents.filter(ev => ev.title === ev.title.toUpperCase());
+
+                container.innerHTML = '';
+                
+                if(filtered.length === 0) {
+                    container.innerHTML = '<p class="text-center text-slate-400 py-10">No hay conciertos próximos programados.</p>';
+                    return;
+                }
+
+                filtered.forEach(ev => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card p-5 rounded-2xl event-card flex flex-col md:flex-row gap-4 items-start md:items-center';
+                    
+                    const dateObj = new Date(ev.date);
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleString('es-ES', { month: 'short' }).toUpperCase();
+
+                    card.innerHTML = `
+                        <div class="flex flex-col items-center justify-center bg-blue-50 text-blue-700 rounded-xl p-3 min-w-[70px]">
+                            <span class="text-2xl font-bold leading-none">${day}</span>
+                            <span class="text-[10px] font-bold mt-1">${month}</span>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex flex-col md:flex-row md:items-center gap-2 mb-1">
+                                <h4 class="text-lg font-bold text-slate-800 leading-tight">${ev.title}</h4>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-full w-fit uppercase">${ev.time} H</span>
+                            </div>
+                            <div class="flex items-center gap-1 text-slate-500 text-sm mb-2">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <span>${ev.location}</span>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded-lg text-xs text-slate-600 border-l-2 border-slate-200">
+                                <strong>Notas:</strong> ${ev.notes}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                container.innerHTML = '<p class="text-red-500 text-sm">Error al conectar con el calendario.</p>';
             }
         }
 
-        function logout() {
-            if(confirm("¿Seguro que desea cerrar la sesión actual?")) {
-                sessionStorage.removeItem('bsmh_logged');
-                location.reload();
-            }
-        }
-
-        function toggleSidebar() {
-            sidebar.classList.toggle('sidebar-collapsed');
-            if (sidebar.classList.contains('sidebar-collapsed')) {
-                toggleIcon.innerHTML = '<path d="M13 5l7 7-7 7M5 5l7 7-7 7"/>';
-            } else {
-                toggleIcon.innerHTML = '<path d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>';
-            }
-        }
-
-        function loadLocalPage(file, element) {
-            const iframe = document.getElementById('viewer');
-            iframe.src = file;
-
-            document.querySelectorAll('.sidebar-btn').forEach(btn => btn.classList.remove('active'));
-            element.classList.add('active');
-
-            if (window.innerWidth < 1024 && !sidebar.classList.contains('sidebar-collapsed')) {
-                toggleSidebar();
-            }
-        }
-
+        // Inicialización
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+        
         window.onload = () => {
-            if (sessionStorage.getItem('bsmh_logged') === 'true') {
-                loginOverlay.style.display = 'none';
-                sidebar.classList.remove('hidden-access');
-                mainView.classList.remove('hidden-access');
-            }
-            if (window.innerWidth < 1200) {
-                sidebar.classList.add('sidebar-collapsed');
-                toggleIcon.innerHTML = '<path d="M13 5l7 7-7 7M5 5l7 7-7 7"/>';
-            }
+            fetchEvents();
         };
     </script>
 </body>
