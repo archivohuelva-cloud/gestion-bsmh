@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesador de Archivos - Banda Sinfónica Municipal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería JSZip para comprimir archivos en un solo clic -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        .drop-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed #cbd5e1;
+        }
+        .drop-zone.drag-over {
+            border-color: #0f172a;
+            background-color: #f1f5f9;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <!-- Barra Superior -->
+    <nav class="bg-white border-b border-gray-200 px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-50 shadow-sm">
+        <div class="flex items-center space-x-6">
+            <a href="index.html" class="flex items-center text-gray-700 hover:text-blue-600 transition-colors font-bold text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Inicio
+            </a>
+            <div class="h-6 w-px bg-gray-300"></div>
+            <span id="liveDateTime" class="text-base text-gray-500 font-semibold italic"></span>
+        </div>
+        <div class="text-sm font-black text-gray-400 uppercase tracking-[0.2em] text-right">
+            Banda Sinfónica Municipal de Huelva
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto p-6 lg:p-12">
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight text-balance">Procesador de Archivos por Lotes</h1>
+            <p class="text-slate-600 mt-3 text-xl font-medium">Generación instantánea de índices .txt para archivo</p>
+        </header>
+
+        <!-- Zona de Carga -->
+        <div id="dropContainer">
+            <div id="dropZone" class="drop-zone rounded-3xl p-24 text-center cursor-pointer bg-white shadow-sm hover:shadow-xl transition-all">
+                <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
+                <div class="flex flex-col items-center">
+                    <div class="bg-blue-50 p-6 rounded-full mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                        </svg>
+                    </div>
+                    <p class="text-2xl font-bold text-slate-800 uppercase tracking-tight">Sube la carpeta del concierto</p>
+                    <p class="text-slate-500 mt-3 text-lg">Arrastra la carpeta aquí o haz clic para seleccionar</p>
+                    <p class="text-xs text-slate-400 mt-8 uppercase font-black tracking-widest border-2 border-slate-100 px-6 py-2 rounded-full">Procesamiento local · Máxima velocidad</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div id="resultArea" class="mt-10 hidden">
+            <div class="flex flex-col lg:flex-row justify-between items-end mb-10 gap-6">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-900 italic">Obras detectadas (<span id="fileCount">0</span>)</h2>
+                    <p class="text-slate-500 font-medium">Se han generado archivos de índice basados en los códigos de registro.</p>
+                </div>
+                <div class="flex space-x-4">
+                    <button id="resetBtn" class="text-sm bg-white border-2 border-gray-200 hover:bg-gray-100 text-gray-700 px-6 py-3 rounded-xl transition-all shadow-sm flex items-center font-black uppercase tracking-wider">
+                        LIMPIAR TODO
+                    </button>
+                    <button id="downloadZipBtn" class="text-lg bg-blue-700 hover:bg-blue-800 text-white px-8 py-4 rounded-xl transition-all shadow-2xl flex items-center font-black scale-105 active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        DESCARGAR TODO (.ZIP)
+                    </button>
+                </div>
+            </div>
+            
+            <div id="filesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Los items se generan aquí -->
+            </div>
+        </div>
+
+        <div id="noCodeMessage" class="mt-8 p-6 bg-amber-50 border-2 border-amber-200 text-amber-900 rounded-2xl text-lg flex items-center hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-4 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            No se han podido detectar códigos numéricos en las subcarpetas. Comprueba el nombre de los directorios.
+        </div>
+    </div>
+
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            const dateStr = now.toLocaleDateString('es-ES', options);
+            document.getElementById('liveDateTime').textContent = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        const dropZone = document.getElementById('dropZone');
+        const folderInput = document.getElementById('folderInput');
+        const resultArea = document.getElementById('resultArea');
+        const filesContainer = document.getElementById('filesContainer');
+        const noCodeMessage = document.getElementById('noCodeMessage');
+        const downloadZipBtn = document.getElementById('downloadZipBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const fileCountSpan = document.getElementById('fileCount');
+
+        let generatedFilesData = []; 
+
+        dropZone.addEventListener('click', () => folderInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+        });
+
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function extractCode(name) {
+            const match = name.match(/\d+/g);
+            return match ? match.join('') : null;
+        }
+
+        async function handleFiles(files) {
+            if (files.length === 0) return;
+
+            const worksMap = new Map();
+            generatedFilesData = [];
+            filesContainer.innerHTML = "";
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const pathParts = file.webkitRelativePath.split('/');
+                
+                let workFolderName = "";
+                if (pathParts.length > 2) {
+                    workFolderName = pathParts[1];
+                } else {
+                    workFolderName = pathParts[0];
+                }
+
+                if (!worksMap.has(workFolderName)) {
+                    worksMap.set(workFolderName, []);
+                }
+                
+                const internalPath = file.webkitRelativePath.substring(file.webkitRelativePath.indexOf(workFolderName) + workFolderName.length + 1);
+                if (internalPath) {
+                    worksMap.set(workFolderName, [...worksMap.get(workFolderName), internalPath]);
+                }
+            }
+
+            worksMap.forEach((fileList, folderName) => {
+                const code = extractCode(folderName);
+                if (code) {
+                    const filename = `${code}.txt`;
+                    const content = `BANDA SINFÓNICA MUNICIPAL DE HUELVA\n` +
+                                    `REGISTRO: ${code}\n` +
+                                    `OBRA: ${folderName}\n` +
+                                    `FECHA: ${new Date().toLocaleString('es-ES')}\n` + 
+                                    `------------------------------------------\n` + 
+                                    fileList.sort().join('\n');
+                    
+                    generatedFilesData.push({ filename, content });
+                    createFileCard(code, folderName, fileList.length, content);
+                }
+            });
+
+            if (generatedFilesData.length > 0) {
+                fileCountSpan.textContent = generatedFilesData.length;
+                resultArea.classList.remove('hidden');
+                document.getElementById('dropContainer').classList.add('hidden');
+                noCodeMessage.classList.add('hidden');
+            } else {
+                resultArea.classList.add('hidden');
+                noCodeMessage.classList.remove('hidden');
+            }
+        }
+
+        function createFileCard(code, originalName, count, content) {
+            const card = document.createElement('div');
+            card.className = "bg-white p-8 rounded-2xl border-2 border-gray-100 shadow-md flex flex-col justify-between hover:border-blue-400 hover:shadow-xl transition-all group";
+            card.innerHTML = `
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-sm font-black text-blue-800 bg-blue-100 px-4 py-1.5 rounded-lg uppercase tracking-wider border-2 border-blue-200">${code}.txt</span>
+                        <span class="text-xs text-gray-400 font-black uppercase tracking-widest">${count} ARCHIVOS</span>
+                    </div>
+                    <h3 class="text-xl font-extrabold text-slate-800 leading-tight group-hover:text-blue-900 transition-colors" title="${originalName}">${originalName}</h3>
+                </div>
+                <div class="mt-8 pt-6 border-t-2 border-gray-50 flex items-center justify-end">
+                    <button class="bg-slate-50 hover:bg-blue-600 hover:text-white text-blue-700 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all border-2 border-blue-50 individual-download">
+                        DESCARGAR INDIVIDUAL
+                    </button>
+                </div>
+            `;
+
+            card.querySelector('.individual-download').addEventListener('click', () => {
+                downloadSingle(`${code}.txt`, content);
+            });
+
+            filesContainer.appendChild(card);
+        }
+
+        function downloadSingle(filename, content) {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        downloadZipBtn.addEventListener('click', async () => {
+            if (generatedFilesData.length === 0) return;
+            
+            const zip = new JSZip();
+            generatedFilesData.forEach(file => {
+                zip.file(file.filename, file.content);
+            });
+
+            downloadZipBtn.disabled = true;
+            downloadZipBtn.innerHTML = `
+                <svg class="animate-spin h-6 w-6 mr-3 text-white" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg> GENERANDO ZIP...`;
+
+            try {
+                const content = await zip.generateAsync({ type: "blob" });
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `LISTADO_REGISTRO_BSMH.zip`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Error al generar el archivo:", err);
+            } finally {
+                downloadZipBtn.disabled = false;
+                downloadZipBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg> DESCARGAR TODO (.ZIP)`;
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            generatedFilesData = [];
+            filesContainer.innerHTML = "";
+            resultArea.classList.add('hidden');
+            document.getElementById('dropContainer').classList.remove('hidden');
+            noCodeMessage.classList.add('hidden');
+            folderInput.value = "";
+        });
+    </script>
+</body>
+</html>
