@@ -331,16 +331,7 @@
                         copiedPages.forEach(p => mergedPdf.addPage(p));
                     }
                 }
-
-                const pages = mergedPdf.getPages();
-                const total = pages.length;
-                const font = await mergedPdf.embedFont(PDFLib.StandardFonts.Helvetica);
-                pages.forEach((page, i) => {
-                    const { width } = page.getSize();
-                    const text = `Pág. ${i + 1} de ${total}`;
-                    page.drawText(text, { x: width - font.widthOfTextAtSize(text, 9) - 25, y: 15, size: 9, font, color: PDFLib.rgb(0.4, 0.4, 0.4) });
-                });
-
+                
                 const bytes = await mergedPdf.save();
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
