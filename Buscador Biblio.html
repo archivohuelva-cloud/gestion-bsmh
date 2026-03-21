@@ -49,9 +49,17 @@
     <!-- Encabezado Institucional -->
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest">Base de Datos BIBLIO BD Sincronizada</span>
+            <div class="flex items-center gap-4">
+                <!-- Flecha para volver -->
+                <button onclick="window.history.back()" class="hover:bg-slate-800 p-1.5 rounded-full transition-colors flex items-center justify-center" title="Volver">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest">Base de Datos BIBLIO BD Sincronizada</span>
+                </div>
             </div>
             <div class="text-[10px] md:text-xs opacity-70 font-medium uppercase tracking-tighter">Banda Sinfónica Municipal de Huelva</div>
         </div>
@@ -73,7 +81,7 @@
                 <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
-                <input type="text" id="search-box" placeholder="" 
+                <input type="text" id="search-box" placeholder="Título, autor, arreglista o palabra clave..." 
                        class="flex-grow ml-4 outline-none text-lg md:text-xl text-slate-700 placeholder-slate-300 bg-transparent"
                        onkeyup="if(event.key === 'Enter') handleSearch()">
             </div>
@@ -127,6 +135,14 @@
 
     <script>
         const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+
+        // Función para normalizar texto (quitar tildes y acentos)
+        function normalizeText(text) {
+            return text.toString()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+        }
 
         async function fetchWithProxy(url) {
             const isLocal = window.location.protocol === 'file:';
@@ -193,8 +209,12 @@
             if (rows.length < 2) return;
 
             const headers = rows[0].map(h => h.toLowerCase().trim());
+            
+            // Normalizamos la consulta para búsqueda insensible a acentos
+            const normalizedQuery = normalizeText(query);
+
             const filteredRows = rows.slice(1).filter(row => 
-                row.some(cell => cell.toLowerCase().includes(query.toLowerCase()))
+                row.some(cell => normalizeText(cell).includes(normalizedQuery))
             );
 
             if (filteredRows.length === 0) {
