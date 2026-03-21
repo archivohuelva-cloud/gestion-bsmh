@@ -50,8 +50,8 @@
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <!-- Flecha para volver -->
-                <button onclick="window.history.back()" class="hover:bg-slate-800 p-1.5 rounded-full transition-colors flex items-center justify-center" title="Volver">
+                <!-- Flecha para volver corregida -->
+                <button onclick="history.length > 1 ? history.back() : window.close()" class="hover:bg-slate-800 p-1.5 rounded-full transition-colors flex items-center justify-center" title="Volver">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
                     </svg>
@@ -81,7 +81,7 @@
                 <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                 </svg>
-                <input type="text" id="search-box" placeholder="Título, autor, arreglista o palabra clave..." 
+                <input type="text" id="search-box" placeholder="" 
                        class="flex-grow ml-4 outline-none text-lg md:text-xl text-slate-700 placeholder-slate-300 bg-transparent"
                        onkeyup="if(event.key === 'Enter') handleSearch()">
             </div>
@@ -90,7 +90,8 @@
                 <button onclick="handleSearch()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-xl transition shadow-lg shadow-blue-100 flex items-center gap-2">
                     <span>Buscar con Biblio</span>
                 </button>
-                <button onclick="location.reload()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl transition">
+                <!-- Botón de limpiar corregido -->
+                <button onclick="clearSearch()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl transition" title="Limpiar búsqueda">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 </button>
             </div>
@@ -135,6 +136,13 @@
 
     <script>
         const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+
+        // Función para limpiar búsqueda y resultados
+        function clearSearch() {
+            document.getElementById('search-box').value = '';
+            document.getElementById('results-list').innerHTML = '';
+            document.getElementById('search-box').focus();
+        }
 
         // Función para normalizar texto (quitar tildes y acentos)
         function normalizeText(text) {
