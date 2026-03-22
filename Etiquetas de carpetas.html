@@ -39,6 +39,31 @@
             z-index: 1000;
         }
 
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-back {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
         .nav-brand {
             font-weight: bold;
             font-size: 0.9rem;
@@ -103,6 +128,7 @@
 
         @media (max-width: 900px) {
             .nav-bar { flex-direction: column; gap: 8px; text-align: center; }
+            .nav-left { flex-direction: column; gap: 8px; }
             .qr-layout { grid-template-columns: 1fr; }
         }
 
@@ -118,7 +144,8 @@
             <button class="btn-back" onclick="window.history.back()">
                 <span>←</span> Volver
             </button>
-        <div class="nav-brand">Banda Sinfónica Municipal de Huelva - Archivo</div>
+            <div class="nav-brand">Banda Sinfónica Municipal de Huelva - Archivo</div>
+        </div>
         <div id="nav-clock" class="nav-datetime">Cargando fecha...</div>
     </nav>
 
@@ -394,7 +421,7 @@
                 currentY += labelH + 8; 
                 counter++;
             }
-            doc.save("BSMH_Etiquetas_Archivo.pdf");
+            doc.save("Etiquetas para carpetas.pdf");
         }
 
         function getQrImage(text) { 
