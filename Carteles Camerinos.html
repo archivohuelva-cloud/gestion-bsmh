@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Carteles - BSMH</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --top-bar-height: 140px;
+        }
+
+        body {
+            background-color: #0f172a;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* BARRA LATERAL */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: #1e293b;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            border-right: 1px solid #334155;
+            padding: 1.5rem 1rem;
+            z-index: 100;
+        }
+
+        .thumbnail-card {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #334155;
+        }
+
+        .thumb-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .thumbnail-box {
+            width: 100%;
+            aspect-ratio: 297/210;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .thumbnail-box span {
+            color: #000;
+            font-size: 8px;
+            font-weight: 900;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 0 5px;
+        }
+
+        /* BARRA SUPERIOR */
+        #top-bar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: var(--sidebar-width);
+            height: var(--top-bar-height);
+            background: #0f172a;
+            border-bottom: 1px solid #1e293b;
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        /* CONTENIDO PRINCIPAL */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            padding-top: 220px; 
+            padding-bottom: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* DISEÑO DEL CARTEL (VISTA PREVIA) */
+        .cartel-preview {
+            width: 297mm;
+            height: 210mm;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 50px 70px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 80px;
+            position: relative;
+        }
+
+        .cabecera-institucional {
+            font-size: 22pt;
+            letter-spacing: 0.15em;
+            color: #000;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 4px solid #000;
+            padding-bottom: 10px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo-area {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 20px 0;
+        }
+
+        .logo-area img {
+            max-width: 70%;
+            max-height: 220px;
+            object-fit: contain;
+        }
+
+        .texto-principal {
+            font-size: 75pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            text-align: center;
+            color: #000;
+            line-height: 1.1; 
+            width: 100%;
+        }
+
+        .footer-line {
+            width: 30%;
+            height: 6px;
+            background: #000;
+            margin-top: 15px;
+        }
+
+        /* CONFIGURACIÓN PARA PDF (OCULTO) */
+        #print-container {
+            position: absolute;
+            left: -10000px;
+            top: -10000px;
+            width: 297mm;
+            background: white;
+        }
+
+        .cartel-pdf-page {
+            width: 290mm;
+            height: 200mm; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px 60px;
+            box-sizing: border-box !important;
+            background: white;
+            overflow: hidden;
+            margin: 0 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <aside id="sidebar">
+        <h2 class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4 px-2 text-center">Gestión de Carteles</h2>
+        
+        <!-- Botones de Selección Masiva -->
+        <div class="flex gap-2 px-2 mb-6">
+            <button onclick="seleccionarTodo(true)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-[9px] font-bold text-white uppercase py-2 rounded transition-colors">Seleccionar todo</button>
+            <button onclick="seleccionarTodo(false)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-[9px] font-bold text-white uppercase py-2 rounded transition-colors">Deshacer selección</button>
+        </div>
+
+        <div id="thumbnails-container"></div>
+    </aside>
+
+    <div id="top-bar">
+        <div class="w-full flex items-center justify-between gap-6">
+            <!-- Botón de Volver -->
+            <button onclick="window.history.back()" class="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="group-hover:-translate-x-1 transition-transform">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span class="text-xs font-black uppercase tracking-widest">Volver</span>
+            </button>
+
+            <div class="flex items-center justify-end gap-6 flex-1">
+                <!-- Grupo de Añadir Cartel -->
+                <div class="flex items-center gap-3">
+                    <input type="text" id="nuevoTexto" placeholder="" 
+                           class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-sm text-white outline-none focus:ring-2 focus:ring-blue-500 w-64 transition-all"
+                           onkeydown="if(event.key === 'Enter') añadirCartel()">
+                    <button onclick="añadirCartel()" class="bg-emerald-600 hover:bg-emerald-700 px-6 py-3 rounded-lg text-xs font-bold text-white uppercase tracking-wider transition-all shrink-0">Añadir</button>
+                </div>
+                
+                <!-- Grupo de Logo y PDF -->
+                <div class="flex items-center gap-6 border-l border-slate-800 pl-6">
+                    <div class="flex flex-col items-center">
+                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2">
+                            <span class="text-[10px] font-black text-white uppercase tracking-widest">Cargar Logo</span>
+                            <input type="file" id="logoInput" accept="image/*" class="hidden">
+                        </label>
+                        <button onclick="limpiarLogo()" class="text-[9px] text-red-500 mt-1 uppercase font-black hover:text-red-400">Limpiar Logo</button>
+                    </div>
+                    <button onclick="generarPDF()" class="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-lg text-sm font-black text-white transition-all shadow-xl border border-blue-500 flex items-center gap-2 uppercase tracking-widest shrink-0">
+                        Generar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main id="main-content">
+        <div id="contenedorCarteles" class="flex flex-col items-center w-full"></div>
+    </main>
+
+    <div id="print-container"></div>
+
+    <script>
+        const cartelesIniciales = ["Director", "Viento Madera", "Viento Metal", "Percusión", "Viento Metal y Percusión", "Mujeres Banda"];
+        let logoDataUrl = localStorage.getItem('bsmh_logo_permanente') || "";
+        let listaTextos = [...cartelesIniciales];
+        let seleccionados = new Array(listaTextos.length).fill(true);
+
+        function renderizar() {
+            const container = document.getElementById('contenedorCarteles');
+            const thumbContainer = document.getElementById('thumbnails-container');
+            container.innerHTML = '';
+            thumbContainer.innerHTML = '';
+
+            listaTextos.forEach((texto, i) => {
+                const div = document.createElement('div');
+                div.id = `cartel-${i}`;
+                div.className = 'cartel-preview';
+                div.innerHTML = `
+                    <div class="cabecera-institucional">Banda Sinfónica Municipal de Huelva</div>
+                    <div class="logo-area">
+                        ${logoDataUrl ? `<img src="${logoDataUrl}">` : '<div class="text-slate-300 font-black italic opacity-20 text-center">LOGO BSMH</div>'}
+                    </div>
+                    <h2 class="texto-principal">${texto}</h2>
+                    <div class="footer-line"></div>
+                `;
+                container.appendChild(div);
+
+                const card = document.createElement('div');
+                card.className = 'thumbnail-card';
+                card.innerHTML = `
+                    <div class="thumb-info">
+                        <span>${i + 1} / ${listaTextos.length}</span>
+                        <button onclick="eliminarCartel(${i})" class="text-red-500 hover:text-red-400">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div class="thumbnail-box" onclick="document.getElementById('cartel-${i}').scrollIntoView({behavior:'smooth'})">
+                        <span>${texto}</span>
+                    </div>
+                    <div class="mt-3 flex items-center gap-2 overflow-hidden">
+                        <input type="checkbox" id="chk-${i}" class="shrink-0 w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-500 focus:ring-0" ${seleccionados[i] ? 'checked' : ''} onchange="toggleSeleccion(${i})">
+                        <label for="chk-${i}" class="text-[10px] font-bold text-slate-400 uppercase cursor-pointer select-none truncate">${texto}</label>
+                    </div>
+                `;
+                thumbContainer.appendChild(card);
+            });
+        }
+
+        function toggleSeleccion(index) {
+            seleccionados[index] = !seleccionados[index];
+        }
+
+        function seleccionarTodo(valor) {
+            seleccionados = new Array(listaTextos.length).fill(valor);
+            renderizar();
+        }
+
+        function añadirCartel() {
+            const input = document.getElementById('nuevoTexto');
+            const valor = input.value.trim();
+            if (valor) {
+                listaTextos.push(valor);
+                seleccionados.push(true);
+                input.value = '';
+                renderizar();
+                setTimeout(() => {
+                    document.getElementById(`cartel-${listaTextos.length - 1}`).scrollIntoView({behavior:'smooth'});
+                }, 100);
+            }
+        }
+
+        function eliminarCartel(index) {
+            listaTextos.splice(index, 1);
+            seleccionados.splice(index, 1);
+            renderizar();
+        }
+
+        function limpiarLogo() {
+            localStorage.removeItem('bsmh_logo_permanente');
+            logoDataUrl = "";
+            renderizar();
+        }
+
+        async function generarPDF() {
+            const printContainer = document.getElementById('print-container');
+            printContainer.innerHTML = '';
+            
+            const seleccionadosFinales = listaTextos.filter((_, i) => seleccionados[i]);
+
+            if (seleccionadosFinales.length === 0) {
+                alert("Selecciona al menos un cartel.");
+                return;
+            }
+
+            const worker = html2pdf().set({
+                margin: 5, 
+                filename: 'Carteles Camerinos.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: 'avoid-all' }
+            }).from(document.createElement('div')).toPdf();
+
+            for (let i = 0; i < seleccionadosFinales.length; i++) {
+                const tempDiv = document.createElement('div');
+                tempDiv.className = 'cartel-pdf-page';
+                tempDiv.innerHTML = `
+                    <div class="cabecera-institucional">Banda Sinfónica Municipal de Huelva</div>
+                    <div class="logo-area">
+                        ${logoDataUrl ? `<img src="${logoDataUrl}">` : ''}
+                    </div>
+                    <h2 class="texto-principal" style="line-height: 1.1;">${seleccionadosFinales[i]}</h2>
+                    <div class="footer-line"></div>
+                `;
+                
+                if (i > 0) {
+                    await worker.get('pdf').then(pdf => pdf.addPage());
+                }
+                
+                await worker.from(tempDiv).toContainer().toCanvas().toImg().toPdf();
+            }
+
+            worker.save();
+        }
+
+        document.getElementById('logoInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    logoDataUrl = event.target.result;
+                    localStorage.setItem('bsmh_logo_permanente', logoDataUrl);
+                    renderizar();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        window.onload = renderizar;
+    </script>
+</body>
+</html>
