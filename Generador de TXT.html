@@ -15,6 +15,7 @@
         .drop-zone.drag-over {
             border-color: #0f172a;
             background-color: #f1f5f9;
+            transform: scale(1.01);
         }
     </style>
 </head>
@@ -23,12 +24,12 @@
     <!-- Barra Superior -->
     <nav class="bg-white border-b border-gray-200 px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-50 shadow-sm">
         <div class="flex items-center space-x-6">
-            <a href="index.html" class="flex items-center text-gray-700 hover:text-blue-600 transition-colors font-bold text-base">
+            <button onclick="window.history.back()" class="flex items-center text-gray-700 hover:text-blue-600 transition-colors font-bold text-base">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Inicio
-            </a>
+                Volver
+            </button>
             <div class="h-6 w-px bg-gray-300"></div>
             <span id="liveDateTime" class="text-base text-gray-500 font-semibold italic"></span>
         </div>
@@ -47,7 +48,7 @@
         <div id="dropContainer">
             <div id="dropZone" class="drop-zone rounded-3xl p-24 text-center cursor-pointer bg-white shadow-sm hover:shadow-xl transition-all">
                 <input type="file" id="folderInput" webkitdirectory directory multiple class="hidden">
-                <div class="flex flex-col items-center">
+                <div class="flex flex-col items-center pointer-events-none">
                     <div class="bg-blue-50 p-6 rounded-full mb-6">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -115,12 +116,62 @@
         let generatedFilesData = []; 
 
         dropZone.addEventListener('click', () => folderInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        
+        // Prevenir comportamiento por defecto
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
+        
+        dropZone.addEventListener('drop', async (e) => {
             dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+            const items = e.dataTransfer.items;
+            if (items) {
+                const files = [];
+                
+                // Función recursiva para procesar entradas de DataTransferItem
+                async function traverseFileTree(item, path = "") {
+                    if (item.isFile) {
+                        const file = await new Promise((resolve, reject) => item.file(resolve, reject));
+                        // Usamos una propiedad personalizada ya que webkitRelativePath es de solo lectura en local
+                        file.customPath = path + item.name;
+                        files.push(file);
+                    } else if (item.isDirectory) {
+                        const dirReader = item.createReader();
+                        let allEntries = [];
+                        
+                        // readEntries puede requerir múltiples llamadas
+                        async function readAllEntries() {
+                            const entries = await new Promise((resolve, reject) => dirReader.readEntries(resolve, reject));
+                            if (entries.length > 0) {
+                                allEntries = allEntries.concat(entries);
+                                await readAllEntries();
+                            }
+                        }
+                        await readAllEntries();
+                        
+                        for (const entry of allEntries) {
+                            await traverseFileTree(entry, path + item.name + "/");
+                        }
+                    }
+                }
+
+                const promises = [];
+                for (let i = 0; i < items.length; i++) {
+                    const entry = items[i].webkitGetAsEntry();
+                    if (entry) {
+                        promises.push(traverseFileTree(entry));
+                    }
+                }
+                
+                await Promise.all(promises);
+                handleFiles(files);
+            }
         });
 
         folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
@@ -131,30 +182,34 @@
         }
 
         async function handleFiles(files) {
-            if (files.length === 0) return;
+            if (!files || files.length === 0) return;
 
             const worksMap = new Map();
             generatedFilesData = [];
             filesContainer.innerHTML = "";
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const pathParts = file.webkitRelativePath.split('/');
+            // Convertir FileList a Array para asegurar métodos de iteración
+            const fileArray = Array.from(files);
+
+            for (const file of fileArray) {
+                // Normalizar ruta usando la propiedad personalizada o la nativa
+                const rawPath = file.customPath || file.webkitRelativePath || file.name;
+                const relPath = rawPath.replace(/^\//, '');
+                const pathParts = relPath.split('/').filter(p => p !== "");
                 
-                let workFolderName = "";
-                if (pathParts.length > 2) {
-                    workFolderName = pathParts[1];
-                } else {
-                    workFolderName = pathParts[0];
-                }
+                if (pathParts.length < 2) continue;
+
+                // Identificamos la carpeta de la obra
+                const workFolderName = pathParts[0];
 
                 if (!worksMap.has(workFolderName)) {
                     worksMap.set(workFolderName, []);
                 }
                 
-                const internalPath = file.webkitRelativePath.substring(file.webkitRelativePath.indexOf(workFolderName) + workFolderName.length + 1);
+                // El resto del path es el archivo interno
+                const internalPath = pathParts.slice(1).join('/');
                 if (internalPath) {
-                    worksMap.set(workFolderName, [...worksMap.get(workFolderName), internalPath]);
+                    worksMap.get(workFolderName).push(internalPath);
                 }
             }
 
@@ -203,7 +258,8 @@
                 </div>
             `;
 
-            card.querySelector('.individual-download').addEventListener('click', () => {
+            card.querySelector('.individual-download').addEventListener('click', (e) => {
+                e.stopPropagation();
                 downloadSingle(`${code}.txt`, content);
             });
 
