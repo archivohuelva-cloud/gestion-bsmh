@@ -7,256 +7,290 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <style>
         :root {
-            --primary: #003366;
-            --secondary: #28a745;
-            --danger: #d9534f;
-            --bg: #f4f7f6;
-            --text: #333;
-            --white: #ffffff;
+            --primary: #1e293b;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --accent: #3b82f6;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg);
-            color: var(--text);
+            color: var(--text-main);
             margin: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
 
         .header-top {
             width: 100%;
-            max-width: 1100px;
+            max-width: 900px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 24px;
         }
 
-        .btn-home {
-            background-color: var(--white);
-            color: var(--primary);
-            border: 1px solid var(--primary);
-            padding: 5px 15px;
+        .btn-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
             text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: all 0.2s;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            cursor: pointer;
         }
 
-        .btn-home:hover {
-            background-color: var(--primary);
-            color: var(--white);
+        .btn-back:hover {
+            background-color: #f1f5f9;
+            border-color: var(--text-muted);
         }
 
         .header-info {
-            font-size: 0.9rem;
-            color: var(--primary);
-            font-weight: 600;
-            text-transform: capitalize;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 400;
         }
 
         .card {
-            background: var(--white);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            max-width: 1100px;
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 900px;
             width: 100%;
+            border: 1px solid var(--border);
         }
 
         h1 {
-            color: var(--primary);
-            font-size: 1.5rem;
-            margin-top: 0;
-            border-bottom: 2px solid var(--bg);
-            padding-bottom: 10px;
+            color: var(--text-main);
+            font-size: 1.25rem;
+            margin: 0 0 2rem 0;
+            font-weight: 700;
             text-align: center;
+            letter-spacing: -0.025em;
         }
 
         .upload-section {
-            border: 2px dashed #00336644;
-            padding: 30px;
+            border: 2px dashed var(--border);
+            padding: 48px 20px;
             text-align: center;
-            border-radius: 8px;
-            background: #f0f4f8;
+            border-radius: 12px;
+            background: #fcfcfd;
             margin-bottom: 20px;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .upload-section.dragover {
+            border-color: var(--accent);
+            background: #f0f7ff;
+            transform: scale(1.01);
+        }
+
+        .upload-section p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin: 0;
+            pointer-events: none;
         }
 
         .upload-section.hidden { display: none; }
 
         .controls {
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 8px;
-            border: 1px solid #eee;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            align-items: end;
         }
 
         .field {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 6px;
         }
 
         label {
             font-weight: 600;
-            font-size: 0.8rem;
-            color: #555;
+            font-size: 0.75rem;
+            color: var(--text-muted);
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        input, button {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+        input {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             font-size: 0.9rem;
+            background: white;
+            outline: none;
+            transition: border-color 0.2s;
         }
+
+        input:focus { border-color: var(--accent); }
 
         input.required-error {
             border-color: var(--danger);
-            background-color: #fff2f2;
+            background-color: #fef2f2;
         }
 
         button {
-            background-color: var(--primary);
-            color: white;
-            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        button:hover { opacity: 0.9; }
+        #download-btn { background-color: var(--primary); color: white; }
+        #open-selector { background-color: white; color: var(--text-main); border-color: var(--border); }
+        #clear-all { background-color: #fff1f2; color: var(--danger); border-color: #fecaca; }
 
-        .btn-danger { background-color: var(--danger); }
-        .btn-secondary { background-color: var(--secondary); }
+        button:hover { filter: brightness(95%); transform: translateY(-1px); }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
 
         .modal-content {
-            background: var(--white);
+            background: white;
             width: 90%;
-            max-width: 1000px;
-            max-height: 85vh;
-            border-radius: 12px;
+            max-width: 900px;
+            max-height: 80vh;
+            border-radius: 16px;
             display: flex;
             flex-direction: column;
-            padding: 20px;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
 
         .grid-preview {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
             overflow-y: auto;
-            padding: 10px;
-            background: #eee;
-            border-radius: 6px;
+            padding: 16px;
+            background: #f1f5f9;
+            border-radius: 12px;
         }
 
         .page-thumb {
             cursor: pointer;
-            border: 3px solid transparent;
+            border: 2px solid transparent;
             background: white;
-            padding: 5px;
+            padding: 8px;
             text-align: center;
-            border-radius: 4px;
+            border-radius: 8px;
+            transition: all 0.2s;
         }
 
-        .page-thumb:hover { border-color: var(--primary); }
-        .page-thumb canvas { width: 100%; height: auto; display: block; }
-        .page-thumb span { display: block; margin-top: 5px; font-weight: bold; font-size: 0.75rem; }
+        .page-thumb:hover { border-color: var(--accent); transform: scale(1.02); }
+        .page-thumb canvas { width: 100%; height: auto; border-radius: 4px; }
+        .page-thumb span { display: block; margin-top: 8px; font-weight: 600; font-size: 0.8rem; color: var(--text-muted); }
 
-        /* Vista Previa Final */
         .final-preview {
-            border: 1px solid #ddd;
-            padding: 20px;
-            border-radius: 8px;
+            margin-top: 20px;
+            padding: 30px;
+            border-radius: 12px;
             display: none;
             flex-direction: column;
             align-items: center;
-            background: #fff;
-            min-height: 300px;
+            background: #f1f5f9;
+            border: 1px solid var(--border);
         }
 
         canvas#main-canvas {
             max-width: 100%;
             height: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border: 1px solid #eee;
+            border-radius: 4px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
+
+        .error-msg { color: var(--danger); font-size: 0.75rem; margin-top: 4px; font-weight: 500; }
     </style>
 </head>
 <body>
 
     <div class="header-top">
-        <a href="index.html" class="btn-home">Inicio</a>
-        <div class="header-info" id="current-date-time">
-            <!-- Se cargará mediante JS -->
-        </div>
+        <button onclick="window.history.back()" class="btn-back">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Volver
+        </button>
+        <div class="header-info" id="current-date-time"></div>
     </div>
 
     <div class="card">
-        <h1>De PDF del guión a JPG para Biblio</h1>
+        <h1>Convertir de PDF a JPG la 1ª página del guión para previa en Biblio</h1>
         
-        <!-- Sección de subida -->
         <div class="upload-section" id="upload-box">
-            <p>Selecciona o arrastra el PDF del guion de director</p>
-            <input type="file" id="pdf-upload" accept="application/pdf">
+            <p>Selecciona o arrastra el PDF del guion aquí</p>
+            <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;">
         </div>
 
-        <!-- Controles de Ajuste Agrupados -->
         <div class="controls" id="adjustment-controls" style="display:none;">
             <div class="field">
-                <label>Nº Registro (Obligatorio)</label>
-                <input type="text" id="reg-number" placeholder="Nombre archivo..." style="width: 140px;">
+                <label>Nº Registro</label>
+                <input type="text" id="reg-number" placeholder="">
             </div>
             <div class="field">
                 <label>Página</label>
-                <input type="number" id="page-number" value="1" readonly style="background:#eee; width: 50px; text-align: center;">
+                <input type="number" id="page-number" value="1" readonly style="background:#f1f5f9; text-align: center; border-color: transparent;">
             </div>
             <div class="field">
                 <label>Ancho (px)</label>
-                <input type="number" id="manual-width" value="800" min="100" style="width: 70px;">
+                <input type="number" id="manual-width" value="800" min="100">
             </div>
             
-            <button id="download-btn" class="btn-secondary">Descargar JPG</button>
             <button id="open-selector">Cambiar Página</button>
-            <button id="clear-all" class="btn-danger">Limpiar Todo</button>
+            <button id="download-btn">Descargar JPG</button>
+            <button id="clear-all">Limpiar</button>
         </div>
 
-        <!-- Vista previa final -->
         <div class="final-preview" id="preview-area">
             <canvas id="main-canvas"></canvas>
         </div>
     </div>
 
-    <!-- Modal de Selección de Página -->
     <div id="page-modal" class="modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0; color: var(--primary);">Selecciona la página del guion</h3>
-                <button onclick="closeModal()" class="btn-danger">Cerrar</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; font-weight:700;">Seleccionar página</h3>
+                <button onclick="closeModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.5rem;">&times;</button>
             </div>
             <div id="grid-preview" class="grid-preview"></div>
         </div>
@@ -278,36 +312,67 @@
         const previewArea = document.getElementById('preview-area');
         const dateTimeDisplay = document.getElementById('current-date-time');
 
-        // Función para actualizar fecha y hora
         function updateDateTime() {
             const now = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
             dateTimeDisplay.textContent = now.toLocaleDateString('es-ES', options);
         }
-        
         setInterval(updateDateTime, 1000);
         updateDateTime();
 
-        // Carga de archivo
-        document.getElementById('pdf-upload').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const arrayBuffer = await file.arrayBuffer();
-                pdfDoc = await pdfJS.getDocument(arrayBuffer).promise;
-                uploadBox.classList.add('hidden');
-                controls.style.display = 'flex';
-                showPageSelector();
+        // Lógica de carga y drag & drop
+        const fileInput = document.getElementById('pdf-upload');
+
+        uploadBox.onclick = () => fileInput.click();
+
+        uploadBox.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadBox.classList.add('dragover');
+        });
+
+        uploadBox.addEventListener('dragleave', () => {
+            uploadBox.classList.remove('dragover');
+        });
+
+        uploadBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadBox.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === 'application/pdf') {
+                processFile(file);
             }
         });
 
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) processFile(file);
+        });
+
+        async function processFile(file) {
+            // Detectar automáticamente el número de registro (primer bloque de números, ignorando el -00)
+            const match = file.name.match(/(\d+)/);
+            if (match) {
+                regInput.value = match[1];
+                regInput.classList.remove('required-error');
+            } else {
+                regInput.value = '';
+            }
+
+            const arrayBuffer = await file.arrayBuffer();
+            pdfDoc = await pdfJS.getDocument(arrayBuffer).promise;
+            uploadBox.classList.add('hidden');
+            controls.style.display = 'grid';
+            showPageSelector();
+        }
+
         async function showPageSelector() {
             modal.style.display = 'flex';
-            grid.innerHTML = '<p style="text-align:center; padding:20px;">Cargando miniaturas...</p>';
+            grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:40px; color:var(--text-muted);">Generando vistas previas...</p>';
             grid.innerHTML = '';
 
             for (let i = 1; i <= pdfDoc.numPages; i++) {
                 const page = await pdfDoc.getPage(i);
-                const viewport = page.getViewport({ scale: 0.3 });
+                const viewport = page.getViewport({ scale: 0.25 });
                 
                 const thumbWrapper = document.createElement('div');
                 thumbWrapper.className = 'page-thumb';
@@ -324,7 +389,7 @@
 
                 thumbWrapper.appendChild(thumbCanvas);
                 const label = document.createElement('span');
-                label.innerText = `Pág. ${i}`;
+                label.innerText = `Página ${i}`;
                 thumbWrapper.appendChild(label);
                 grid.appendChild(thumbWrapper);
             }
@@ -333,17 +398,12 @@
         function closeModal() { modal.style.display = 'none'; }
 
         document.getElementById('open-selector').onclick = () => modal.style.display = 'flex';
-        
-        // El renderizado se actualiza automáticamente al cambiar el ancho
         widthInput.onchange = () => renderFinal();
-
-        // Eliminar estilo de error al escribir
         regInput.oninput = () => regInput.classList.remove('required-error');
 
-        // Botón Limpiar Todo
         document.getElementById('clear-all').onclick = () => {
             pdfDoc = null;
-            document.getElementById('pdf-upload').value = "";
+            fileInput.value = "";
             regInput.value = "";
             regInput.classList.remove('required-error');
             pageInput.value = "1";
@@ -375,28 +435,21 @@
             previewArea.style.display = 'flex';
         }
 
-        // Descarga de archivo JPG con validación obligatoria
         document.getElementById('download-btn').onclick = () => {
             if (!pdfDoc) return;
-            
             const regValue = regInput.value.trim();
             if (!regValue) {
                 regInput.classList.add('required-error');
                 regInput.focus();
-                const errorBox = document.createElement('div');
-                errorBox.style.color = 'var(--danger)';
-                errorBox.style.fontSize = '0.8rem';
-                errorBox.style.marginTop = '5px';
-                errorBox.innerText = '⚠️ Debe asignar un número de registro';
-                // Evitar duplicados de mensaje
                 if (!regInput.parentNode.querySelector('.error-msg')) {
+                    const errorBox = document.createElement('div');
                     errorBox.className = 'error-msg';
+                    errorBox.innerText = 'Número de registro obligatorio';
                     regInput.parentNode.appendChild(errorBox);
                     setTimeout(() => errorBox.remove(), 3000);
                 }
                 return;
             }
-
             const link = document.createElement('a');
             link.download = `${regValue}.jpg`;
             link.href = mainCanvas.toDataURL("image/jpeg", 0.9);
