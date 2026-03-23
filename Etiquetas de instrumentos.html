@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Etiquetas - BSM Huelva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CONFIGURACIÓN DE IMPRESIÓN A4 */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            body {
+                background-color: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            #print-pages-container {
+                display: block !important;
+                visibility: visible !important;
+            }
+
+            .print-page {
+                width: 210mm;
+                height: 297mm;
+                padding: 10mm 10mm; /* Margen superior/inferior y lateral */
+                box-sizing: border-box;
+                page-break-after: always;
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .labels-grid {
+                display: grid;
+                /* 95mm * 2 = 190mm (cabe bien en los 210mm del A4) */
+                grid-template-columns: 95mm 95mm; 
+                /* 55mm * 5 = 275mm (cabe bien en los 297mm del A4) */
+                grid-template-rows: repeat(5, 55mm);
+                border-top: 1.5px solid black;
+                border-left: 1.5px solid black;
+                box-sizing: border-box;
+            }
+
+            .label-box {
+                width: 95mm;
+                height: 55mm;
+                box-sizing: border-box;
+                border-right: 1.5px solid black;
+                border-bottom: 1.5px solid black;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 4mm;
+                text-align: center;
+                overflow: hidden;
+            }
+
+            .label-title {
+                font-family: 'Arial', sans-serif;
+                font-weight: bold;
+                font-size: 26pt; /* Ajustado para el nuevo tamaño */
+                text-transform: uppercase;
+                margin-bottom: 4pt;
+                line-height: 1.1;
+                color: black;
+		margin-top: 10mm;
+            }
+
+            .label-subtitle {
+                font-family: 'Arial', sans-serif;
+                font-size: 16pt;
+                line-height: 1.2;
+                white-space: pre-line;
+                color: black;
+		margin-top: 6mm;
+            }
+        }
+
+        /* VISTA WEB */
+        #print-pages-container {
+            display: none;
+        }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-900 font-sans">
+
+    <!-- CABECERA -->
+    <header class="bg-[#003366] text-white shadow-lg p-4 no-print flex items-center justify-between sticky top-0 z-50">
+        <button onclick="window.history.back()" class="flex items-center hover:bg-blue-800 px-4 py-2 rounded-lg transition-all active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver
+        </button>
+        <div class="text-center">
+            <h1 class="text-lg md:text-xl font-bold uppercase tracking-wider">Generador de Etiquetas para instrumentos</h1>
+            <p class="text-xs opacity-80 font-medium">Genera las etiquetas necesarias para las carpetas o carpetillas de los instrumentos (9,5cm x 5,5cm)</p>
+        </div>
+        <div class="w-20"></div>
+    </header>
+
+    <main class="max-w-4xl mx-auto p-4 md:p-8 no-print">
+        
+        <!-- PANEL DE CONTROL -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-tight">Texto del Subtítulo</label>
+                <textarea id="subtitle-input" rows="2" class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm">Banda Sinfónica Municipal de Huelva</textarea>
+            </div>
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                <label class="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-tight">Añadir Nuevo Instrumento</label>
+                <div class="flex gap-2">
+                    <input type="text" id="new-instrument-input" placeholder="" class="flex-1 border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all" onkeypress="if(event.key==='Enter') addInstrument()">
+                    <button onclick="addInstrument()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-bold transition-all active:scale-95 shadow-md">Añadir</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ACCIONES -->
+        <div class="flex flex-wrap items-center gap-3 mb-6">
+            <button onclick="selectAll(true)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Seleccionar Todo</button>
+            <button onclick="selectAll(false)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition-colors">Deseleccionar</button>
+            <button onclick="resetProcess()" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg text-sm font-bold border border-red-200 transition-colors">Limpiar Todo</button>
+            
+            <div class="flex-1"></div>
+            
+            <button onclick="generatePDF()" id="print-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl shadow-lg font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95 transform">
+                <span id="btn-text">Imprimir Etiquetas</span>
+                <svg id="btn-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- LISTADO -->
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="bg-slate-50 p-4 grid grid-cols-12 gap-4 text-xs font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">
+                <div class="col-span-2 text-center">Incluir</div>
+                <div class="col-span-6">Instrumento</div>
+                <div class="col-span-4 text-center">Cantidad</div>
+            </div>
+            <div id="instruments-container" class="divide-y divide-slate-100"></div>
+        </div>
+    </main>
+
+    <!-- ÁREA DE IMPRESIÓN -->
+    <div id="print-pages-container"></div>
+
+    <script>
+        const baseList = [
+            "Flauta", "Oboe", "Requinto", "Clarinete Pral.", "Clarinete 1º", 
+            "Clarinete 2º", "Clarinete 3º", "Saxo Alto 1º", "Saxo Alto 2º", 
+            "Saxo Tenor 1º", "Saxo Tenor 2º", "Trompa", "Trompeta 1ª", 
+            "Trompeta 2ª", "Fliscorno", "Trombón 1º", "Trombón 2º", 
+            "Tuba 1ª", "Tuba 2ª", "Timbales", "Percusión 1", "Percusión 2","Percusión 3","Láminas","Caja", "Caja | Tambor", "Bombo | Platos"
+        ];
+
+        let instrumentsState = [];
+
+        function init() {
+            instrumentsState = baseList.map(name => ({
+                id: Math.random().toString(36).substr(2, 9),
+                name: name,
+                selected: true,
+                quantity: 1
+            }));
+            renderList();
+        }
+
+        function renderList() {
+            const container = document.getElementById('instruments-container');
+            container.innerHTML = '';
+            instrumentsState.forEach(inst => {
+                const row = document.createElement('div');
+                row.className = `p-4 grid grid-cols-12 gap-4 items-center transition-all ${inst.selected ? 'bg-white' : 'bg-slate-50 opacity-50 grayscale'}`;
+                row.innerHTML = `
+                    <div class="col-span-2 flex justify-center">
+                        <input type="checkbox" ${inst.selected ? 'checked' : ''} onchange="toggleSelection('${inst.id}')" class="w-6 h-6 cursor-pointer accent-blue-600 rounded">
+                    </div>
+                    <div class="col-span-6 font-bold text-lg text-slate-800 uppercase">${inst.name}</div>
+                    <div class="col-span-4 flex justify-center items-center gap-3">
+                        <button onclick="changeQuantity('${inst.id}', -1)" class="w-10 h-10 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xl transition-all active:scale-90" ${!inst.selected || inst.quantity <= 1 ? 'disabled' : ''}>-</button>
+                        <input type="number" value="${inst.quantity}" onchange="manualQuantity('${inst.id}', this.value)" class="w-14 text-center border-2 border-slate-200 rounded-lg py-2 font-bold text-blue-700 text-lg focus:border-blue-500 outline-none" ${!inst.selected ? 'disabled' : ''}>
+                        <button onclick="changeQuantity('${inst.id}', 1)" class="w-10 h-10 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-black text-xl transition-all active:scale-90" ${!inst.selected ? 'disabled' : ''}>+</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function toggleSelection(id) {
+            const inst = instrumentsState.find(i => i.id === id);
+            if (inst) { inst.selected = !inst.selected; renderList(); }
+        }
+
+        function changeQuantity(id, delta) {
+            const inst = instrumentsState.find(i => i.id === id);
+            if (inst) { inst.quantity = Math.max(1, parseInt(inst.quantity) + delta); renderList(); }
+        }
+
+        function manualQuantity(id, value) {
+            const inst = instrumentsState.find(i => i.id === id);
+            if (inst) { inst.quantity = Math.max(1, parseInt(value) || 1); renderList(); }
+        }
+
+        function selectAll(status) {
+            instrumentsState.forEach(inst => inst.selected = status);
+            renderList();
+        }
+
+        function addInstrument() {
+            const input = document.getElementById('new-instrument-input');
+            const name = input.value.trim();
+            if (name) {
+                instrumentsState.push({ id: Math.random().toString(36).substr(2, 9), name: name, selected: true, quantity: 1 });
+                input.value = '';
+                renderList();
+            }
+        }
+
+        function resetProcess() {
+            if(confirm("¿Deseas reiniciar toda la lista?")) {
+                init();
+                document.getElementById('subtitle-input').value = "Banda Sinfónica Municipal de Huelva";
+            }
+        }
+
+        function generatePDF() {
+            const btn = document.getElementById('print-btn');
+            const btnText = document.getElementById('btn-text');
+            const container = document.getElementById('print-pages-container');
+            const subtitleText = document.getElementById('subtitle-input').value.trim().replace(/\n/g, '<br>');
+            
+            btn.classList.add('opacity-50', 'cursor-wait');
+            btnText.innerText = "Preparando...";
+
+            container.innerHTML = '';
+
+            let labelsToPrint = [];
+            instrumentsState.forEach(inst => {
+                if (inst.selected) {
+                    for (let i = 0; i < inst.quantity; i++) {
+                        labelsToPrint.push(inst.name);
+                    }
+                }
+            });
+
+            if (labelsToPrint.length === 0) {
+                alert("Selecciona al menos un instrumento.");
+                btn.classList.remove('opacity-50', 'cursor-wait');
+                btnText.innerText = "Imprimir Etiquetas";
+                return;
+            }
+
+            // Cada página A4 ahora tendrá 10 etiquetas (2x5)
+            for (let i = 0; i < labelsToPrint.length; i += 10) {
+                const chunk = labelsToPrint.slice(i, i + 10);
+                const page = document.createElement('div');
+                page.className = 'print-page';
+                
+                const grid = document.createElement('div');
+                grid.className = 'labels-grid';
+
+                chunk.forEach(name => {
+                    const box = document.createElement('div');
+                    box.className = 'label-box';
+                    box.innerHTML = `<div class="label-title">${name}</div><div class="label-subtitle">${subtitleText}</div>`;
+                    grid.appendChild(box);
+                });
+
+                // Rellenar hasta 10 para mantener la cuadrícula
+                while (grid.children.length < 10) {
+                    const empty = document.createElement('div');
+                    empty.className = 'label-box';
+                    empty.innerHTML = '&nbsp;';
+                    grid.appendChild(empty);
+                }
+
+                page.appendChild(grid);
+                container.appendChild(page);
+            }
+
+            container.style.display = 'block'; 
+            
+            setTimeout(() => {
+                window.print();
+                btn.classList.remove('opacity-50', 'cursor-wait');
+                btnText.innerText = "Imprimir Etiquetas";
+                container.style.display = 'none';
+            }, 600);
+        }
+
+        init();
+    </script>
+</body>
+</html>
