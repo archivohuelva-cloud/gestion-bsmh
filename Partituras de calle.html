@@ -94,7 +94,7 @@
         </div>
         <div class="flex items-center gap-2">
             <button id="new-process-btn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium">
-                <i data-lucide="file-plus" class="w-4 h-4"></i> Nuevo
+                <i data-lucide="file-plus" class="w-4 h-4"></i> Nuevo proceso
             </button>
             <label for="pdf-upload" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md cursor-pointer transition flex items-center gap-2 text-sm font-medium">
                 <i data-lucide="upload" class="w-4 h-4"></i> Cargar PDF(s)
@@ -102,6 +102,9 @@
             <input type="file" id="pdf-upload" accept="application/pdf" class="hidden" multiple>
             <button id="export-btn" class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-500 text-white px-4 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium" disabled>
                 <i data-lucide="printer" class="w-4 h-4"></i> Exportar con Guías
+	    <button id="print-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium">
+    		<i data-lucide="printer" class="w-4 h-4"></i> Imprimir
+</button>
             </button>
         </div>
     </header>
@@ -218,6 +221,7 @@
         
         const uploadInput = document.getElementById('pdf-upload');
         const exportBtn = document.getElementById('export-btn');
+	const printBtn = document.getElementById('print-btn');
         const newProcessBtn = document.getElementById('new-process-btn');
         const prevPageBtn = document.getElementById('prev-page');
         const nextPageBtn = document.getElementById('next-page');
@@ -243,6 +247,11 @@
         // MANEJO DE TECLADO
         window.addEventListener('keydown', (e) => { 
             if (e.key === 'Control') isCtrlPressed = true; 
+	// Ctrl + P personalizado
+	    if (isCtrlPressed && e.key.toLowerCase() === 'p') {
+    		e.preventDefault();
+    		imprimirCanvas();
+}
             
             // Confirmar cambios con Enter en modo Transformar/Mover
             if (e.key === 'Enter' && currentMode === 'transform' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
@@ -702,6 +711,67 @@ doc.addImage(imgData, 'JPEG', OFFSET_X, OFFSET_Y, WIDTH, HEIGHT);
             }, 500);
         };
 
+async function imprimirCanvas() {
+    showLoading("Preparando impresión...");
+
+    setTimeout(() => {
+        const printWindow = window.open('', '_blank');
+
+        let html = `
+            <html>
+            <head>
+                <title>Impresión</title>
+                <style>
+                    body { margin: 0; }
+                    img { 
+                        width: 100vw; 
+                        height: 100vh; 
+                        object-fit: contain;
+                    }
+                    @page { size: A4 landscape; margin: 0; }
+                </style>
+            </head>
+            <body>
+        `;
+
+        const originalIdx = currentIndex;
+
+        pagesData.forEach((p, i) => {
+            currentIndex = i;
+            render(true);
+
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+            html += `<img src="${imgData}">`;
+
+            if (i < pagesData.length - 1) {
+                html += `<div style="page-break-after: always;"></div>`;
+            }
+        });
+
+        currentIndex = originalIdx;
+        render();
+
+        html += `
+            <script>
+                window.onload = function() {
+                    window.print();
+                    window.onafterprint = function() { window.close(); }
+                }
+            <\/script>
+            </body></html>
+        `;
+
+        printWindow.document.write(html);
+        printWindow.document.close();
+
+        hideLoading();
+    }, 300);
+}
+
+printBtn.onclick = async () => {
+    imprimirCanvas();
+};
         function showLoading(t) { loadingText.innerText = t; loadingOverlay.classList.remove('hidden'); }
         function hideLoading() { loadingOverlay.classList.add('hidden'); }
 
