@@ -779,6 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isDataLoaded = false;
     let searchTimeout;
 
+    // URL de tu base de datos (verificada)
     const DATA_URL = 'https://script.google.com/macros/s/AKfycbzpN0jN6E0v8R4-fRAsVq7mI_YF3R7G9m6H0-Xg-O6Y06f0-Y0/exec'; 
 
     async function loadData() {
@@ -786,18 +787,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             searchLoader.classList.remove('hidden');
             const response = await fetch(DATA_URL);
-            const rawData = await response.json();
-            // Normalizamos las claves a minúsculas para evitar errores de coincidencia
-            quickSearchData = rawData.map(item => {
-                const normalizedItem = {};
-                for (let key in item) {
-                    normalizedItem[key.toLowerCase()] = item[key];
-                }
-                return normalizedItem;
-            });
+            quickSearchData = await response.json();
+            console.log("Datos cargados correctamente:", quickSearchData.length, "obras.");
             isDataLoaded = true;
         } catch (error) {
-            console.error("Error cargando base de datos:", error);
+            console.error("Error en la carga de datos:", error);
         } finally {
             searchLoader.classList.add('hidden');
         }
@@ -812,24 +806,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const lowerQuery = query.toLowerCase();
         
+        // Filtramos usando exactamente los mismos campos que tu Buscador Biblio.html
         const results = quickSearchData.filter(item => {
-            const titulo = String(item.titulo || '').toLowerCase();
-            const compositor = String(item.compositor || '').toLowerCase();
+            const titulo = String(item.TITULO || item.titulo || '').toLowerCase();
+            const compositor = String(item.COMPOSITOR || item.compositor || '').toLowerCase();
             return titulo.includes(lowerQuery) || compositor.includes(lowerQuery);
         }).slice(0, 8);
 
         if (results.length === 0) {
-            searchDropdown.innerHTML = '<div class="p-4 text-center text-sm text-slate-500">No se encontraron resultados.</div>';
+            searchDropdown.innerHTML = '<div class="p-4 text-center text-sm text-slate-500">No se encontraron resultados en el archivo.</div>';
         } else {
             results.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors';
                 
-                // Usamos las claves normalizadas en minúsculas
-                const titulo = item.titulo || 'Sin título';
-                const compositor = item.compositor || 'Compositor desconocido';
-                const signatura = item.signatura || '-';
-                const registro = item.registro || item.numero || '-';
+                // Prioridad a las mayúsculas como en tu Excel
+                const titulo = item.TITULO || item.titulo || 'Sin título';
+                const compositor = item.COMPOSITOR || item.compositor || 'Desconocido';
+                const signatura = item.SIGNATURA || item.signatura || '-';
+                const registro = item.REGISTRO || item.registro || item.NUMERO || '-';
 
                 div.innerHTML = `
                     <div class="font-semibold text-slate-800 text-sm">${titulo}</div>
@@ -859,6 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Cerrar al hacer clic fuera
     document.addEventListener('click', (e) => {
         if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
             searchDropdown.classList.add('hidden');
