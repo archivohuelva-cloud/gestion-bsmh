@@ -777,61 +777,63 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let quickSearchData = [];
     let isDataLoaded = false;
-    let searchTimeout;
 
-    // URL de tu base de datos (verificada)
+    // URL verificada de nuestra base de datos
     const DATA_URL = 'https://script.google.com/macros/s/AKfycbzpN0jN6E0v8R4-fRAsVq7mI_YF3R7G9m6H0-Xg-O6Y06f0-Y0/exec'; 
 
-    async function loadData() {
-        if (isDataLoaded) return;
+    // Iniciamos la carga nada más abrir la web para que esté lista
+    async function initLoad() {
         try {
-            searchLoader.classList.remove('hidden');
             const response = await fetch(DATA_URL);
-            quickSearchData = await response.json();
-            console.log("Datos cargados correctamente:", quickSearchData.length, "obras.");
+            const rawData = await response.json();
+            
+            // Normalizamos los datos: Convertimos todas las llaves a MAYÚSCULAS
+            // para que coincidan siempre con el filtrado
+            quickSearchData = rawData.map(item => {
+                const normalized = {};
+                for (let key in item) {
+                    normalized[key.toUpperCase()] = item[key];
+                }
+                return normalized;
+            });
+
+            console.log("✓ Base de datos de la Banda cargada:", quickSearchData.length, "obras.");
             isDataLoaded = true;
         } catch (error) {
-            console.error("Error en la carga de datos:", error);
-        } finally {
-            searchLoader.classList.add('hidden');
+            console.error("❌ Error cargando base de datos:", error);
         }
     }
 
+    initLoad();
+
     function renderResults(query) {
         searchDropdown.innerHTML = '';
-        if (!query) {
+        if (!query || !isDataLoaded) {
             searchDropdown.classList.add('hidden');
             return;
         }
 
         const lowerQuery = query.toLowerCase();
         
-        // Filtramos usando exactamente los mismos campos que tu Buscador Biblio.html
+        // Buscamos en todos los campos relevantes (como en Buscador Biblio.html)
         const results = quickSearchData.filter(item => {
-            const titulo = String(item.TITULO || item.titulo || '').toLowerCase();
-            const compositor = String(item.COMPOSITOR || item.compositor || '').toLowerCase();
-            return titulo.includes(lowerQuery) || compositor.includes(lowerQuery);
+            const searchString = `${item.TITULO || ''} ${item.COMPOSITOR || ''} ${item.SIGNATURA || ''} ${item.REGISTRO || ''}`.toLowerCase();
+            return searchString.includes(lowerQuery);
         }).slice(0, 8);
 
         if (results.length === 0) {
-            searchDropdown.innerHTML = '<div class="p-4 text-center text-sm text-slate-500">No se encontraron resultados en el archivo.</div>';
+            searchDropdown.innerHTML = '<div class="p-4 text-center text-sm text-slate-500">No se han encontrado coincidencias.</div>';
         } else {
             results.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors';
+                div.className = 'p-3 border-b border-slate-100 hover:bg-slate-50 cursor-default transition-colors';
                 
-                // Prioridad a las mayúsculas como en tu Excel
-                const titulo = item.TITULO || item.titulo || 'Sin título';
-                const compositor = item.COMPOSITOR || item.compositor || 'Desconocido';
-                const signatura = item.SIGNATURA || item.signatura || '-';
-                const registro = item.REGISTRO || item.registro || item.NUMERO || '-';
-
                 div.innerHTML = `
-                    <div class="font-semibold text-slate-800 text-sm">${titulo}</div>
-                    <div class="text-xs text-slate-600 mt-0.5">${compositor}</div>
+                    <div class="font-semibold text-slate-800 text-sm">${item.TITULO || 'Sin título'}</div>
+                    <div class="text-xs text-slate-600 mt-0.5">${item.COMPOSITOR || 'Desconocido'}</div>
                     <div class="flex gap-2 mt-1.5">
-                        <span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Sig: ${signatura}</span>
-                        <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Reg: ${registro}</span>
+                        <span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Sig: ${item.SIGNATURA || '-'}</span>
+                        <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Reg: ${item.REGISTRO || item.NUMERO || '-'}</span>
                     </div>
                 `;
                 searchDropdown.appendChild(div);
@@ -843,12 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         if (query.length >= 2) {
-            if (!isDataLoaded) {
-                loadData().then(() => renderResults(query));
-            } else {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => renderResults(query), 200);
-            }
+            renderResults(query);
         } else {
             searchDropdown.classList.add('hidden');
         }
