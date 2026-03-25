@@ -165,10 +165,11 @@
 .ticker-content {
     display: inline-block;
     padding-left: 100%;
-    animation: ticker 30s linear infinite;
-    font-size: 13px;
-    font-weight: 600;
-    color: #334155;
+    animation: ticker 40s linear infinite;
+    font-size: 16px; /* MÁS GRANDE */
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 0.5px;
 }
 @keyframes ticker {
     0% { transform: translateX(0%); }
@@ -220,12 +221,16 @@
                             </button>
                             <div id="reminders-dropdown" class="reminders-dropdown">
                                 <div class="flex justify-between items-center mb-3 border-b pb-2">
-                                    <span class="font-bold text-slate-800">Tareas</span>
-                                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" id="reminders-count">0</span>
-                                </div>
+    <span class="font-bold text-slate-800">Tareas</span>
+    <div class="flex items-center gap-2">
+        <button onclick="toggleAllReminders(true)" class="text-xs text-blue-600">Todo</button>
+        <button onclick="toggleAllReminders(false)" class="text-xs text-slate-500">Nada</button>
+        <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" id="reminders-count">0</span>
+    </div>
+</div>
                                 <div id="reminders-list" class="max-h-60 overflow-y-auto mb-3"></div>
                                 <div class="flex gap-2">
-                                    <input type="text" id="reminder-input" placeholder="Nuevo..." class="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400">
+                                    <input type="text" id="reminder-input" placeholder="Nuevo..." class="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400" onkeypress="if(event.key === 'Enter') addReminder()">
                                     <button onclick="addReminder()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">+</button>
                                 </div>
                             </div>
@@ -683,12 +688,15 @@ function renderTicker() {
     const ticker = document.getElementById('ticker');
     if (!ticker) return;
 
-    const active = reminders
-        .filter(r => !r.completed)
-        .map(r => `• ${r.text}`)
-        .join('     ');
+    const activeReminders = reminders.filter(r => !r.completed);
 
-    ticker.innerHTML = active ? active + "     " + active : "Sin recordatorios activos";
+    if (activeReminders.length === 0) {
+        ticker.innerHTML = "Sin recordatorios activos";
+        return;
+    }
+
+    // SOLO una vez (sin duplicar)
+    ticker.innerHTML = activeReminders.map(r => `• ${r.text}`).join('          ');
 }
 
         function toggleReminders() {
@@ -730,10 +738,19 @@ function renderTicker() {
         }
 
         function deleteReminder(i) {
-            reminders.splice(i, 1);
-            saveReminders();
-            renderReminders();
-        }
+    reminders.splice(i, 1);
+    saveReminders();
+    renderReminders();
+}
+
+	function toggleAllReminders(state) {
+    reminders.forEach(r => r.completed = state);
+    saveReminders();
+    renderReminders();
+
+    // Mantener abierto el desplegable
+    document.getElementById('reminders-dropdown').classList.add('show');
+}
 
 function saveReminders() {
     localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
@@ -754,10 +771,13 @@ function saveReminders() {
 
         // Cerrar dropdown si se hace clic fuera
         window.addEventListener('click', function(e) {
-            if (!e.target.closest('.relative')) {
-                document.getElementById('reminders-dropdown').classList.remove('show');
-            }
-        });
+    const dropdown = document.getElementById('reminders-dropdown');
+    const button = e.target.closest('button');
+
+    if (!e.target.closest('#reminders-dropdown') && !button?.onclick?.toString().includes('toggleReminders')) {
+        dropdown.classList.remove('show');
+    }
+});
     </script>
 </body>
 </html>
