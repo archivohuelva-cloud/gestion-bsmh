@@ -403,6 +403,26 @@
     <div id="ticker" class="ticker-content"></div>
 </div>
 
+<!-- INICIO CAJA PEN DRIVE VIRTUAL -->
+<div id="virtual-pendrive" class="relative bg-white p-6 rounded-2xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-shadow group overflow-hidden" onclick="openDriveModal()">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 transition-transform group-hover:scale-110">
+                <!-- Icono de USB / Nube -->
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-800">Drive Partituras</h3>
+                <p class="text-sm text-slate-500">Pen Drive Virtual (Abrir)</p>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4 border-2 border-dashed border-slate-200 rounded-lg p-4 text-center text-sm text-slate-500 group-hover:border-blue-400 group-hover:text-blue-600 group-hover:bg-blue-50 transition-colors">
+        Arrastra archivos aquí o haz clic
+    </div>
+</div>
+<!-- FIN CAJA PEN DRIVE VIRTUAL -->
+
         <!-- CUERPO PRINCIPAL: Calendarios -->
         <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12 relative z-0">
             
@@ -739,6 +759,64 @@ function saveReminders() {
     renderTicker();
 }
 
+// --- INICIO FUNCIONES DEL PEN DRIVE VIRTUAL ---
+function openDriveModal() {
+    const modal = document.getElementById('drive-modal');
+    const content = document.getElementById('drive-modal-content');
+    modal.classList.remove('hidden');
+    // Pequeño retardo para que la animación de Tailwind funcione correctamente
+    setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('scale-95');
+    }, 10);
+}
+
+function closeDriveModal(e, forceClose = false) {
+    // Cerrar si se hace clic en la X o fuera de la ventana blanca
+    if (forceClose || (e && e.target.id === 'drive-modal')) {
+        const modal = document.getElementById('drive-modal');
+        const content = document.getElementById('drive-modal-content');
+        modal.classList.add('opacity-0');
+        content.classList.add('scale-95');
+        // Esperar a que acabe la animación para ocultarlo del todo
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 300); 
+    }
+}
+
+// Configuración para el arrastre de archivos (Drag & Drop)
+document.addEventListener('DOMContentLoaded', () => {
+    const dropzone = document.getElementById('virtual-pendrive');
+    if(dropzone) {
+        // Efecto visual al pasar el archivo por encima
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+        
+        // Quitar efecto visual si el ratón sale de la caja
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+        
+        // Acción al soltar el archivo en la caja del panel
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+            
+            // Abrimos la ventana de Drive automáticamente
+            openDriveModal(); 
+            
+            // Le damos 1 segundo y avisamos al usuario para que arrastre dentro de Drive
+            setTimeout(() => {
+                alert("Has abierto el Pen Drive Virtual.\\n\\nPara guardar tu partitura, arrástrala ahora dentro de la lista de archivos de Google Drive que ves en pantalla.");
+            }, 800);
+        });
+    }
+});
+// --- FIN FUNCIONES DEL PEN DRIVE VIRTUAL ---
+
         window.onload = function() {
             checkSession();
             setInterval(updateUI, 1000);
@@ -758,5 +836,32 @@ function saveReminders() {
             }
         });
     </script>
+
+<!-- INICIO MODAL GOOGLE DRIVE -->
+<div id="drive-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-[10000] flex items-center justify-center transition-opacity opacity-0" onclick="closeDriveModal(event)">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden transform scale-95 transition-transform mx-4" id="drive-modal-content">
+        <!-- Cabecera del modal -->
+        <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white shadow-sm z-10">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L6.3 21h13.12l3.43-6m-3.15-11.5L13.15 3H6.58L13.12 14.5"/></svg>
+                Drive Partituras
+            </h2>
+            <div class="flex items-center gap-3">
+                <a href="[https://drive.google.com/drive/folders/1Kte2u9QfCGg4CB4MaAv6bxlwsamLgEHp?usp=sharing](https://drive.google.com/drive/folders/1Kte2u9QfCGg4CB4MaAv6bxlwsamLgEHp?usp=sharing)" target="_blank" class="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-100 transition-colors border border-blue-200">
+                    Abrir en pestaña nueva
+                </a>
+                <button onclick="closeDriveModal(event, true)" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        </div>
+        <!-- Iframe de Google Drive -->
+        <div class="flex-1 w-full bg-slate-50 relative">
+            <iframe src="[https://drive.google.com/embeddedfolderview?id=1Kte2u9QfCGg4CB4MaAv6bxlwsamLgEHp#list](https://drive.google.com/embeddedfolderview?id=1Kte2u9QfCGg4CB4MaAv6bxlwsamLgEHp#list)" width="100%" height="100%" frameborder="0" class="w-full h-full absolute inset-0"></iframe>
+        </div>
+    </div>
+</div>
+<!-- FIN MODAL GOOGLE DRIVE -->
+
 </body>
 </html>
