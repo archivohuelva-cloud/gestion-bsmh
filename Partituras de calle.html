@@ -212,7 +212,8 @@
 
         const DPI = 10;
         const A4 = { w: 297 * DPI, h: 210 * DPI };
-        const CUT = { w: 252 * DPI, h: 182 * DPI };
+	const CUT = { w: 252 * DPI, h: 182 * DPI };
+	const SAFE_MARGIN = 5 * DPI; // Margen de seguridad de 0,5cm [cite: 243, 244]
 
         const canvas = document.getElementById('main-canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -357,7 +358,9 @@
                         await page.render({ canvasContext: offCanvas.getContext('2d'), viewport }).promise;
                         let scale = Math.min(CUT.w / viewport.width, CUT.h / viewport.height);
                         const newPage = {
-                            img: offCanvas, x: CUT.w / 2, y: CUT.h / 2,
+    			img: offCanvas, 
+    			x: (CUT.w + SAFE_MARGIN) / 2, 
+    			y: (CUT.h + SAFE_MARGIN) / 2,
                             w: viewport.width * scale, h: viewport.height * scale,
                             origW: viewport.width, origH: viewport.height,
                             rotation: 0, strokes: [], texts: [], history: [], redoStack: []
@@ -451,7 +454,10 @@
 
             // DIBUJAR GUÍAS Y HERRAMIENTAS FUERA DEL RECORTE
             if (!isExport) {
-                ctx.strokeStyle = "rgba(255,0,0,0.5)"; ctx.setLineDash([20, 10]); ctx.lineWidth = 5; ctx.strokeRect(2, 2, CUT.w, CUT.h);
+    ctx.strokeStyle = "rgba(255,0,0,0.5)";
+    ctx.setLineDash([20, 10]); ctx.lineWidth = 5; 
+    // Dibujamos la guía con el margen de seguridad de 0,5cm (50 unidades de DPI) 
+    ctx.strokeRect(SAFE_MARGIN, SAFE_MARGIN, CUT.w - SAFE_MARGIN, CUT.h - SAFE_MARGIN);
                 if (currentMode === 'transform') drawTransformBox(p);
                 
                 if (currentMode === 'erase') {
