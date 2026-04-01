@@ -3,416 +3,915 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rider - BSMH</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Creador de Rider - Banda Sinfónica Municipal de Huelva</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        .unselectable { -webkit-user-select: none; user-select: none; }
+        :root {
+            --primary: #1a365d;
+            --secondary: #2b6cb0;
+            --accent: #e53e3e;
+            --bg: #f0f2f5;
+            --white: #ffffff;
+            --success: #48bb78;
+            --warning: #ed8936;
+            --selection: #4299e1;
+            --sidebar-width: 340px;
+            --sidebar-collapsed: 70px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; display: flex; height: 100vh; background-color: var(--bg); color: #333; overflow: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width); background: var(--primary); color: white; display: flex; flex-direction: column;
+            padding: 20px; box-shadow: 4px 0 10px rgba(0,0,0,0.2); z-index: 100; overflow-y: auto;
+            transition: width 0.3s ease, padding 0.3s ease; position: relative;
+        }
+
+        .sidebar.collapsed { width: var(--sidebar-collapsed); padding: 20px 10px; overflow-y: auto; overflow-x: hidden; }
+        .sidebar.collapsed .sidebar-content-text, 
+        .sidebar.collapsed .sidebar-header h2,
+        .sidebar.collapsed label span,
+        .sidebar.collapsed .btn-back span,
+        .sidebar.collapsed .instr-group,
+        .sidebar.collapsed .btn-hist span,
+        .sidebar.collapsed .custom-add { display: none; }
+
+        .collapsed-icon { display: none; width: 24px; height: 24px; fill: currentColor; }
+        .sidebar.collapsed .collapsed-icon { display: block; margin: 0 auto; }
         
-        #canvas-rider {
-            position: relative;
-            width: 100%;
-            height: 500px;
-            background-color: #f1f5f9;
-            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 20px 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 1rem;
-            overflow: hidden;
-            touch-action: none;
+        .sidebar.collapsed .file-controls,
+        .sidebar.collapsed .action-controls,
+        .sidebar.collapsed .history-controls { 
+            display: flex; 
+            flex-direction: column; 
+            grid-template-columns: none; 
+            gap: 15px; 
+            background: none; 
+            padding: 0;
+            margin-bottom: 15px;
         }
 
-        .rider-item {
-            position: absolute;
-            cursor: move;
-            z-index: 10;
-            transform: translate(-50%, -50%);
+        .sidebar.collapsed .btn-file, 
+        .sidebar.collapsed .btn-hist,
+        .sidebar.collapsed .btn-add-pdf {
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .rider-label {
-            background: white;
-            border: 2px solid #3b82f6;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            white-space: nowrap;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .btn-toggle-sidebar {
+            position: absolute; top: 20px; right: 10px; background: none; border: none; color: white; 
+            cursor: pointer; font-size: 1.2rem; z-index: 110;
         }
 
-        .rider-label.viento { border-color: #10b981; }
-        .rider-label.percusión { border-color: #3b82f6; }
-        .rider-label.extra { border-color: #f59e0b; }
-
-        .active-tab {
-            background-color: #1d4ed8 !important;
-            color: white !important;
+        .btn-back {
+            background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px; border-radius: 4px;
+            cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; width: fit-content;
         }
 
-        /* CONFIGURACIÓN DE IMPRESIÓN VERTICAL */
-        @media print {
-            @page { 
-                size: A4 portrait; 
-                margin: 10mm; 
-            }
-            
-            .no-print { display: none !important; }
-            body { background: white !important; padding: 0 !important; }
-            
-            .print-page {
-                display: block !important;
-                page-break-after: always;
-                width: 100%;
-            }
+        .sidebar-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px; margin-bottom: 20px; }
+        .sidebar h2 { font-size: 1.1rem; margin: 0; }
 
-            #print-rider-area {
-                border: 2px solid #000 !important;
-                height: 250mm; 
-                width: 100%;
-                position: relative;
-                background: white !important;
-                background-image: radial-gradient(#e2e8f0 1px, transparent 1px) !important;
-                background-size: 15px 15px !important;
-            }
+        .main-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .file-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+        .action-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-            .rider-label {
-                font-size: 9px;
-                padding: 2px 4px;
-                border-width: 1.5px;
-            }
+        .btn-file {
+            background: var(--secondary); border: none; color: white; padding: 8px; border-radius: 4px;
+            cursor: pointer; font-size: 0.75rem; font-weight: bold; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-file.export { background: var(--warning); }
+        .btn-new { background: var(--accent); }
+        .btn-select-mode { background: #4a5568; border: 2px solid transparent; }
+        .btn-select-mode.active { background: var(--selection); border-color: white; }
+        .btn-select-all { background: #2d3748; grid-column: span 2; }
+
+        .history-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .btn-hist { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; }
+
+        /* Estilos Secciones Colapsables */
+        .instr-group { margin-bottom: 10px; border-radius: 6px; overflow: hidden; background: rgba(0,0,0,0.1); }
+        .instr-group-header { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s; }
+        .instr-group-header:hover { background: rgba(255,255,255,0.1); }
+        .instr-group label { font-size: 0.65rem; text-transform: uppercase; font-weight: bold; pointer-events: none; opacity: 0.9; margin: 0; }
+        .eye-icon { font-size: 0.9rem; }
+        .grid-buttons { display: none; grid-template-columns: 1fr 1fr; gap: 4px; padding: 8px; }
+        .instr-group.open .grid-buttons { display: grid; }
+
+        /* Añadir personalizado */
+        .custom-add { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 6px; margin-bottom: 15px; }
+        .custom-add label { display: block; font-size: 0.65rem; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; opacity: 0.8; }
+        .custom-add-row { display: flex; gap: 5px; }
+        .custom-add input { flex: 1; padding: 6px; border-radius: 4px; border: none; font-size: 0.8rem; color: #333; }
+        .btn-add-custom { background: var(--success); border: none; color: white; padding: 0 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
+        .btn-add { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 5px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-add:hover { background: var(--secondary); }
+
+        /* Canvas Area */
+        .canvas-area { flex: 1; padding: 10px; display: flex; flex-direction: column; align-items: center; overflow: auto; background: #dfe3e8; position: relative; }
+
+        .counters-bar {
+            width: 1050px; background: white; padding: 8px 20px; border-radius: 8px 8px 0 0;
+            border: 1px solid #bbb; border-bottom: none; display: flex; justify-content: center; gap: 40px; 
+            font-size: 0.9rem; font-weight: bold; color: var(--primary); box-sizing: border-box;
         }
 
-        .print-only { display: none; }
-        @media print { .print-only { display: block; } }
+        .pdf-container { 
+    width: 1050px; 
+    margin: 0 auto; /* Esto lo centra en la pantalla y ayuda al motor de PDF */
+    background: white; 
+    padding: 15px 25px; 
+    box-sizing: border-box; 
+    border: 1px solid #bbb; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+    overflow: hidden;
+}
+        
+        .document-header { text-align: center; margin-bottom: 10px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; }
+        .document-header h1 { margin: 0; font-size: 1.3rem; color: var(--primary); text-transform: uppercase; margin-bottom: 8px; }
+        
+        .header-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; text-align: left; }
+        .header-column { display: flex; flex-direction: column; gap: 5px; }
+        
+        .field-group { display: flex; align-items: center; gap: 8px; }
+        .field-label { font-size: 0.7rem; font-weight: bold; color: var(--primary); text-transform: uppercase; min-width: 60px; }
+        .header-input { flex: 1; border: none; border-bottom: 1px solid #ddd; font-size: 0.85rem; padding: 2px; font-family: inherit; background: transparent; }
+        .print-date-label { display: none; font-size: 0.85rem; padding: 2px; }
 
-        /* Mejora visual para inputs de fecha/hora en la interfaz */
-        input[type="date"]::-webkit-calendar-picker-indicator,
-        input[type="time"]::-webkit-calendar-picker-indicator {
-            cursor: pointer;
-            filter: invert(0); /* Asegura que el icono sea oscuro sobre fondo claro */
+        .info-fields { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .info-fields textarea { width: 100%; border: 1px solid #f0f0f0; border-radius: 4px; font-size: 0.8rem; padding: 6px; resize: none; min-height: 40px; }
+
+        .report-summary { margin-top: 5px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 0.85rem; color: var(--primary); font-weight: bold; }
+
+        .stage-wrapper { position: relative; width: 100%; height: 530px; border: 2px solid #333; overflow: hidden; background: #fff; cursor: grab; }
+        .stage-wrapper:active { cursor: grabbing; }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 150;
+            background: rgba(255,255,255,0.9); padding: 5px; border-radius: 6px; border: 1px solid #ccc;
         }
+        .btn-zoom { width: 30px; height: 30px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: bold; color: var(--primary); display: flex; align-items: center; justify-content: center; }
+
+        .stage {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+            background-image: radial-gradient(#e2e8f0 1.5px, transparent 1.5px); background-size: 25px 25px;
+            transform-origin: center center;
+        }
+
+        .stage-apron { position: absolute; bottom: 0; width: 100%; height: 30px; background: #f1f5f9; border-top: 2px solid #333; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.75rem; color: #64748b; letter-spacing: 3px; z-index: 100; }
+
+        /* Items */
+        .item { position: absolute; width: 85px; min-height: 52px; background: white; border: 2px solid #000; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: grab; user-select: none; padding: 4px; box-sizing: border-box; font-size: 0.7rem; font-weight: bold; text-align: center; z-index: 10; }
+        .item.selected { border-color: var(--selection); background: #ebf8ff; box-shadow: 0 0 8px rgba(66, 153, 225, 0.6); z-index: 50; }
+        .item.director { width: 100px; height: 60px; background: #f8fafc; border-width: 3px; z-index: 5; }
+
+        .item-name { margin-bottom: 4px; width: 100%; border-bottom: 1px solid #eee; padding-bottom: 2px; }
+        .item-status-row { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; }
+        .chair-check { cursor: pointer; width: 14px; height: 14px; accent-color: var(--success); }
+
+        .stands-container { display: flex; gap: 1px; justify-content: center; min-width: 15px; }
+        .stand-x { color: var(--accent); font-size: 1rem; line-height: 1; font-weight: 900; }
+
+        .item-tools { position: absolute; top: -12px; right: -12px; display: none; gap: 3px; z-index: 60; }
+        .item:hover .item-tools { display: flex; }
+        .tool-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid #333; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+        /* Exporting logic - Con zona de Público recuperada */
+.exporting .item-tools, 
+.exporting .sidebar, 
+.exporting .zoom-controls,
+.exporting .counters-bar { 
+    display: none !important; 
+}
+
+.exporting .pdf-container { 
+    border: none !important; 
+    box-shadow: none !important;
+    width: 1050px !important; 
+    margin: 0 auto !important; 
+    padding: 10px !important;
+    display: block !important;
+}
+
+.exporting .stage-wrapper { 
+    border: none !important; 
+    height: auto !important; 
+    min-height: 530px; 
+    overflow: visible !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+/* Recupera el cuadro de Público / Patio de butacas  */
+.exporting .stage-apron { 
+    display: flex !important; /* Asegura que sea visible */
+    position: absolute; 
+    bottom: 0; 
+    width: 100%; 
+    border: 2px solid #333 !important; /* Contorno definido */
+    background: #f9f9f9 !important; /* Sombreado suave */
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1) !important; /* Efecto de profundidad */
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+}
+
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen p-4">
+<body>
 
-    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 no-print">
+<div class="sidebar" id="sidebar">
+    <button class="btn-toggle-sidebar" onclick="toggleSidebar()">☰</button>
+    
+    <div class="sidebar-content">
+        <button class="btn-back" onclick="window.history.back()">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            <span>Volver</span>
+        </button>
         
-        <!-- HEADER -->
-        <header class="p-6 bg-slate-900 text-white">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                <div>
-                    <h1 class="text-2xl font-black uppercase tracking-tighter">Rider - BSMH</h1>
-                    <p class="text-blue-400 text-[10px] font-bold uppercase tracking-[0.2em]">Banda Sinfónica Municipal de Huelva</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="reestablecerTodo()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-[10px] font-bold uppercase">Limpiar</button>
-                    <button onclick="prepararEImprimir()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg text-[10px] font-bold uppercase shadow-lg">Generar Reporte PDF</button>
-                </div>
+        <div class="sidebar-header">
+            <h2>MENÚ RIDER BSMHuelva</h2>
+        </div>
+
+        <div class="main-controls">
+            <div class="file-controls">
+                <button class="btn-file export" title="Guardar JSON" onclick="exportData()">
+                    <span class="sidebar-content-text">💾 Guardar</span>
+                    <svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+                </button>
+                <label class="btn-file" title="Cargar JSON">
+                    <span class="sidebar-content-text">📂 Cargar</span>
+                    <svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/></svg>
+                    <input type="file" style="display:none" accept=".json" onchange="importData(event)">
+                </label>
             </div>
-
-            <!-- Ajuste de colores en inputs para visibilidad de iconos -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                <input type="text" id="in-concierto" placeholder="CONCIERTO" class="bg-slate-100 border-none rounded-lg p-2 text-xs uppercase font-bold text-slate-900 focus:ring-2 ring-blue-500 placeholder:text-slate-500">
-                <input type="text" id="in-lugar" placeholder="LUGAR" class="bg-slate-100 border-none rounded-lg p-2 text-xs uppercase font-bold text-slate-900 focus:ring-2 ring-blue-500 placeholder:text-slate-500">
-                <input type="date" id="in-fecha" class="bg-slate-100 border-none rounded-lg p-2 text-xs font-bold text-slate-900 focus:ring-2 ring-blue-500">
-                <input type="time" id="in-hora" class="bg-slate-100 border-none rounded-lg p-2 text-xs font-bold text-slate-900 focus:ring-2 ring-blue-500">
+            <div class="action-controls">
+                <button class="btn-file btn-new" title="Nuevo" onclick="resetStage()">
+                    <span class="sidebar-content-text">✨ Nuevo</span>
+                    <svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+                <button class="btn-file btn-select-mode" id="selBtn" title="Selección Múltiple" onclick="toggleSelectionMode()">
+                    <span class="sidebar-content-text">🎯 Selección</span>
+                    <svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4.5-9h-9c-.28 0-.5.22-.5.5v1c0 .28.22.5.5.5h9c.28 0 .5-.22.5-.5v-1c0-.28-.22-.5-.5-.5z"/></svg>
+                </button>
+                <!-- 1. Botón Seleccionar Todo -->
+                <button class="btn-file btn-select-all" onclick="selectAllItems()">✅ Seleccionar Todo</button>
             </div>
-        </header>
-
-        <main class="p-6">
-            <!-- TABS -->
-            <div class="flex gap-2 mb-6 bg-slate-100 p-1 rounded-xl w-fit">
-                <button onclick="cambiarTab('percusión')" id="tab-percusión" class="px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all active-tab">Percusión</button>
-                <button onclick="cambiarTab('viento')" id="tab-viento" class="px-6 py-2 rounded-lg text-[10px] font-black uppercase transition-all text-slate-500 hover:bg-white">Vientos</button>
+            <div class="history-controls">
+                <button class="btn-hist" onclick="undo()" title="Deshacer"><span>↩ Deshacer (Ctrl + Z)</span><svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg></button>
+                <button class="btn-hist" onclick="redo()" title="Rehacer"><span>↪ Rehacer (Ctrl + Y)</span><svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg></button>
             </div>
+        </div>
 
-            <!-- GRID INSTRUMENTOS -->
-            <div id="grid-instrumentos" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8 unselectable"></div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- LISTADO SELECCIONADOS -->
-                <div class="lg:col-span-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Instrumentos en Escena</h3>
-                        <span id="total-badge" class="bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full font-black">0 TOTAL</span>
-                    </div>
-                    <div id="lista-resumen" class="space-y-2"></div>
-                    
-                    <div class="mt-6 pt-4 border-t border-slate-200">
-                        <input type="text" id="extra-nombre" placeholder="AÑADIR EXTRA..." class="w-full bg-white border rounded-lg p-2 text-[10px] font-bold uppercase mb-2">
-                        <button onclick="añadirExtra()" class="w-full bg-slate-200 hover:bg-slate-300 py-2 rounded-lg text-[10px] font-black uppercase">Añadir a mano</button>
-                    </div>
-                </div>
-
-                <!-- RIDER CANVAS -->
-                <div class="lg:col-span-8">
-                    <div id="canvas-rider">
-                        <div class="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] font-black text-slate-300 uppercase tracking-widest">FONDO DE ESCENARIO</div>
-                    </div>
-                </div>
+        <!-- 2. Añadir nuevo instrumento -->
+        <div class="custom-add">
+            <label>Añadir Nuevo Instrumento</label>
+            <div class="custom-add-row">
+                <input type="text" id="customInput" placeholder="">
+                <button class="btn-add-custom" onclick="addCustom()">+</button>
             </div>
-        </main>
+        </div>
+
+        <!-- 3. Secciones Colapsables -->
+        <div class="instr-group" id="sec-wood">
+            <div class="instr-group-header" onclick="toggleSection('sec-wood')">
+                <label>Viento Madera</label>
+                <span class="eye-icon">👁️</span>
+            </div>
+            <div class="grid-buttons">
+                <button class="btn-add" onclick="addItem('FLAUTA')">FLAUTA</button>
+                <button class="btn-add" onclick="addItem('OBOE')">OBOE</button>
+		<button class="btn-add" onclick="addItem('REQUINTO')">REQUINTO</button>
+                <button class="btn-add" onclick="addItem('CLAR. PRAL.')">CLARINETE PRAL.</button>
+                <button class="btn-add" onclick="addItem('CLARINETE 1')">CLARINETE 1º</button>
+                <button class="btn-add" onclick="addItem('CLARINETE 2')">CLARINETE 2º</button>
+		<button class="btn-add" onclick="addItem('CLARINETE 3')">CLARINETE 3º</button>
+		<button class="btn-add" onclick="addItem('CLAR.3/BAJO')">CLARINETE 3º/BAJO</button>
+		<button class="btn-add" onclick="addItem('CLAR. BAJO')">CLARINETE BAJO</button>
+                <button class="btn-add" onclick="addItem('SAXO ALTO 1')">SAXO ALTO 1º</button>
+                <button class="btn-add" onclick="addItem('SAXO ALTO 2')">SAXO ALTO 2º</button>
+                <button class="btn-add" onclick="addItem('SAXO TEN. 1')">SAXO TENOR 1º</button>
+                <button class="btn-add" onclick="addItem('SAXO TEN. 2')">SAXO TENOR 2º</button>
+            </div>
+        </div>
+
+        <div class="instr-group" id="sec-brass">
+            <div class="instr-group-header" onclick="toggleSection('sec-brass')">
+                <label>Viento Metal</label>
+                <span class="eye-icon">👁️</span>
+            </div>
+            <div class="grid-buttons">
+                <button class="btn-add" onclick="addItem('TROMPA 1')">TROMPA 1ª</button>
+                <button class="btn-add" onclick="addItem('TROMPETA 1')">TROMPETA 1ª</button>
+                <button class="btn-add" onclick="addItem('TROMPETA 2')">TROMPETA 2ª</button>
+		<button class="btn-add" onclick="addItem('FLISCORNO')">FLISCORNO</button>
+		<button class="btn-add" onclick="addItem('TROMBÓN 1')">TROMBÓN 1º</button>
+		<button class="btn-add" onclick="addItem('TROMBÓN 2')">TROMBÓN 2º</button>
+		<button class="btn-add" onclick="addItem('TUBA 1')">TUBA 1ª</button>
+		<button class="btn-add" onclick="addItem('TUBA 2')">TUBA 2ª</button>
+            </div>
+        </div>
+
+        <div class="instr-group" id="sec-perc">
+            <div class="instr-group-header" onclick="toggleSection('sec-perc')">
+                <label>Percusión</label>
+                <span class="eye-icon">👁️</span>
+            </div>
+            <div class="grid-buttons">
+                <button class="btn-add" onclick="addItem('TIMBALES', true, false)">TIMBALES</button>
+                <button class="btn-add" onclick="addItem('CAJA', true, false)">CAJA</button>
+                <button class="btn-add" onclick="addItem('BOMBO', true, false)">BOMBO</button>
+                <button class="btn-add" onclick="addItem('PLATOS', true, false)">PLATOS</button>
+                <button class="btn-add" onclick="addItem('LIRA', true, false)">LIRA</button>
+                <button class="btn-add" onclick="addItem('CORTINILLAS', true, false)">CORTINILLAS</button>
+                <button class="btn-add" onclick="addItem('BATERÍA', true, false)">BATERÍA</button>
+		<button class="btn-add" onclick="addItem('CAMPANÓLOGO', true, false)">CAMPANÓLOGO</button>
+		<button class="btn-add" onclick="addItem('GONG', true, false)">GONG</button>
+		<button class="btn-add" onclick="addItem('XILÓFONO', true, false)">XILÓFONO</button>
+		<button class="btn-add" onclick="addItem('VIBRÁFONO', true, false)">VIBRÁFONO</button>
+		<button class="btn-add" onclick="addItem('TOMS', true, false)">TOMS</button>
+		<button class="btn-add" onclick="addItem('TEMPLE BLOCK', true, false)">TEMPLE BLOCK</button>
+		<button class="btn-add" onclick="addItem('CONGAS', true, false)">CONGAS</button>
+		<button class="btn-add" onclick="addItem('BONGO', true, false)">BONGO</button>
+		<button class="btn-add" onclick="addItem('CAJÓN FLAMENCO', true, false)">CAJÓN FLAMENCO</button>
+            </div>
+        </div>
+
+        <div style="margin-top:auto; padding-top: 20px;">
+            <button class="btn-file btn-add-pdf" style="background: var(--success); width: 100%; padding: 12px;" onclick="generatePDF()">
+                <span class="sidebar-content-text">📄 DESCARGAR PDF</span>
+                <svg class="collapsed-icon" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="canvas-area">
+    <div class="counters-bar">
+        <span>Instrumentos: <b id="cI">0</b></span>
+        <span>Atriles: <b id="cA">0</b></span>
+        <span>Sillas: <b id="cS">0</b></span>
     </div>
 
-    <!-- ESTRUCTURA PARA IMPRESIÓN -->
-    <div class="print-only">
-        <!-- PÁGINA 1: LISTADO DE CARGA -->
-        <section class="print-page">
-            <div class="border-b-4 border-black pb-4 mb-6">
-                <h1 class="text-3xl font-black uppercase">Reporte de Instrumentación</h1>
-                <p class="font-bold text-blue-700 uppercase">Banda Sinfónica Municipal de Huelva</p>
+    <div class="pdf-container" id="pdfRoot">
+        <div class="document-header">
+            <h1>Banda Sinfónica Municipal de Huelva</h1>
+            <div class="header-grid">
+                <div class="header-column">
+                    <div class="field-group">
+                        <span class="field-label">Título:</span>
+                        <input type="text" id="h_tit" class="header-input" placeholder="Nombre del concierto">
+                        <span id="p_tit" class="print-date-label"></span>
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Ubicación:</span>
+                        <input type="text" id="h_loc" class="header-input" placeholder="Lugar del evento">
+                        <span id="p_loc" class="print-date-label"></span>
+                    </div>
+                </div>
+                <div class="header-column">
+                    <div class="field-group">
+                        <span class="field-label">Fecha:</span>
+                        <input type="date" id="h_fec" class="header-input">
+                        <span id="p_fec" class="print-date-label"></span>
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Hora:</span>
+                        <input type="time" id="h_hor" class="header-input">
+                        <span id="p_hor" class="print-date-label"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="info-fields">
+                <textarea id="obs" placeholder="Observaciones técnicas adicionales..."></textarea>
+                <div class="report-summary" id="reportSummary">RESUMEN TÉCNICO: 0 Instrumentos, 0 Atriles y 0 Sillas totales.</div>
+            </div>
+        </div>
+        
+        <div class="stage-wrapper" id="stageWrapper">
+            <div class="zoom-controls">
+                <button class="btn-zoom" onclick="changeZoom(0.1)">+</button>
+                <button class="btn-zoom" onclick="changeZoom(-0.1)">-</button>
+                <button class="btn-zoom" style="font-size: 0.6rem;" onclick="resetZoom()">100%</button>
             </div>
             
-            <div class="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase mb-8 border p-4">
-                <p>CONCIERTO: <span id="pr-concierto"></span></p>
-                <p>LUGAR: <span id="pr-lugar"></span></p>
-                <p>FECHA: <span id="pr-fecha"></span></p>
-                <p>HORA: <span id="pr-hora"></span></p>
+            <div class="stage" id="stage">
+                <div class="stage-apron">PÚBLICO / PATIO DE BUTACAS</div>
             </div>
-
-            <h2 class="bg-black text-white p-2 text-xs font-black uppercase mb-4">Inventario de Percusión</h2>
-            <div id="pr-lista-percusion" class="divide-y border-t border-b border-black mb-8"></div>
-
-            <h2 class="bg-slate-200 p-2 text-xs font-black uppercase mb-4">Otros Instrumentos / Vientos</h2>
-            <div id="pr-lista-viento" class="divide-y border-t border-b border-black"></div>
-        </section>
-
-        <!-- PÁGINA 2: RIDER TÉCNICO (SOLO INSTRUMENTOS) -->
-        <section class="print-page">
-            <div class="text-[8px] font-black text-center uppercase mb-2 text-slate-400">FONDO DE ESCENARIO</div>
-            <div id="print-rider-area"></div>
-        </section>
+        </div>
     </div>
+</div>
 
-    <script>
-        const DB = [
-            { id: 1, nombre: "Timbales", cat: "percusión", def: 4 },
-            { id: 2, nombre: "Bombo", cat: "percusión", def: 1 },
-            { id: 3, nombre: "Platos", cat: "percusión", def: 1 },
-            { id: 4, nombre: "Caja", cat: "percusión", def: 1 },
-            { id: 5, nombre: "Cortinillas", cat: "percusión", def: 1 },
-            { id: 6, nombre: "Lira", cat: "percusión", def: 1 },
-            { id: 7, nombre: "Campanólogo", cat: "percusión", def: 1 },
-            { id: 8, nombre: "Gong", cat: "percusión", def: 1 },
-            { id: 9, nombre: "Batería", cat: "percusión", def: 1 },
-            { id: 10, nombre: "Toms Concierto", cat: "percusión", def: 1 },
-            { id: 11, nombre: "Temple Block", cat: "percusión", def: 1 },
-            { id: 12, nombre: "Congas", cat: "percusión", def: 1 },
-            { id: 13, nombre: "Xilófono", cat: "percusión", def: 1 },
-            { id: 14, nombre: "Bongo", cat: "percusión", def: 1 },
-            { id: 15, nombre: "Vibráfono", cat: "percusión", def: 1 },
-            { id: 16, nombre: "Cajón Flamenco", cat: "percusión", def: 1 },
-            { id: 101, nombre: "Flauta", cat: "viento", def: 1 },
-            { id: 102, nombre: "Oboe", cat: "viento", def: 1 },
-            { id: 103, nombre: "Requinto", cat: "viento", def: 1 },
-            { id: 104, nombre: "Clarinete", cat: "viento", def: 5 },
-            { id: 105, nombre: "Saxo Alto", cat: "viento", def: 2 },
-            { id: 106, nombre: "Saxo Tenor", cat: "viento", def: 2 },
-            { id: 107, nombre: "Trompa", cat: "viento", def: 1 },
-            { id: 108, nombre: "Trompeta", cat: "viento", def: 2 },
-            { id: 109, nombre: "Fliscorno", cat: "viento", def: 1 },
-            { id: 110, nombre: "Trombón", cat: "viento", def: 2 },
-            { id: 111, nombre: "Tuba", cat: "viento", def: 2 }
-        ];
+<script>
+    const stage = document.getElementById('stage');
+    const stageWrapper = document.getElementById('stageWrapper');
+    const pdfRoot = document.getElementById('pdfRoot');
+    
+    let selectedItems = new Set();
+    let isSelectionMode = false;
+    let history = [];
+    let redoStack = [];
+    
+    let currentZoom = 1.0;
+    let stageOffsetX = 0;
+    let stageOffsetY = 0;
+    let copiedData = null;
 
-        let itemsRider = [];
-        let tabActual = 'percusión';
+    let isPanning = false;
+    let panStartX, panStartY;
 
-        function cambiarTab(cat) {
-            tabActual = cat;
-            document.getElementById('tab-percusión').classList.toggle('active-tab', cat === 'percusión');
-            document.getElementById('tab-viento').classList.toggle('active-tab', cat === 'viento');
-            
-            if (cat === 'viento') {
-                DB.filter(i => i.cat === 'viento').forEach(inst => {
-                    const yaExiste = itemsRider.some(it => it.idInst === inst.id);
-                    if (!yaExiste) {
-                        setCantidad(inst.id, inst.def, false);
+    // --- NUEVAS FUNCIONES ---
+
+    function toggleSection(id) {
+        const el = document.getElementById(id);
+        el.classList.toggle('open');
+        const eye = el.querySelector('.eye-icon');
+        eye.innerText = el.classList.contains('open') ? '👁️‍🗨️' : '👁️';
+    }
+
+    function addCustom() {
+        const input = document.getElementById('customInput');
+        const val = input.value.trim();
+        if (val) {
+            addItem(val);
+            input.value = '';
+        }
+    }
+
+    function selectAllItems() {
+        const items = stage.querySelectorAll('.item');
+        if (items.length === 0) return;
+        
+        items.forEach(it => {
+            it.classList.add('selected');
+            selectedItems.add(it);
+        });
+
+        if (!isSelectionMode) {
+            isSelectionMode = true;
+            document.getElementById('selBtn').classList.add('active');
+        }
+    }
+
+    // --- LÓGICA EXISTENTE ---
+
+    stageWrapper.addEventListener('mousedown', (e) => {
+        if (e.button === 1 || e.target === stage || e.target === stageWrapper) {
+            isPanning = true;
+            panStartX = e.clientX - stageOffsetX;
+            panStartY = e.clientY - stageOffsetY;
+            e.preventDefault();
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isPanning) {
+            stageOffsetX = e.clientX - panStartX;
+            stageOffsetY = e.clientY - panStartY;
+            updateStageTransform();
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isPanning = false;
+    });
+
+    function updateStageTransform() {
+        stage.style.transform = `translate(${stageOffsetX}px, ${stageOffsetY}px) scale(${currentZoom})`;
+    }
+
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    }
+
+    function changeZoom(delta) {
+        currentZoom = Math.max(0.4, Math.min(3.0, currentZoom + delta));
+        updateStageTransform();
+    }
+
+    function resetZoom() {
+        currentZoom = 1.0;
+        stageOffsetX = 0;
+        stageOffsetY = 0;
+        updateStageTransform();
+    }
+
+    function saveState() {
+        const state = {
+            stage: stage.innerHTML,
+            h_tit: document.getElementById('h_tit').value,
+            h_loc: document.getElementById('h_loc').value,
+            h_fec: document.getElementById('h_fec').value,
+            h_hor: document.getElementById('h_hor').value,
+            obs: document.getElementById('obs').value,
+            zoom: currentZoom,
+            ox: stageOffsetX,
+            oy: stageOffsetY
+        };
+        history.push(JSON.stringify(state));
+        if (history.length > 40) history.shift();
+        redoStack = [];
+    }
+
+    function undo() {
+        if (history.length === 0) return;
+        const current = getCurrentState();
+        redoStack.push(JSON.stringify(current));
+        const prev = JSON.parse(history.pop());
+        applyState(prev);
+    }
+
+    function redo() {
+        if (redoStack.length === 0) return;
+        const current = getCurrentState();
+        history.push(JSON.stringify(current));
+        const next = JSON.parse(redoStack.pop());
+        applyState(next);
+    }
+
+    function getCurrentState() {
+        return {
+            stage: stage.innerHTML,
+            h_tit: document.getElementById('h_tit').value,
+            h_loc: document.getElementById('h_loc').value,
+            h_fec: document.getElementById('h_fec').value,
+            h_hor: document.getElementById('h_hor').value,
+            obs: document.getElementById('obs').value,
+            zoom: currentZoom,
+            ox: stageOffsetX,
+            oy: stageOffsetY
+        };
+    }
+
+    function applyState(data) {
+        stage.innerHTML = data.stage;
+        document.getElementById('h_tit').value = data.h_tit || '';
+        document.getElementById('h_loc').value = data.h_loc || '';
+        document.getElementById('h_fec').value = data.h_fec || '';
+        document.getElementById('h_hor').value = data.h_hor || '';
+        document.getElementById('obs').value = data.obs || '';
+        currentZoom = data.zoom || 1.0;
+        stageOffsetX = data.ox || 0;
+        stageOffsetY = data.oy || 0;
+        updateStageTransform();
+        stage.querySelectorAll('.item').forEach(item => {
+            item.onmousedown = startDrag;
+            const check = item.querySelector('.chair-check');
+            if(check) check.onclick = (e) => { e.stopPropagation(); updateCounters(); };
+        });
+        updateCounters();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+        if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+        if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+            if (selectedItems.size > 0) {
+                const arr = Array.from(selectedItems);
+                copiedData = arr.map(el => ({
+                    n: el.querySelector('.item-name').innerText,
+                    l: el.style.left, t: el.style.top,
+                    s: el.querySelectorAll('.stand-x').length,
+                    c: el.querySelector('.chair-check') ? el.querySelector('.chair-check').checked : false,
+                    p: el.classList.contains('director')
+                }));
+            }
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'v') {
+            if (copiedData) {
+                saveState();
+                clearSelection();
+                copiedData.forEach(d => {
+                    addItem(d.n, !d.p, d.c);
+                    const last = stage.lastChild;
+                    last.style.left = (parseFloat(d.l) + 20) + 'px';
+                    last.style.top = (parseFloat(d.t) + 20) + 'px';
+                    const cont = last.querySelector('.stands-container');
+                    cont.innerHTML = '';
+                    for(let i=0; i<d.s; i++) {
+                        const s = document.createElement('span'); s.className = 'stand-x'; s.innerText = '×';
+                        cont.appendChild(s);
                     }
+                    last.classList.add('selected');
+                    selectedItems.add(last);
                 });
+                updateCounters();
             }
-            renderAll();
+        }
+    });
+
+    function toggleSelectionMode() {
+        isSelectionMode = !isSelectionMode;
+        document.getElementById('selBtn').classList.toggle('active', isSelectionMode);
+        if(!isSelectionMode) clearSelection();
+    }
+
+    function clearSelection() {
+        selectedItems.forEach(el => el.classList.remove('selected'));
+        selectedItems.clear();
+    }
+
+    function addItem(name, isInstr = true, hasChair = true) {
+        saveState();
+        const item = document.createElement('div');
+        item.className = 'item' + (name === 'DIRECTOR' ? ' director' : '');
+        
+        if (name === 'DIRECTOR') {
+            item.style.left = '475px';
+            item.style.top = '430px'; 
+        } else {
+            item.style.left = (525 - stageOffsetX) + 'px';
+            item.style.top = (265 - stageOffsetY) + 'px';
         }
 
-        function toggleInstrumento(id) {
-            const inst = DB.find(i => i.id === id);
-            const actuales = itemsRider.filter(it => it.idInst === id);
-            if (actuales.length > 0) itemsRider = itemsRider.filter(it => it.idInst !== id);
-            else setCantidad(id, inst.def);
-            renderAll();
-        }
+        const chairHtml = isInstr && name !== 'DIRECTOR' ? `<input type="checkbox" class="chair-check" title="¿Silla?" ${hasChair ? 'checked' : ''} onclick="event.stopPropagation(); updateCounters();">` : '';
 
-        function setCantidad(id, total, triggerRender = true) {
-            const inst = DB.find(i => i.id === id);
-            itemsRider = itemsRider.filter(it => it.idInst !== id);
-            for(let i=0; i<total; i++) {
-                itemsRider.push({
-                    idInst: inst.id,
-                    nombre: inst.nombre,
-                    cat: inst.cat,
-                    x: 50 + (Math.random()*10 - 5),
-                    y: inst.cat === 'percusión' ? 15 : 65,
-                    uid: Math.random().toString(36).substr(2, 9)
-                });
+        item.innerHTML = `
+            <div class="item-name">${name}</div>
+            <div class="item-status-row">
+                ${chairHtml}
+                <div class="stands-container">${isInstr && name !== 'DIRECTOR' ? '<span class="stand-x">×</span>' : ''}</div>
+            </div>
+            <div class="item-tools">
+                <button class="tool-btn" style="background:#4299e1;color:white" onclick="modStand(event, this, 1)">+</button>
+                <button class="tool-btn" style="background:#ed8936;color:white" onclick="modStand(event, this, -1)">-</button>
+                <button class="tool-btn" style="background:#e53e3e;color:white" onclick="deleteItem(this)">✕</button>
+            </div>
+        `;
+        
+        item.onmousedown = startDrag;
+        stage.appendChild(item);
+        updateCounters();
+    }
+
+    function deleteItem(btn) {
+        saveState();
+        const el = btn.parentElement.parentElement;
+        selectedItems.delete(el);
+        el.remove();
+        updateCounters();
+    }
+// --- CONTINUACIÓN DE MODSTAND (que estaba incompleto) ---
+    function modStand(e, btn, val) {
+        e.stopPropagation();
+        saveState();
+        const cont = btn.parentElement.parentElement.querySelector('.stands-container');
+        if (val > 0) {
+            const s = document.createElement('span');
+            s.className = 'stand-x';
+            s.innerText = '×';
+            cont.appendChild(s);
+        } else {
+            if (cont.lastChild) cont.removeChild(cont.lastChild);
+        }
+        updateCounters();
+    }
+
+    // --- FUNCIÓN PARA GENERAR EL PDF CENTRADO ---
+    function generatePDF() {
+    const element = document.getElementById('pdfRoot');
+    
+    document.body.classList.add('exporting');
+
+    // Sincronización de textos para el PDF [cite: 21, 23]
+    document.getElementById('p_tit').innerText = document.getElementById('h_tit').value;
+    document.getElementById('p_loc').innerText = document.getElementById('h_loc').value;
+    document.getElementById('p_fec').innerText = document.getElementById('h_fec').value;
+    document.getElementById('p_hor').innerText = document.getElementById('h_hor').value;
+
+    const opt = {
+        margin:        [10, 0, 10, 0], // Eliminamos margen lateral aquí para usar el del CSS
+        filename:      'Rider_BSMHuelva.pdf',
+        image:         { type: 'jpeg', quality: 0.98 },
+        html2canvas:   { 
+            scale: 2, 
+            width: 1050, // Ajuste exacto al ancho del contenedor
+            letterRendering: true,
+            useCORS: true 
+        },
+        jsPDF:         { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        document.body.classList.remove('exporting');
+    });
+}
+
+    // --- OTRAS FUNCIONES NECESARIAS PARA QUE NO DE ERROR ---
+    function updateCounters() {
+        const items = stage.querySelectorAll('.item:not(.director)');
+        let stands = 0;
+        let chairs = 0;
+        
+        items.forEach(it => {
+            stands += it.querySelectorAll('.stand-x').length;
+            if(it.querySelector('.chair-check')?.checked) chairs++;
+        });
+
+        document.getElementById('cI').innerText = items.length;
+        document.getElementById('cA').innerText = stands;
+        document.getElementById('cS').innerText = chairs;
+        
+        document.getElementById('reportSummary').innerText = 
+            `RESUMEN TÉCNICO: ${items.length} Instrumentos, ${stands} Atriles y ${chairs} Sillas totales.`;
+    }
+
+    function startDrag(e) {
+        if (isSelectionMode && selectedItems.has(this)) {
+            // Lógica para mover múltiples si fuera necesario
+        }
+        // Lógica de arrastre básica...
+    }
+
+    function resetStage() {
+        if(confirm('¿Vaciar el escenario?')) {
+            saveState();
+            stage.querySelectorAll('.item:not(.director)').forEach(it => it.remove());
+            updateCounters();
+        }
+    }
+
+    let dragItems = [];
+    function startDrag(e) {
+        if(e.target.closest('.item-tools') || e.target.closest('.chair-check')) return;
+        const target = this;
+        
+        if(!isSelectionMode) {
+            if (!selectedItems.has(target)) {
+                clearSelection();
+                target.classList.add('selected');
+                selectedItems.add(target);
             }
-            if(triggerRender) renderAll();
+        } else {
+            if(!selectedItems.has(target)) {
+                target.classList.add('selected');
+                selectedItems.add(target);
+            }
         }
 
-        function modificarCantidad(e, id, delta) {
-            e.stopPropagation();
-            const actuales = itemsRider.filter(it => it.idInst === id);
-            setCantidad(id, Math.max(0, actuales.length + delta));
-        }
+        dragItems = Array.from(selectedItems).map(el => ({
+            el,
+            startLeft: parseFloat(el.style.left),
+            startTop: parseFloat(el.style.top)
+        }));
 
-        function añadirExtra() {
-            const val = document.getElementById('extra-nombre').value.trim();
-            if(!val) return;
-            itemsRider.push({ idInst: Date.now(), nombre: val.toUpperCase(), cat: 'extra', x: 50, y: 50, uid: 'e'+Date.now() });
-            document.getElementById('extra-nombre').value = '';
-            renderAll();
-        }
+        const startX = e.clientX;
+        const startY = e.clientY;
 
-        function renderGrid() {
-            const grid = document.getElementById('grid-instrumentos');
-            grid.innerHTML = '';
-            DB.filter(i => i.cat === tabActual).forEach(inst => {
-                const canti = itemsRider.filter(it => it.idInst === inst.id).length;
-                const card = document.createElement('div');
-                card.className = `p-3 rounded-xl border transition-all cursor-pointer select-none group ${canti > 0 ? 'bg-blue-50 border-blue-400' : 'bg-white border-slate-200'}`;
-                card.onclick = () => toggleInstrumento(inst.id);
-                card.innerHTML = `
-                    <p class="text-[9px] font-black uppercase mb-2 truncate">${inst.nombre}</p>
-                    <div class="flex items-center justify-between gap-1">
-                        <button onclick="modificarCantidad(event, ${inst.id}, -1)" class="w-6 h-6 bg-white border rounded flex items-center justify-center text-xs font-bold">-</button>
-                        <span class="text-xs font-black">${canti}</span>
-                        <button onclick="modificarCantidad(event, ${inst.id}, 1)" class="w-6 h-6 bg-white border rounded flex items-center justify-center text-xs font-bold">+</button>
-                    </div>`;
-                grid.appendChild(card);
+        function move(e) {
+            const dx = (e.clientX - startX) / currentZoom;
+            const dy = (e.clientY - startY) / currentZoom;
+            dragItems.forEach(item => {
+                item.el.style.left = (item.startLeft + dx) + 'px';
+                item.el.style.top = (item.startTop + dy) + 'px';
             });
         }
 
-        function renderAll() {
-            renderGrid();
-            renderResumen();
-            renderEscenario();
+        function stop() {
+            if (dragItems.length > 0) saveState();
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', stop);
         }
 
-        function renderResumen() {
-            const container = document.getElementById('lista-resumen');
-            const badge = document.getElementById('total-badge');
-            container.innerHTML = '';
-            
-            const grupos = itemsRider.reduce((acc, it) => { 
-                acc[it.idInst] = (acc[it.idInst] || 0) + 1; 
-                return acc; 
-            }, {});
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', stop);
+    }
 
-            let totalItems = 0;
+    function updateCounters() {
+        const instCount = stage.querySelectorAll('.item:not(.director)').length;
+        const standCount = stage.querySelectorAll('.stand-x').length;
+        let chairCount = 0;
+        stage.querySelectorAll('.chair-check').forEach(chk => { if(chk.checked) chairCount++; });
+        
+        document.getElementById('cI').innerText = instCount;
+        document.getElementById('cA').innerText = standCount;
+        document.getElementById('cS').innerText = chairCount;
+        document.getElementById('reportSummary').innerText = `RESUMEN TÉCNICO: ${instCount} Instrumentos, ${standCount} Atriles y ${chairCount} Sillas totales.`;
+    }
 
-            DB.forEach(inst => {
-                const can = grupos[inst.id];
-                if (can > 0) {
-                    totalItems += can;
-                    const div = document.createElement('div');
-                    div.className = "flex justify-between items-center bg-white p-2 px-3 rounded-lg border text-[10px] font-bold uppercase shadow-sm";
-                    div.innerHTML = `<span>${inst.nombre}</span><div class="flex items-center gap-3"><span class="text-blue-600 font-black">${can}</span><button onclick="eliminarPorId(${inst.id})" class="text-red-400 hover:text-red-600">✕</button></div>`;
-                    container.appendChild(div);
+    function formatPrintDate(isoDate) {
+        if (!isoDate) return '';
+        const parts = isoDate.split('-');
+        if (parts.length !== 3) return isoDate;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function generatePDF() {
+        const conciertoNombre = document.getElementById('h_tit').value.trim() || 'Rider_BSMH';
+        const fileName = conciertoNombre.replace(/[/\\?%*:|"<>]/g, '-') + '.pdf';
+
+        document.getElementById('p_tit').innerText = document.getElementById('h_tit').value;
+        document.getElementById('p_loc').innerText = document.getElementById('h_loc').value;
+        document.getElementById('p_fec').innerText = formatPrintDate(document.getElementById('h_fec').value);
+        document.getElementById('p_hor').innerText = document.getElementById('h_hor').value;
+
+        const originalTransform = stage.style.transform;
+        
+        document.body.classList.add('exporting');
+        const element = document.getElementById('pdfRoot');
+        
+        const opt = {
+            margin: 0,
+            filename: fileName,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true, 
+                logging: false,
+                scrollX: 0,
+                scrollY: 0
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            document.body.classList.remove('exporting');
+            stage.style.transform = originalTransform;
+        });
+    }
+
+    function resetStage() {
+        if(!confirm("¿Deseas iniciar un nuevo proceso? Se borrará todo el diseño actual.")) return;
+        saveState();
+        stage.querySelectorAll('.item').forEach(i => i.remove());
+        document.getElementById('h_tit').value = '';
+        document.getElementById('h_loc').value = '';
+        document.getElementById('h_fec').value = '';
+        document.getElementById('h_hor').value = '';
+        document.getElementById('obs').value = '';
+        resetZoom();
+        addItem('DIRECTOR', false);
+        updateCounters();
+    }
+
+    function exportData() {
+        const data = {
+            h: { t: document.getElementById('h_tit').value, l: document.getElementById('h_loc').value, f: document.getElementById('h_fec').value, h: document.getElementById('h_hor').value },
+            obs: document.getElementById('obs').value,
+            zoom: currentZoom,
+            ox: stageOffsetX, oy: stageOffsetY,
+            items: Array.from(stage.querySelectorAll('.item')).map(i => ({
+                n: i.querySelector('.item-name').innerText,
+                l: i.style.left, t: i.style.top,
+                s: i.querySelectorAll('.stand-x').length,
+                p: i.classList.contains('director'),
+                c: i.querySelector('.chair-check') ? i.querySelector('.chair-check').checked : false
+            }))
+        };
+        const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (document.getElementById('h_tit').value || 'rider') + '_config.json';
+        a.click();
+    }
+
+    function importData(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const data = JSON.parse(ev.target.result);
+            saveState();
+            document.getElementById('h_tit').value = data.h.t || '';
+            document.getElementById('h_loc').value = data.h.l || '';
+            document.getElementById('h_fec').value = data.h.f || '';
+            document.getElementById('h_hor').value = data.h.h || '';
+            document.getElementById('obs').value = data.obs || '';
+            currentZoom = data.zoom || 1.0;
+            stageOffsetX = data.ox || 0;
+            stageOffsetY = data.oy || 0;
+            updateStageTransform();
+            stage.querySelectorAll('.item').forEach(i => i.remove());
+            data.items.forEach(d => {
+                addItem(d.n, !d.p, d.c);
+                const last = stage.lastChild;
+                last.style.left = d.l; last.style.top = d.t;
+                const cont = last.querySelector('.stands-container');
+                cont.innerHTML = '';
+                for(let i=0; i<d.s; i++) {
+                    const s = document.createElement('span'); s.className = 'stand-x'; s.innerText = '×';
+                    cont.appendChild(s);
                 }
             });
+            updateCounters();
+        };
+        reader.readAsText(file);
+    }
 
-            itemsRider.filter(it => it.cat === 'extra').forEach(extra => {
-                totalItems++;
-                const div = document.createElement('div');
-                div.className = "flex justify-between items-center bg-white p-2 px-3 rounded-lg border text-[10px] font-bold uppercase shadow-sm border-orange-200";
-                div.innerHTML = `<span>${extra.nombre}</span><div class="flex items-center gap-3"><span class="text-orange-600 font-black">1</span><button onclick="eliminarPorUid('${extra.uid}')" class="text-red-400 hover:text-red-600">✕</button></div>`;
-                container.appendChild(div);
-            });
-
-            badge.textContent = `${totalItems} TOTAL`;
-        }
-
-        function eliminarPorId(id) {
-            itemsRider = itemsRider.filter(it => it.idInst !== id);
-            renderAll();
-        }
-
-        function eliminarPorUid(uid) {
-            itemsRider = itemsRider.filter(it => it.uid !== uid);
-            renderAll();
-        }
-
-        function renderEscenario() {
-            const zones = [document.getElementById('canvas-rider'), document.getElementById('print-rider-area')];
-            zones.forEach(zone => {
-                if(!zone) return;
-                zone.querySelectorAll('.rider-item').forEach(el => el.remove());
-                itemsRider.forEach(it => {
-                    const el = document.createElement('div');
-                    el.className = 'rider-item';
-                    el.style.left = `${it.x}%`;
-                    el.style.top = `${it.y}%`;
-                    el.innerHTML = `<div class="rider-label ${it.cat}">${it.nombre}</div>`;
-                    if(zone.id === 'canvas-rider') {
-                        let isDragging = false;
-                        const start = () => { isDragging = true; el.style.zIndex = 1000; };
-                        const move = (e) => {
-                            if(!isDragging) return;
-                            const rect = zone.getBoundingClientRect();
-                            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-                            it.x = Math.max(5, Math.min(95, ((clientX - rect.left) / rect.width) * 100));
-                            it.y = Math.max(5, Math.min(95, ((clientY - rect.top) / rect.height) * 100));
-                            el.style.left = `${it.x}%`; el.style.top = `${it.y}%`;
-                        };
-                        const end = () => isDragging = false;
-                        el.addEventListener('mousedown', start);
-                        window.addEventListener('mousemove', move);
-                        window.addEventListener('mouseup', end);
-                        el.addEventListener('touchstart', start, {passive:false});
-                        window.addEventListener('touchmove', move, {passive:false});
-                        window.addEventListener('touchend', end);
-                    }
-                    zone.appendChild(el);
-                });
-            });
-        }
-
-        function prepararEImprimir() {
-            ['concierto', 'lugar', 'fecha', 'hora'].forEach(f => {
-                const val = document.getElementById('in-'+f).value.toUpperCase();
-                document.getElementById('pr-'+f).textContent = val || '---';
-            });
-            
-            const listPerc = document.getElementById('pr-lista-percusion');
-            const listVien = document.getElementById('pr-lista-viento');
-            listPerc.innerHTML = ''; listVien.innerHTML = '';
-
-            const resumen = itemsRider.reduce((acc, it) => {
-                acc[it.idInst] = (acc[it.idInst] || 0) + 1;
-                return acc;
-            }, {});
-
-            DB.forEach(inst => {
-                const can = resumen[inst.id];
-                if (can > 0) {
-                    const item = document.createElement('div');
-                    item.className = "flex justify-between py-2 text-[10px] font-bold uppercase";
-                    item.innerHTML = `<span>${inst.nombre}</span> <span>${can} UNIDADES</span>`;
-                    if(inst.cat === 'percusión') listPerc.appendChild(item);
-                    else listVien.appendChild(item);
-                }
-            });
-
-            renderEscenario();
-            setTimeout(() => { window.print(); }, 200);
-        }
-
-        function reestablecerTodo() {
-            itemsRider = [];
-            renderAll();
-        }
-
-        window.onload = renderAll;
-    </script>
+    window.onload = () => {
+        addItem('DIRECTOR', false);
+    };
+</script>
 </body>
 </html>
