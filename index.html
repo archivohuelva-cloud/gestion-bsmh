@@ -461,6 +461,21 @@
     <div id="ticker" class="ticker-content"></div>
 </div>
 
+<!-- Buscador Integrado -->
+<div class="w-full max-w-2xl mx-auto mb-8">
+    <div class="flex items-center bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-shadow">
+        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input type="text" id="search-box-index" placeholder="Buscar partituras en Biblio..." 
+               class="flex-grow ml-3 outline-none text-sm text-slate-700 placeholder-slate-400 bg-transparent"
+               onkeyup="if(event.key === 'Enter') handleSearchIndex()">
+        <button onclick="handleSearchIndex()" class="bg-[#0000bd] text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-800 transition">Buscar</button>
+    </div>
+    <!-- Área de resultados simplificada -->
+    <div id="results-area-index" class="mt-2"></div>
+</div>
+
         <!-- CUERPO PRINCIPAL: Calendarios -->
         <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12 relative z-0">
             
@@ -830,6 +845,41 @@ function saveReminders() {
         dropdown.classList.remove('show');
     }
 });
+
+// Añade estas constantes y funciones a tu script de index.html
+const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+
+async function handleSearchIndex() {
+    const query = document.getElementById('search-box-index').value.trim();
+    const resultsArea = document.getElementById('results-area-index');
+    if (!query) return;
+
+    resultsArea.innerHTML = '<p class="text-xs text-slate-400 italic">Buscando...</p>';
+
+    try {
+        // Usamos el mismo proxy que en el otro archivo
+        const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_SOURCE + '&t=' + new Date().getTime())}`);
+        const csvText = await res.text();
+        
+        // Aquí podrías reutilizar tu lógica de parseCSV, 
+        // para no repetir código, lo ideal es mover parseCSV a un archivo externo o simplemente hacer un match básico aquí:
+        const rows = csvText.split('\n');
+        const matches = rows.filter(row => row.toLowerCase().includes(query.toLowerCase())).slice(0, 3);
+
+        if (matches.length > 0) {
+            resultsArea.innerHTML = matches.map(m => `
+                <div class="bg-white p-2 mb-1 rounded border border-slate-100 text-xs shadow-sm truncate">
+                    ${m.split(',')[0]} <!-- Muestra la primera columna (Título) -->
+                </div>
+            `).join('');
+        } else {
+            resultsArea.innerHTML = '<p class="text-xs text-red-400">No encontrado.</p>';
+        }
+    } catch (e) {
+        resultsArea.innerHTML = '<p class="text-xs text-red-500">Error de conexión.</p>';
+    }
+}
+
     </script>
 </body>
 </html>
