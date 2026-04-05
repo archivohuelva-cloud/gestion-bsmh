@@ -282,10 +282,23 @@
         <!-- Barra de Marcadores (Navegación) -->
         <nav class="bg-white border border-slate-200 rounded-lg shadow-sm mb-8 px-4 py-2 flex flex-wrap gap-x-6 gap-y-2 items-center text-sm font-medium relative z-50">
 
+<div class="flex items-center gap-4 mr-2 border-r border-slate-200 pr-4">
+    <a href="Buscador Biblio.html" target="_blank" title="Buscador Biblio" class="text-slate-600 hover:text-[#0000bd] transition-colors">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+    </a>
+    <a href="https://drive.google.com/drive/folders/1Kte2u9QfCGg4CB4MaAv6bxlwsamLgEHp?usp=sharing" target="_blank" title="Pen Drive Virtual" class="text-slate-600 hover:text-[#0000bd] transition-colors">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 2h12a2 2 0 012 2v16a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2zm0 2v16h12V4H6zm2 2h8v2H8V6zm0 4h8v2H8v-2z"></path>
+        </svg>
+    </a>
+</div>
+
             <div class="bookmark-folder cursor-pointer">
                 <div class="flex items-center gap-1.5 text-slate-700 hover:text-[#0000bd] py-1 select-none" onclick="toggleMenu(event, this)">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" class="text-[#0000bd]"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-                    Herramientas Internas
+                    Herramientas Propias
                 </div>
                 <div class="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-50">
 		    		<a href="Buscador Biblio.html" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Buscador Biblio</a>
@@ -365,7 +378,7 @@
             <div class="bookmark-folder cursor-pointer">
                 <div class="flex items-center gap-1.5 text-slate-700 hover:text-[#0000bd] py-1 select-none" onclick="toggleMenu(event, this)">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" class="text-blue-500"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-                    Gestión del Archivo
+                    Gestión Archivo
                 </div>
                 <div class="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-50">
                     <a href="https://www.appsheet.com/start/34fb9066-bbe5-4236-8946-667ae69dff1d" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Biblio App</a>
@@ -382,23 +395,10 @@
                     e-mails
                 </div>
                 <div class="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-50">
-                    <a href="https://accounts.zoho.eu/signin?servicename=VirtualOffice&signupurl=https://www.zoho.com/mail/zohomail-pricing.html&serviceurl=https://mail.zoho.eu" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">banda.municipal@huelva.es</a>
+		    <a href="https://accounts.zoho.eu/signin?servicename=VirtualOffice&signupurl=https://www.zoho.com/mail/zohomail-pricing.html&serviceurl=https://mail.zoho.eu" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">banda.municipal@huelva.es</a>
 		    <a href="https://mail.google.com/mail/u/6/?ogbl#inbox" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">archivo.huelva@gmail.com</a>
                 </div>
             </div>
-
-	    <div class="bookmark-folder cursor-pointer">
-                <div class="flex items-center gap-1.5 text-slate-700 hover:text-[#0000bd] py-1 select-none" onclick="toggleMenu(event, this)">
-                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" class="text-yellow-500"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-                    Nubes
-                </div>
-                <div class="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-50">
-		    <a href="https://drive.google.com/drive/folders/1Kte2u9QfCGg4CB4MaAv6bxlwsamLgEHp?usp=sharing" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Pen Drive Virtual</a>
-                    <a href="https://drive.google.com/drive/u/2/my-drive" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Nube 1</a>
-		    <a href="https://drive.google.com/drive/u/5/my-drive" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Nube 2</a>
-                </div>
-            </div>
-
 
             <div class="bookmark-folder cursor-pointer">
                 <div class="flex items-center gap-1.5 text-slate-700 hover:text-[#0000bd] py-1 select-none" onclick="toggleMenu(event, this)">
@@ -435,7 +435,7 @@
             <div class="bookmark-folder cursor-pointer">
                 <div class="flex items-center gap-1.5 text-slate-700 hover:text-[#0000bd] py-1 select-none" onclick="toggleMenu(event, this)">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" class="text-emerald-500"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-                    Redes Sociales BSMH
+                    Redes Sociales
                 </div>
                 <div class="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-50">
                     <a href="https://www.facebook.com/BSMdeH/" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Facebook</a>
@@ -450,7 +450,7 @@
             <div class="bookmark-folder cursor-pointer">
                 <div class="flex items-center gap-1.5 text-slate-700 hover:text-[#0000bd] py-1 select-none" onclick="toggleMenu(event, this)">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20" class="text-black-500"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-                    Panel de Control
+                    Ajustes
                 </div>
                 <div class="absolute top-full left-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-50">
                     <a href="https://github.com/archivohuelva-cloud/gestion-bsmh" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Github BSMHuelva</a>
