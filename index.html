@@ -152,6 +152,25 @@
         .reminder-text.completed { text-decoration: line-through; color: #94a3b8; }
         .reminder-delete { color: #ef4444; font-size: 18px; margin-left: 8px; cursor: pointer; }
 
+/* ===== ESTILOS PARA ARRASTRAR RECORDATORIOS ===== */
+.drag-handle {
+    cursor: grab;
+    color: #cbd5e1;
+    padding-right: 8px;
+    display: flex;
+    align-items: center;
+}
+.drag-handle:active {
+    cursor: grabbing;
+}
+.reminder-item.dragging {
+    opacity: 0.5;
+    background-color: #f8fafc;
+}
+.reminder-item.drag-over {
+    border-top: 2px dashed #007AFF;
+}
+
 /* ===== SCROLL RECORDATORIOS ===== */
 .ticker-container {
     overflow: hidden;
@@ -757,22 +776,87 @@ function renderTicker() {
         }
 
         function renderReminders() {
-            const list = document.getElementById('reminders-list');
-            list.innerHTML = '';
-            let count = 0;
-            reminders.forEach((r, i) => {
-                if(!r.completed) count++;
-                const div = document.createElement('div');
-                div.className = 'reminder-item';
-                div.innerHTML = `
-                    <input type="checkbox" class="reminder-checkbox" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
-                    <span class="reminder-text ${r.completed ? 'completed' : ''}">${r.text}</span>
-                    <span class="reminder-delete" onclick="deleteReminder(${i})">&times;</span>
-                `;
-                list.appendChild(div);
-            });
-            document.getElementById('reminders-count').innerText = count;
-        }
+    const list = document.getElementById('reminders-list');
+    list.innerHTML = '';
+    let count = 0;
+    
+    reminders.forEach((r, i) => {
+        if(!r.completed) count++;
+        const div = document.createElement('div');
+        div.className = 'reminder-item';
+        div.draggable = true;
+        div.dataset.index = i;
+
+        // Asignación de eventos para Drag & Drop
+        div.addEventListener('dragstart', handleDragStart);
+        div.addEventListener('dragover', handleDragOver);
+        div.addEventListener('drop', handleDrop);
+        div.addEventListener('dragenter', handleDragEnter);
+        div.addEventListener('dragleave', handleDragLeave);
+        div.addEventListener('dragend', handleDragEnd);
+
+        div.innerHTML = `
+            <div class="drag-handle" title="Arrastrar para reordenar">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                </svg>
+            </div>
+            <input type="checkbox" class="reminder-checkbox" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
+            <span class="reminder-text ${r.completed ? 'completed' : ''}">${r.text}</span>
+            <span class="reminder-delete" onclick="deleteReminder(${i})">&times;</span>
+        `;
+        list.appendChild(div);
+    });
+    
+    document.getElementById('reminders-count').innerText = count;
+}
+
+// --- LÓGICA DE EVENTOS DRAG & DROP ---
+let dragStartIndex;
+
+function handleDragStart(e) {
+    dragStartIndex = +this.dataset.index;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragStartIndex);
+}
+
+function handleDragOver(e) {
+    e.preventDefault(); // Necesario para permitir el "drop"
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDragEnter(e) {
+    this.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.stopPropagation();
+    this.classList.remove('drag-over');
+    
+    const dragEndIndex = +this.dataset.index;
+    
+    if (dragStartIndex !== dragEndIndex) {
+        // Extraemos el elemento movido y lo insertamos en su nueva posición
+        const itemToMove = reminders.splice(dragStartIndex, 1)[0];
+        reminders.splice(dragEndIndex, 0, itemToMove);
+        
+        saveReminders(); // Esto actualiza el localStorage y el Ticker horizontal
+        renderReminders();
+    }
+    return false;
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    const items = document.querySelectorAll('.reminder-item');
+    items.forEach(item => item.classList.remove('drag-over'));
+}
 
         function addReminder() {
             const input = document.getElementById('reminder-input');
