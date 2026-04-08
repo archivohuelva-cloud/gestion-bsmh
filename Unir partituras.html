@@ -191,12 +191,52 @@
             dropzone.classList.remove('drag-over'); 
         });
 
-        dropzone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            dropzone.classList.remove('drag-over');
-            if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+        dropzone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropzone.classList.remove('drag-over');
+
+    const items = e.dataTransfer.items;
+    if (items) {
+        let allFiles = [];
+        const promises = [];
+
+        for (let i = 0; i < items.length; i++) {
+            const entry = items[i].webkitGetAsEntry();
+            if (entry) {
+                promises.push(scanFiles(entry));
+            }
+        }
+
+        const results = await Promise.all(promises);
+        allFiles = results.flat();
+
+        if (allFiles.length > 0) {
+            handleFiles(allFiles);
+        }
+    }
+});
+
+// Función recursiva para leer archivos dentro de carpetas
+async function scanFiles(entry) {
+    let files = [];
+    if (entry.isFile) {
+        const file = await new Promise((resolve) => entry.file(resolve));
+        if (file.type === 'application/pdf') {
+            files.push(file);
+        }
+    } else if (entry.isDirectory) {
+        const directoryReader = entry.createReader();
+        const entries = await new Promise((resolve) => {
+            directoryReader.readEntries(resolve);
         });
+        
+        const promises = entries.map(childEntry => scanFiles(childEntry));
+        const results = await Promise.all(promises);
+        files = results.flat();
+    }
+    return files;
+}
 
         function getSortOrder(filename) {
             const match = filename.match(/-(\d+)/);
