@@ -875,7 +875,7 @@ function renderTicker() {
             </div>
             <input type="checkbox" class="reminder-checkbox" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
             <span class="reminder-text ${r.completed ? 'completed' : ''}">${r.text}</span>
-            <span class="reminder-delete" onclick="deleteReminder(${i})">&times;</span>
+            <span class="reminder-delete" onclick="deleteReminder(${i}, event)">&times;</span>
         `;
         list.appendChild(div);
     });
@@ -946,10 +946,19 @@ function handleDragEnd(e) {
             renderReminders();
         }
 
-        function deleteReminder(i) {
+function deleteReminder(i, event) {
+    // Evita que el clic llegue al contenedor del menú y lo cierre
+    if (event) event.stopPropagation();
+
     reminders.splice(i, 1);
     saveReminders();
     renderReminders();
+
+    // Forzamos que el menú se mantenga abierto añadiendo la clase 'show'
+    const dropdown = document.getElementById('reminders-dropdown');
+    if (dropdown) {
+        dropdown.classList.add('show');
+    }
 }
 
 	function toggleAllReminders(state) {
