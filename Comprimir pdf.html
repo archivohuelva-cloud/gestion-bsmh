@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compresor de PDF de Alta Fidelidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f3f4f6; margin: 0; }
+        .dropzone-active { background-color: #fee2e2; border: 2px dashed #ef4444; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+        const { PDFDocument } = PDFLib;
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // --- ICONOS ---
+        const IconBack = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>;
+        const IconCheck = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#22c55e"/><path d="m9 12 2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+        const IconPDF = () => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ef4444" className="w-12 h-12"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 14h-2v2h2v-2zm0-4h-2v2h2v-2zm-4 4h-2v2h2v-2zm0-4h-2v2h2v-2zm-4 4H6v2h2v-2zm0-4H6v2h2v-2zM13 9V3.5L18.5 9H13z"/></svg>;
+        const IconRemove = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const IconArrowRight = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-8"/><path d="m8 12 4 4 4-4"/></svg>;
+        const IconDownload = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>;
+        const IconTrash = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
+
+        const App = () => {
+            const [step, setStep] = useState(0); 
+            const [filesToProcess, setFilesToProcess] = useState([]); 
+            const [isDragging, setIsDragging] = useState(false);
+            const [compressionLevel, setCompressionLevel] = useState('recommended');
+            const [overallProgress, setOverallProgress] = useState(0);
+            const fileInputRef = useRef(null);
+
+            useEffect(() => {
+                const preventDefault = (e) => e.preventDefault();
+                window.addEventListener('dragover', preventDefault);
+                window.addEventListener('drop', preventDefault);
+                return () => {
+                    window.removeEventListener('dragover', preventDefault);
+                    window.removeEventListener('drop', preventDefault);
+                };
+            }, []);
+
+            const handleGoBack = () => {
+                setStep(0); setFilesToProcess([]); setOverallProgress(0);
+            };
+
+            const processInput = async (files) => {
+                let extractedFiles = [];
+                for (let f of files) {
+                    if (f.type === 'application/pdf') {
+                        extractedFiles.push({ file: f, status: 'pending', compressedBlob: null });
+                    } else if (f.name.endsWith('.zip') || f.type === 'application/zip' || f.type === 'application/x-zip-compressed') {
+                        try {
+                            const zip = await JSZip.loadAsync(f);
+                            const pdfFiles = [];
+                            zip.forEach((relativePath, zipEntry) => {
+                                if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.pdf')) {
+                                    pdfFiles.push(zipEntry);
+                                }
+                            });
+                            
+                            for (let entry of pdfFiles) {
+                                const content = await entry.async("blob");
+                                const newFile = new File([content], entry.name, { type: "application/pdf" });
+                                extractedFiles.push({ file: newFile, status: 'pending', compressedBlob: null });
+                            }
+                        } catch (e) {
+                            console.error("Error leyendo ZIP:", e);
+                        }
+                    }
+                }
+
+                if (extractedFiles.length > 0) {
+                    setFilesToProcess(extractedFiles);
+                    setStep(1);
+                }
+            };
+
+            const formatBytes = (bytes) => {
+                if (!bytes) return '0 Bytes';
+                const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            const startBulkCompression = async () => {
+                setStep(2);
+                const updatedFiles = [...filesToProcess];
+                
+                let quality = 0.75; 
+                let scale = 2.0; 
+                if (compressionLevel === 'extreme') { quality = 0.3; scale = 1.0; } 
+                else if (compressionLevel === 'low') { quality = 0.92; scale = 3.0; }
+
+                for (let i = 0; i < updatedFiles.length; i++) {
+                    try {
+                        const current = updatedFiles[i];
+                        const arrayBuffer = await current.file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        const outPdf = await PDFDocument.create();
+
+                        for (let p = 1; p <= pdf.numPages; p++) {
+                            const page = await pdf.getPage(p);
+                            const viewport = page.getViewport({ scale });
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d', { alpha: false });
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+                            context.fillStyle = "white";
+                            context.fillRect(0, 0, canvas.width, canvas.height);
+
+                            await page.render({ canvasContext: context, viewport }).promise;
+                            const imgData = canvas.toDataURL('image/jpeg', quality);
+                            const img = await outPdf.embedJpg(imgData);
+                            
+                            const pdfPage = outPdf.addPage([viewport.width, viewport.height]);
+                            pdfPage.drawImage(img, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+                        }
+
+                        const pdfBytes = await outPdf.save();
+                        updatedFiles[i].compressedBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                        updatedFiles[i].status = 'done';
+                        setOverallProgress(Math.round(((i + 1) / updatedFiles.length) * 100));
+                    } catch (e) {
+                        updatedFiles[i].status = 'error';
+                    }
+                }
+
+                setFilesToProcess(updatedFiles);
+                setStep(3);
+            };
+
+            const handleDownload = async () => {
+                if (filesToProcess.length === 1) {
+                    // Descarga directa del PDF
+                    const item = filesToProcess[0];
+                    if (item.compressedBlob) {
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(item.compressedBlob);
+                        link.download = `optimizado_${item.file.name}`;
+                        link.click();
+                    }
+                } else {
+                    // Descarga de ZIP
+                    const zip = new JSZip();
+                    filesToProcess.forEach(item => {
+                        if (item.compressedBlob) {
+                            zip.file(`optimizado_${item.file.name}`, item.compressedBlob);
+                        }
+                    });
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = "PDFs_optimizados.zip";
+                    link.click();
+                }
+            };
+
+            const renderUploadView = () => (
+                <div className={`flex flex-col items-center justify-center flex-grow transition-colors ${isDragging ? 'dropzone-active rounded-3xl m-4' : ''}`}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files) processInput(e.dataTransfer.files); }}
+                >
+                    <div className="text-center px-4 max-w-3xl pointer-events-none">
+                        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">Optimizar PDF</h1>
+                        <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed">Arrastra un PDF para descargarlo optimizado, o un ZIP para procesar archivos en lote.</p>
+                    </div>
+                    <button onClick={() => fileInputRef.current.click()} className="bg-[#e53e3e] hover:bg-red-700 text-white font-bold text-2xl py-6 px-12 rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95 mb-4">
+                        Seleccionar archivos
+                    </button>
+                    <input type="file" accept=".pdf,.zip" multiple className="hidden" ref={fileInputRef} onChange={(e) => processInput(e.target.files)} />
+                    <p className="text-gray-500 font-medium">Soporta .pdf y archivos .zip con PDFs internos</p>
+                </div>
+            );
+
+            const renderConfigureView = () => (
+                <div className="flex flex-col md:flex-row flex-grow overflow-hidden">
+                    <div className="flex-grow bg-gray-100 p-6 overflow-y-auto no-scrollbar">
+                        <div className="max-w-4xl mx-auto">
+                            <h3 className="text-lg font-bold text-gray-600 mb-4 uppercase tracking-wider">
+                                {filesToProcess.length === 1 ? "Archivo seleccionado" : `Archivos detectados (${filesToProcess.length})`}
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {filesToProcess.map((item, idx) => (
+                                    <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col items-center relative">
+                                        <IconPDF />
+                                        <p className="text-xs text-gray-600 mt-2 text-center break-all line-clamp-2">{item.file.name}</p>
+                                        <p className="text-[10px] text-gray-400 font-bold">{formatBytes(item.file.size)}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="w-full md:w-80 bg-white shadow-[-4px_0_15px_rgba(0,0,0,0.05)] flex flex-col h-full z-10 shrink-0">
+                        <div className="p-6 border-b border-gray-200"><h2 className="text-2xl font-bold text-gray-800 text-center">Configuración</h2></div>
+                        <div className="flex-grow overflow-y-auto no-scrollbar">
+                            {[
+                                { id: 'extreme', title: 'MÁXIMO AHORRO', desc: 'Menor resolución, máximo espacio.' },
+                                { id: 'recommended', title: 'LECTURA NÍTIDA', desc: 'Resolución ideal para partituras.' },
+                                { id: 'low', title: 'CALIDAD ORIGINAL', desc: 'Máxima nitidez, menor ahorro.' }
+                            ].map(opt => (
+                                <div key={opt.id} onClick={() => setCompressionLevel(opt.id)} className={`p-6 border-b border-gray-200 cursor-pointer relative ${compressionLevel === opt.id ? 'bg-[#f0f2f5]' : 'hover:bg-gray-50'}`}>
+                                    <h3 className={`font-bold mb-1 ${compressionLevel === opt.id ? 'text-[#e53e3e]' : 'text-gray-700'}`}>{opt.title}</h3>
+                                    <p className="text-sm text-gray-500">{opt.desc}</p>
+                                    {compressionLevel === opt.id && <div className="absolute right-4 top-1/2 -translate-y-1/2"><IconCheck /></div>}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="p-6 bg-white border-t border-gray-200">
+                            <button onClick={startBulkCompression} className="w-full bg-[#e53e3e] hover:bg-red-700 text-white font-bold text-xl py-4 rounded-lg flex items-center justify-center gap-2 shadow-md">
+                                {filesToProcess.length === 1 ? "Optimizar PDF" : "Optimizar Lote"} <span className="rotate-[-90deg]"><IconArrowRight /></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const renderProcessingView = () => (
+                <div className="flex flex-col items-center justify-center flex-grow bg-white">
+                    <div className="w-full max-w-md p-8 text-center">
+                        <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                            {filesToProcess.length === 1 ? "Optimizando archivo..." : "Optimizando lote..."}
+                        </h2>
+                        <div className="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                            <div className="bg-[#e53e3e] h-4 transition-all duration-300" style={{ width: `${overallProgress}%` }}></div>
+                        </div>
+                        <p className="text-gray-500 font-medium">Progreso: {overallProgress}%</p>
+                    </div>
+                </div>
+            );
+
+            const renderDoneView = () => {
+                const isSingle = filesToProcess.length === 1;
+                const totalOriginal = filesToProcess.reduce((acc, curr) => acc + curr.file.size, 0);
+                const totalNew = filesToProcess.reduce((acc, curr) => acc + (curr.compressedBlob?.size || 0), 0);
+                const savings = Math.max(0, Math.round((1 - (totalNew / totalOriginal)) * 100));
+
+                return (
+                    <div className="flex flex-col items-center justify-center flex-grow bg-transparent px-4">
+                        <div className="max-w-4xl w-full text-center">
+                            <h2 className="text-4xl font-bold text-[#33333b] mb-10">¡Proceso finalizado!</h2>
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+                                <button onClick={handleGoBack} className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-5 px-8 rounded-xl flex items-center gap-2">Nueva carga</button>
+                                <button onClick={handleDownload} className="bg-[#d32f2f] hover:bg-red-700 text-white font-bold text-2xl py-5 px-12 rounded-xl shadow-lg flex items-center gap-3">
+                                    <IconDownload /> {isSingle ? "Descargar PDF" : "Descargar todo (.ZIP)"}
+                                </button>
+                                <button onClick={handleGoBack} className="w-16 h-16 bg-[#e53e3e] hover:bg-red-700 rounded-full flex items-center justify-center shadow-md"><IconTrash /></button>
+                            </div>
+                            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 inline-flex items-center gap-8">
+                                <div className="text-left border-r border-gray-100 pr-8">
+                                    <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Ahorro de espacio</p>
+                                    <p className="text-4xl font-bold text-[#e53e3e]">{savings}%</p>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-gray-500 text-sm font-bold uppercase tracking-wider mb-1">Reducción total</p>
+                                    <p className="text-lg font-bold text-gray-700">{formatBytes(totalOriginal)} → {formatBytes(totalNew)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="flex flex-col h-screen w-full bg-[#f3f4f6]">
+                    <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6 shrink-0 z-20">
+                        <button onClick={handleGoBack} className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium"><IconBack /> <span>Volver</span></button>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest italic">Banda Sinfónica Municipal de Huelva - Optimización Nítida</span>
+                    </header>
+                    {step === 0 && renderUploadView()}
+                    {step === 1 && renderConfigureView()}
+                    {step === 2 && renderProcessingView()}
+                    {step === 3 && renderDoneView()}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
