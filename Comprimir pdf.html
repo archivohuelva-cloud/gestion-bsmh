@@ -56,8 +56,14 @@
             }, []);
 
             const handleGoBack = () => {
-                setStep(0); setFilesToProcess([]); setOverallProgress(0);
-            };
+    setStep(0);
+    setFilesToProcess([]);
+    setOverallProgress(0);
+    // Limpieza del input para permitir subir el mismo archivo consecutivamente
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+};
 
             const processInput = async (files) => {
                 let extractedFiles = [];
@@ -178,8 +184,8 @@
                     onDrop={(e) => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files) processInput(e.dataTransfer.files); }}
                 >
                     <div className="text-center px-4 max-w-3xl pointer-events-none">
-                        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">Optimizar PDF</h1>
-                        <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed">Arrastra un PDF para descargarlo optimizado, o un ZIP para procesar archivos en lote.</p>
+                        <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">Comprimir PDF</h1>
+                        <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed">Arrastra un PDF para descargarlo comprimido, o un archivo .ZIP para procesar archivos en lote.</p>
                     </div>
                     <button onClick={() => fileInputRef.current.click()} className="bg-[#e53e3e] hover:bg-red-700 text-white font-bold text-2xl py-6 px-12 rounded-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95 mb-4">
                         Seleccionar archivos
@@ -224,7 +230,7 @@
                         </div>
                         <div className="p-6 bg-white border-t border-gray-200">
                             <button onClick={startBulkCompression} className="w-full bg-[#e53e3e] hover:bg-red-700 text-white font-bold text-xl py-4 rounded-lg flex items-center justify-center gap-2 shadow-md">
-                                {filesToProcess.length === 1 ? "Optimizar PDF" : "Optimizar Lote"} <span className="rotate-[-90deg]"><IconArrowRight /></span>
+                                {filesToProcess.length === 1 ? "Comprimir PDF" : "Comprimir Lote"} <span className="rotate-[-90deg]"><IconArrowRight /></span>
                             </button>
                         </div>
                     </div>
@@ -235,7 +241,7 @@
                 <div className="flex flex-col items-center justify-center flex-grow bg-white">
                     <div className="w-full max-w-md p-8 text-center">
                         <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                            {filesToProcess.length === 1 ? "Optimizando archivo..." : "Optimizando lote..."}
+                            {filesToProcess.length === 1 ? "Comprimiendo archivo..." : "Comprimiendo lote..."}
                         </h2>
                         <div className="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
                             <div className="bg-[#e53e3e] h-4 transition-all duration-300" style={{ width: `${overallProgress}%` }}></div>
@@ -280,9 +286,28 @@
             return (
                 <div className="flex flex-col h-screen w-full bg-[#f3f4f6]">
                     <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6 shrink-0 z-20">
-                        <button onClick={handleGoBack} className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium"><IconBack /> <span>Volver</span></button>
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest italic">Banda Sinfónica Municipal de Huelva - Optimización Nítida</span>
-                    </header>
+    {step === 0 ? (
+        /* Botón para volver al Index externo cuando estás en la pantalla principal */
+        <a 
+            href="index.html" 
+            className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium transition-colors"
+        >
+            <IconBack /> <span>Volver</span>
+        </a>
+    ) : (
+        /* Botón para volver al paso anterior dentro de la aplicación */
+        <button 
+            onClick={handleGoBack} 
+            className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium transition-colors"
+        >
+            <IconBack /> <span>Volver</span>
+        </button>
+    )}
+    
+    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest italic">
+        Banda Sinfónica Municipal de Huelva - Archivo
+    </span>
+</header>
                     {step === 0 && renderUploadView()}
                     {step === 1 && renderConfigureView()}
                     {step === 2 && renderProcessingView()}
