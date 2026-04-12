@@ -158,7 +158,7 @@
                     if (item.compressedBlob) {
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(item.compressedBlob);
-                        link.download = `optimizado_${item.file.name}`;
+                        link.download = `comprimido_${item.file.name}`;
                         link.click();
                     }
                 } else {
@@ -166,13 +166,13 @@
                     const zip = new JSZip();
                     filesToProcess.forEach(item => {
                         if (item.compressedBlob) {
-                            zip.file(`optimizado_${item.file.name}`, item.compressedBlob);
+                            zip.file(`comprimido_${item.file.name}`, item.compressedBlob);
                         }
                     });
                     const content = await zip.generateAsync({ type: "blob" });
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(content);
-                    link.download = "PDFs_optimizados.zip";
+                    link.download = "PDFs_comprimidos.zip";
                     link.click();
                 }
             };
