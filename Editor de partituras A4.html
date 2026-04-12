@@ -104,7 +104,7 @@
             <label for="pdf-upload" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md cursor-pointer transition flex items-center gap-2 text-sm font-medium">
                 <i data-lucide="upload" class="w-4 h-4"></i> Cargar PDF(s)
             </label>
-            <input type="file" id="pdf-upload" accept="application/pdf" class="hidden" multiple>
+            <input type="file" id="pdf-upload" accept="application/pdf,image/*" class="hidden" multiple>
             
             <!-- Corregido el cierre anidado de botones del código original -->
             <button id="export-btn" class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-500 text-white px-4 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium" disabled>
@@ -372,37 +372,71 @@
         uploadInput.addEventListener('change', async (e) => {
             const files = e.target.files;
             if (!files || files.length === 0) return;
-            showLoading("Procesando archivos PDF...");
+            showLoading("Procesando archivos...");
             try {
                 for (let f = 0; f < files.length; f++) {
                     const file = files[f];
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                    for(let i=1; i<=pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const viewport = page.getViewport({ scale: 2.5 });
-                        const offCanvas = document.createElement('canvas');
-                        offCanvas.width = viewport.width; offCanvas.height = viewport.height;
-                        await page.render({ canvasContext: offCanvas.getContext('2d'), viewport }).promise;
-                        
-                        // Ajustamos la escala inicial en base a todo el lienzo del canvas actual
-                        let scale = Math.min(canvas.width / viewport.width, canvas.height / viewport.height);
-                        const newPage = {
-                            img: offCanvas, 
-                            x: canvas.width / 2, y: canvas.height / 2, // Centramos al medio del A4
-                            w: viewport.width * scale, h: viewport.height * scale,
-                            origW: viewport.width, origH: viewport.height,
-                            rotation: 0, strokes: [], texts: [], history: [], redoStack: []
-                        };
-                        newPage.history.push({ x: newPage.x, y: newPage.y, w: newPage.w, h: newPage.h, rotation: 0, strokes: [], texts: [] });
-                        pagesData.push(newPage);
+                    
+                    if (file.type === 'application/pdf') {
+                        // LÓGICA PARA PDF
+                        const arrayBuffer = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                        for(let i=1; i<=pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const viewport = page.getViewport({ scale: 2.5 });
+                            const offCanvas = document.createElement('canvas');
+                            offCanvas.width = viewport.width; 
+                            offCanvas.height = viewport.height;
+                            await page.render({ canvasContext: offCanvas.getContext('2d'), viewport }).promise;
+                            crearNuevaPagina(offCanvas, viewport.width, viewport.height);
+                        }
+                    } else if (file.type.startsWith('image/')) {
+                        // LÓGICA PARA IMÁGENES (JPG, PNG, GIF, TIFF, etc.)
+                        await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                                const img = new Image();
+                                img.onload = () => {
+                                    const offCanvas = document.createElement('canvas');
+                                    offCanvas.width = img.width;
+                                    offCanvas.height = img.height;
+                                    offCanvas.getContext('2d').drawImage(img, 0, 0);
+                                    crearNuevaPagina(offCanvas, img.width, img.height);
+                                    resolve();
+                                };
+                                img.onerror = reject;
+                                img.src = event.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                        });
                     }
                 }
-                currentIndex = 0; toolsContainer.style.opacity = '1'; toolsContainer.style.pointerEvents = 'auto'; 
-                exportBtn.disabled = false; document.getElementById('zoom-fit').click();
+                currentIndex = 0;
+                toolsContainer.style.opacity = '1'; 
+                toolsContainer.style.pointerEvents = 'auto'; 
+                exportBtn.disabled = false; 
+                document.getElementById('zoom-fit').click();
                 updateUI(); render(); hideLoading();
-            } catch (err) { console.error(err); alert("Error al cargar PDF."); hideLoading(); }
+            } catch (err) { 
+                console.error(err);
+                alert("Error al cargar los archivos."); 
+                hideLoading(); 
+            }
         });
+
+        // Función auxiliar para evitar repetir código
+        function crearNuevaPagina(sourceCanvas, width, height) {
+            let scale = Math.min(canvas.width / width, canvas.height / height);
+            const newPage = {
+                img: sourceCanvas, 
+                x: canvas.width / 2, y: canvas.height / 2,
+                w: width * scale, h: height * scale,
+                origW: width, origH: height,
+                rotation: 0, strokes: [], texts: [], history: [], redoStack: []
+            };
+            newPage.history.push({ x: newPage.x, y: newPage.y, w: newPage.w, h: newPage.h, rotation: 0, strokes: [], texts: [] });
+            pagesData.push(newPage);
+        }
 
         function worldToLocal(worldX, worldY, p) {
             const dx = worldX - p.x;
@@ -841,11 +875,11 @@
 
             const files = e.dataTransfer.files;
             if (files && files.length > 0) {
-                const hasPDF = Array.from(files).some(file => file.type === 'application/pdf');
-                if (!hasPDF) {
-                    alert('Por favor, asegúrese de arrastrar un archivo en formato PDF.');
-                    return;
-                }
+                const isValid = Array.from(files).some(file => file.type === 'application/pdf' || file.type.startsWith('image/'));
+if (!isValid) {
+    alert('Por favor, arrastre archivos PDF o imágenes (JPG, PNG, etc.).');
+    return;
+}
 
                 if (fileInput) {
                     // Transferimos el archivo al sistema y forzamos el evento de actualización
