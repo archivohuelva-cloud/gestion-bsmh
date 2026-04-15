@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema BSMH v.3.0.4 (Web Version)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 para notificaciones tipo Toast -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Librerías para PDF y ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <style>
+        body { background-color: #f5f7f9; }
+        .big-button {
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .big-button:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        .miniatura-container {
+            height: 180px; width: 100%; overflow: auto; border: 1px solid #888; background-color: #000; border-radius: 5px; text-align: center;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased font-sans flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-col flex z-20">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-gray-800" id="sb-user">👤 Usuario</h2>
+            <p class="text-xs text-gray-500 mb-2 font-mono" id="sb-logic">Lógica: Nombre_BSMH</p>
+            <div class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded inline-block font-medium">Versión Web 1.0.0</div>
+        </div>
+        <hr class="border-gray-100">
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button onclick="navigate('menu')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-home w-6"></i> Inicio</button>
+            <button onclick="navigate('renombrador')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-tags w-6"></i> Renombrador</button>
+            <button onclick="navigate('extractor')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-file-export w-6"></i> Extractor PDF</button>
+            <hr class="border-gray-100 my-2">
+            <button onclick="navigate('editorLB')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-cog w-6"></i> Gestionar Lista Base</button>
+            <button id="btn-gestionar-patrones" onclick="navigate('editorPatrones')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition hidden"><i class="fas fa-puzzle-piece w-6"></i> Gestionar Patrones</button>
+        </nav>
+        <div class="p-4 border-t border-gray-200">
+            <button onclick="logout()" class="w-fbull bg-red-50 text-red-600 px-4 py-2 rounded hover:bg-red-100 font-medium transition"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 h-full overflow-y-auto relative">
+        <!-- VISTA: LOGIN -->
+        <div id="view-login" class="flex items-center justify-center h-full hidden">
+            <div class="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full">
+                <div class="text-center mb-6">
+                    <h1 class="text-2xl font-bold text-gray-800">🔐 Acceso al Sistema</h1>
+                    <p class="text-sm text-gray-500 mt-1">Banda Sinfónica Municipal de Huelva</p>
+                </div>
+                <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                        <input type="text" id="login-user" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-pass" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition">Entrar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VISTA: MENU PRINCIPAL -->
+        <div id="view-menu" class="p-8 max-w-5xl mx-auto mt-10">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-gray-800">Selecciona una herramienta <span class="text-sm text-gray-500 align-middle">v.3.0.4</span></h1>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <button onclick="navigate('renombrador')" class="big-button bg-blue-600 text-white rounded-2xl h-48 flex flex-col items-center justify-center text-2xl font-bold">
+                    <i class="fas fa-tags text-4xl mb-4"></i>
+                    RENOMBRADOR
+                </button>
+                <button onclick="navigate('extractor')" class="big-button bg-blue-600 text-white rounded-2xl h-48 flex flex-col items-center justify-center text-2xl font-bold">
+                    <i class="fas fa-folder-open text-4xl mb-4"></i>
+                    EXTRACTOR
+                </button>
+            </div>
+        </div>
+
+        <!-- VISTA: RENOMBRADOR -->
+        <div id="view-renombrador" class="hidden p-8 max-w-6xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-black text-gray-800">Renombrador</h1>
+                <p class="text-lg text-gray-500">Versión 4.7.2 (Web)</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <label class="font-bold text-gray-700">Subir PDFs</label>
+                    <div id="renom-stats" class="text-sm font-bold text-green-600"></div>
+                </div>
+                <input type="file" id="renom-files" multiple accept="application/pdf" class="w-full border-2 border-dashed border-gray-300 p-8 rounded-lg text-center cursor-pointer mb-4" onchange="handleRenombradorFiles(event)">
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Nombre del archivo Limpio?</label>
+                        <select id="renom-limpio" class="w-full border border-gray-300 rounded px-3 py-2">
+                            <option value="Si">Sí</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div id="renom-cod-obra-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Código obra (Obligatorio):</label>
+                        <input type="text" id="renom-cod-obra" maxlength="5" class="w-full border border-gray-300 rounded px-3 py-2">
+                    </div>
+                </div>
+            </div>
+
+            <div id="renom-list" class="space-y-2 mb-6"></div>
+
+            <div id="renom-actions" class="hidden flex gap-4">
+                <button onclick="processRenombrador()" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-md"><i class="fas fa-rocket mr-2"></i> PROCESAR Y DESCARGAR ZIP</button>
+            </div>
+        </div>
+
+        <!-- VISTA: EXTRACTOR -->
+        <div id="view-extractor" class="hidden p-8 max-w-6xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-black text-gray-800">Extractor PDF</h1>
+                <p class="text-lg text-gray-500">Versión 3.8.6 (Web)</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="md:col-span-3 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <label class="font-bold text-gray-700 block mb-2">Subir PDF</label>
+                    <input type="file" id="ext-file" accept="application/pdf" class="w-full border border-gray-300 p-2 rounded" onchange="handleExtractorFile(event)">
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <label class="font-bold text-gray-700 block mb-2">🔍 Zoom Miniatura</label>
+                    <input type="range" id="ext-zoom" min="0.1" max="4.0" step="0.1" value="1.0" class="w-full" onchange="renderAllThumbnails()">
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <label class="font-bold text-gray-700 block mb-2">🤖 Pegar análisis de la IA aquí</label>
+                <textarea id="ext-ia" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono placeholder-gray-400" placeholder="Estructura de la IA..."></textarea>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <h3 class="font-bold text-gray-700 mb-3">🛠️ Configuración</h3>
+                <div class="grid grid-cols-5 gap-4 items-end">
+                    <div><label class="block text-xs text-gray-500">Págs Totales</label><input type="number" id="ext-pt" value="20" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs text-gray-500">Págs/Inst</label><input type="number" id="ext-pi" value="1" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs text-gray-500">Guion Ini</label><input type="number" id="ext-gi" value="1" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs text-gray-500">Guion Fin</label><input type="number" id="ext-gf" value="9" class="w-full border p-2 rounded"></div>
+                    <button onclick="generateExtractorTable()" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition">🚀 GENERAR TABLA</button>
+                </div>
+            </div>
+
+            <div id="ext-table" class="space-y-2 mb-6"></div>
+            
+            <button id="ext-btn-download" onclick="processExtractor()" class="hidden w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-md"><i class="fas fa-download mr-2"></i> FINALIZAR Y DESCARGAR ZIP</button>
+        </div>
+
+        <!-- VISTA: EDITOR LISTA BASE -->
+        <div id="view-editorLB" class="hidden p-8 max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black text-gray-800">⚙️ Gestión de Lista Base</h1>
+            </div>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                <p class="text-sm text-blue-700" id="lb-info-text">📍 Editando. Marca para borrar o cambia el ID para mover.</p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+                <div class="max-h-[600px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 w-16 text-center text-sm font-semibold text-gray-600">🗑️</th>
+                                <th class="p-3 w-24 text-sm font-semibold text-gray-600">ID</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">Nombre Instrumento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lb-tbody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <button onclick="saveLB()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md"><i class="fas fa-save mr-2"></i> GUARDAR Y LIMPIAR EXCEL</button>
+        </div>
+
+        <!-- VISTA: EDITOR PATRONES -->
+        <div id="view-editorPatrones" class="hidden p-8 max-w-5xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black text-gray-800">🧩 Editor de Patrones</h1>
+                <p class="text-lg text-gray-500">Versión 4.2.2 (Web)</p>
+            </div>
+            
+            <div id="patrones-alerts" class="mb-4"></div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <input type="text" id="pat-search-p" placeholder="🔍 Buscar Patrón..." class="w-full border border-gray-300 p-2 rounded" onkeyup="renderPatronesTable()">
+                <input type="text" id="pat-search-i" placeholder="🔍 Buscar Instrumento..." class="w-full border border-gray-300 p-2 rounded" onkeyup="renderPatronesTable()">
+            </div>
+
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+                <div class="max-h-[500px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 w-32 text-sm font-semibold text-gray-600">Aviso</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">Patrón</th>
+                                <th class="p-3 w-1/3 text-sm font-semibold text-gray-600">Instrumento Real</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pat-tbody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <button onclick="savePatrones()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md"><i class="fas fa-save mr-2"></i> GUARDAR CAMBIOS</button>
+        </div>
+    </main>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 z-50 flex flex-col items-center justify-center hidden">
+        <i class="fas fa-circle-notch fa-spin text-6xl text-blue-600 mb-4"></i>
+        <h2 id="loading-text" class="text-xl font-bold text-gray-800">Cargando...</h2>
+    </div>
+
+    <!-- SCRIPT PRINCIPAL -->
+    <script>
+        // Configuración de PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // --- ESTADO GLOBAL ---
+        const URL_PUENTE = "https://script.google.com/macros/s/AKfycbzMdvGYaHXAW_h5TGw3JphefqTtc-10WoVtR5KP87bA_4ek6_3A1fkrVMHsrbJ98h8hJQ/exec";
+        
+        const state = {
+            user: null,
+            logicMode: null, // "Nombre_BSMH" (Adrian) o "Nombre_LARGO" (Jose)
+            pestana_lb: null,
+            df_base: [],
+            df_patrones: [],
+            
+            // Renombrador
+            renom_files: [],
+            renom_orden: {},
+            renom_selecciones: {},
+            renom_manuales: {},
+            patron_texto_visual: {},
+            patrones_voluntarios: {},
+            
+            // Extractor
+            ext_pdf_bytes: null,
+            ext_pdf_doc: null,
+            ext_filename: "",
+            ext_filas: [],
+            
+            // Editores
+            lb_data: [],
+            pat_data: []
+        };
+
+// Este código se ejecutará solo al cargar la página
+window.addEventListener('DOMContentLoaded', (event) => {
+    // Definimos qué usuario queremos ser por defecto (puedes cambiar "Adrian" por "Jose")
+    state.user = "Adrian"; 
+    state.logicMode = "Nombre_BSMH"; 
+    state.pestana_lb = "LB_BSMH";
+
+    // Actualizamos los textos de la barra lateral para que no salgan vacíos
+    document.getElementById('sb-user').innerText = `👤 ${state.user}`;
+    document.getElementById('sb-logic').innerText = `Lógica: ${state.logicMode}`;
+    
+    // Mostramos el botón de patrones si elegiste ser Adrian
+    document.getElementById('btn-gestionar-patrones').classList.remove('hidden');
+
+    // Cargamos los datos de la base de datos de Google automáticamente
+    preloadData(); 
+});
+
+        // --- UTILIDADES ---
+        const showLoading = (text = "Cargando...") => {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        };
+        const hideLoading = () => document.getElementById('loading-overlay').classList.add('hidden');
+        const toast = (msg, icon = 'success') => {
+            Swal.fire({ toast: true, position: 'top-end', icon: icon, title: msg, showConfirmButton: false, timer: 3000 });
+        };
+
+        // Lógica de traducción e instrumentos
+        function normalizarParaComparar(texto) {
+            if (!texto) return "";
+            return texto.toString().replace(/\*/g, "").toLowerCase().trim()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Quitar acentos
+        }
+
+        function construirPatronRegex(patronUsuario) {
+            const p = normalizarParaComparar(patronUsuario);
+            if (!p) return "$.^";
+            // Escapar caracteres especiales de regex
+            const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\ /g, '\\s*');
+            return new RegExp(`.*${pEsc}.*`, 'i');
+        }
+
+        function traductorInstrumento(nombre, haciaNube, esAdrian) {
+            nombre = String(nombre).trim();
+            if (haciaNube) {
+                let res = nombre.toUpperCase();
+                res = res.replace(/([A-Z])(\d)/g, '$1 $2');
+                if (res.includes("CLARINETEPRAL")) res = res.replace("CLARINETEPRAL", "CLARINETE PRAL");
+                return res.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' '); // Title case
+            } else {
+                if (esAdrian) {
+                    let res = nombre.replace(/(CLARINETE)(BAJO)/ig, '$1 $2');
+                    return res.split(' ').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                } else {
+                    let res = nombre.toUpperCase();
+                    if (res.includes("CLARINETE")) res = res.replace(/ /g, "");
+                    if (res.includes("SAXO ")) res = res.replace("SAXO ", "");
+                    return res.toUpperCase();
+                }
+            }
+        }
+
+        function formatearNombreExtractor(nombre, pestana) {
+            nombre = String(nombre).trim();
+            if (pestana === "LB_BSMH") {
+                let res = nombre.replace(/(\d+)/g, ' $1');
+                res = res.split(' ').filter(Boolean).join(' ');
+                return res.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            } else {
+                let res = nombre.toUpperCase();
+                if (res.includes("CLARINETE")) {
+                    if (res.includes("BAJO")) return "CLARINETEBAJO";
+                    return res.replace(/ /g, "");
+                } else {
+                    res = res.replace(/(\D)(\d)/g, '$1 $2');
+                    return res.split(' ').filter(Boolean).join(' ');
+                }
+            }
+        }
+
+        // --- CONEXIÓN CON GOOGLE SHEETS ---
+        // CORS workaround: Google Script exec url usually redirects. We use GET for reading. 
+        // Para POST, desde JS puro puede dar error de CORS si el GAS no responde headers adecuados.
+        // Se asume que el GAS está preparado o usaremos fetch standard con mode 'cors'.
+        async function fetchSheet(pestana) {
+            try {
+                const res = await fetch(`${URL_PUENTE}?pestaña=${pestana}&nocache=${Math.random().toString(36).substring(7)}`);
+                const data = await res.json();
+                if (data && data.length > 1) {
+                    const headers = data[0];
+                    return data.slice(1).map(row => {
+                        let obj = {};
+                        headers.forEach((h, i) => obj[h] = row[i]);
+                        return obj;
+                    });
+                }
+                return [];
+            } catch (e) {
+                console.error(e);
+                return [];
+            }
+        }
+
+        async function postSheet(payload) {
+            try {
+                const res = await fetch(URL_PUENTE, {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                    // mode: 'no-cors' // Si hay problemas de CORS estricto, pero no podremos leer respuesta.
+                });
+                return true; 
+            } catch (e) {
+                console.error(e);
+                return false;
+            }
+        }
+
+        // --- NAVEGACIÓN Y LOGIN ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('login-user').value.toLowerCase().trim();
+            const p = document.getElementById('login-pass').value;
+            
+            if (u === "adrian" && p === "bsmh") {
+                state.user = "Adrian"; state.logicMode = "Nombre_BSMH"; state.pestana_lb = "LB_BSMH";
+            } else if (u === "jose" && p === "bsmh") {
+                state.user = "Jose"; state.logicMode = "Nombre_LARGO"; state.pestana_lb = "LB_LARGO";
+            } else {
+                Swal.fire("Error", "Credenciales incorrectas.", "error");
+                return;
+            }
+
+            document.getElementById('sb-user').innerText = `👤 ${state.user}`;
+            document.getElementById('sb-logic').innerText = `Lógica: ${state.logicMode}`;
+            document.getElementById('sidebar').classList.remove('hidden');
+            document.getElementById('sidebar').classList.add('flex');
+            
+            if(state.user === "Adrian") {
+                document.getElementById('btn-gestionar-patrones').classList.remove('hidden');
+            }
+
+            navigate('menu');
+            preloadData(); // Cargar datos base en background
+        }
+
+        function logout() {
+            Object.assign(state, {user:null, df_base:[], df_patrones:[], renom_files:[]});
+            document.getElementById('login-form').reset();
+            document.getElementById('sidebar').classList.add('hidden');
+            document.getElementById('sidebar').classList.remove('flex');
+            navigate('login');
+        }
+
+        function navigate(viewId) {
+            ['login', 'menu', 'renombrador', 'extractor', 'editorLB', 'editorPatrones'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+            });
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+
+            if(viewId === 'renombrador') initRenombradorUI();
+            if(viewId === 'editorLB') loadEditorLB();
+            if(viewId === 'editorPatrones') loadEditorPatrones();
+        }
+
+        async function preloadData() {
+            if(state.df_base.length === 0) state.df_base = await fetchSheet(state.pestana_lb);
+            if(state.df_patrones.length === 0) {
+                let pats = await fetchSheet("Patrones");
+                // Ordenar por longitud de patron descendente (como en Python)
+                state.df_patrones = pats.sort((a,b) => (String(b.Patron).length - String(a.Patron).length));
+            }
+        }
+
+        // ==========================================
+        // VISTA: RENOMBRADOR
+        // ==========================================
+        async function initRenombradorUI() {
+            if (state.user === "Adrian") {
+                document.getElementById('renom-cod-obra-container').classList.remove('hidden');
+            } else {
+                document.getElementById('renom-cod-obra-container').classList.add('hidden');
+            }
+            if(state.df_base.length === 0 || state.df_patrones.length === 0) {
+                showLoading("Cargando patrones y lista base...");
+                await preloadData();
+                hideLoading();
+            }
+            document.getElementById('renom-stats').innerHTML = `✅ ${state.df_patrones.length} Patrones activos`;
+            renderRenombradorList();
+        }
+
+        function handleRenombradorFiles(e) {
+            state.renom_files = Array.from(e.target.files);
+            const hayNombresLargos = state.renom_files.some(f => f.name.length > 25);
+            document.getElementById('renom-limpio').value = hayNombresLargos ? "No" : "Si";
+            
+            state.renom_orden = {};
+            state.renom_selecciones = {};
+            state.patron_texto_visual = {};
+            state.renom_manuales = {};
+            let dict_pesos = {};
+
+            const esAdrian = (state.user === "Adrian");
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+
+            state.renom_files.forEach(arc => {
+                let nameLimpio = normalizarParaComparar(arc.name.replace(".pdf", ""));
+                
+                if (arc.name.toUpperCase().includes("GUION")) {
+                    state.renom_selecciones[arc.name] = "Guion";
+                    dict_pesos[arc.name] = -1;
+                    return;
+                }
+
+                let mejorMatch = null;
+                for (let fila of state.df_patrones) {
+                    let p_raw = String(fila.Patron).trim();
+                    if (p_raw && p_raw.replace(/\*/g, "").trim()) {
+                        let regex = construirPatronRegex(p_raw);
+                        if (regex.test(nameLimpio)) {
+                            // Toma el primero, que por ordenación previa es el más largo (más específico)
+                            mejorMatch = fila;
+                            break;
+                        }
+                    }
+                }
+
+                if (mejorMatch) {
+                    let sug = traductorInstrumento(String(mejorMatch.Renombrado), false, esAdrian);
+                    state.patron_texto_visual[arc.name] = String(mejorMatch.Patron);
+                    state.renom_selecciones[arc.name] = lista_inst_ordenada.includes(sug) ? sug : "OTRO / EDITAR...";
+                    dict_pesos[arc.name] = lista_inst_ordenada.includes(sug) ? lista_inst_ordenada.indexOf(sug) : 9999;
+                } else {
+                    state.renom_selecciones[arc.name] = "Seleccionar...";
+                    dict_pesos[arc.name] = 10000;
+                }
+            });
+
+            // Ordenar array
+            state.renom_files.sort((a, b) => {
+                let pA = dict_pesos[a.name] || 10000;
+                let pB = dict_pesos[b.name] || 10000;
+                if(pA !== pB) return pA - pB;
+                return a.name.localeCompare(b.name);
+            });
+
+            let c_inst = 1;
+            state.renom_files.forEach(arc => {
+                state.renom_orden[arc.name] = (state.renom_selecciones[arc.name] === "Guion") ? 0 : c_inst++;
+            });
+
+            document.getElementById('renom-actions').classList.remove('hidden');
+            renderRenombradorList();
+        }
+
+        function renderRenombradorList() {
+            const container = document.getElementById('renom-list');
+            container.innerHTML = '';
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            const limpioSelect = document.getElementById('renom-limpio').value;
+
+            // Re-ordenar archivos según state.renom_orden
+            let renderFiles = [...state.renom_files].sort((a, b) => {
+                let oA = state.renom_orden[a.name] || 999;
+                let oB = state.renom_orden[b.name] || 999;
+                if(oA !== oB) return oA - oB;
+                return a.name.localeCompare(b.name);
+            });
+
+            renderFiles.forEach(arc => {
+                let v_sel = state.renom_selecciones[arc.name] || "Seleccionar...";
+                let p_vis = state.patron_texto_visual[arc.name] || "";
+                
+                let html = `
+                <div class="bg-white p-3 rounded shadow-sm border border-gray-200 flex items-center gap-4 text-sm">
+                    <div class="w-16 flex items-center gap-2">
+                        <input type="number" class="w-10 border rounded px-1 py-1 text-center" value="${state.renom_orden[arc.name] || 0}" onchange="updateRenomOrden('${arc.name}', this.value)">
+                    </div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="font-bold truncate">${arc.name}</div>
+                        ${(limpioSelect === "No" && !p_vis.replace(/\*/g,"").trim()) ? 
+                            `<input type="text" placeholder="Escribe Patrón Manual..." class="text-xs border rounded px-2 py-1 mt-1 w-full" onchange="state.patrones_voluntarios['${arc.name}'] = this.value">` : ''}
+                    </div>
+                    <div class="w-1/4">
+                        <select class="w-full border rounded px-2 py-1" onchange="updateRenomSelection('${arc.name}', this.value)">
+                            <option value="Seleccionar..." ${v_sel === 'Seleccionar...' ? 'selected' : ''}>Seleccionar...</option>
+                            <option value="Guion" ${v_sel === 'Guion' ? 'selected' : ''}>Guion</option>
+                            <option value="OTRO / EDITAR..." ${v_sel === 'OTRO / EDITAR...' ? 'selected' : ''}>OTRO / EDITAR...</option>
+                            <option disabled>---</option>
+                            ${lista_inst_ordenada.map(i => `<option value="${i}" ${v_sel === i ? 'selected' : ''}>${i}</option>`).join('')}
+                        </select>
+                        ${(p_vis && v_sel !== 'Seleccionar...') ? `<div class="text-[10px] text-gray-500 italic mt-1">📌 Patrón: ${p_vis}</div>` : ''}
+                    </div>
+                    <div class="w-1/3 flex items-center gap-2 ${v_sel !== 'OTRO / EDITAR...' ? 'invisible' : ''}">
+                        <input type="text" placeholder="Nombre" class="flex-1 border rounded px-2 py-1 text-xs" value="${state.renom_manuales[arc.name] || ''}" onchange="state.renom_manuales['${arc.name}'] = this.value">
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function updateRenomOrden(name, newPos) {
+            let n = parseInt(newPos) || 0;
+            // Similar a la logica de streamlite: reordenar la lista
+            let lista_k = Object.keys(state.renom_orden).filter(k => state.renom_orden[k] !== 0).sort((a,b) => state.renom_orden[a] - state.renom_orden[b]);
+            if(lista_k.includes(name)) lista_k.splice(lista_k.indexOf(name), 1);
+            lista_k.splice(Math.max(0, n - 1), 0, name);
+            
+            lista_k.forEach((k, idx) => state.renom_orden[k] = idx + 1);
+            if(n === 0) state.renom_orden[name] = 0;
+            renderRenombradorList();
+        }
+
+        function updateRenomSelection(name, newVal) {
+            state.renom_selecciones[name] = newVal;
+            if(newVal === "Guion") state.renom_orden[name] = 0;
+            // Re-evaluar orden de todos basado en la Lista Base
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            let dict_pesos = {};
+            Object.keys(state.renom_selecciones).forEach(k => {
+                let inst = state.renom_selecciones[k];
+                if(inst === "Guion") dict_pesos[k] = -1;
+                else if(lista_inst_ordenada.includes(inst)) dict_pesos[k] = lista_inst_ordenada.indexOf(inst);
+                else dict_pesos[k] = 9999;
+            });
+            let ordenados = Object.keys(dict_pesos).sort((a,b) => {
+                if(dict_pesos[a] !== dict_pesos[b]) return dict_pesos[a] - dict_pesos[b];
+                return a.localeCompare(b);
+            });
+            let c_inst = 1;
+            ordenados.forEach(k => {
+                if(state.renom_selecciones[k] !== "Guion") {
+                    state.renom_orden[k] = c_inst++;
+                }
+            });
+            renderRenombradorList();
+        }
+
+        async function processRenombrador() {
+            const esAdrian = (state.user === "Adrian");
+            const codObra = document.getElementById('renom-cod-obra').value.trim();
+            if (esAdrian && !codObra) {
+                Swal.fire("Atención", "Introduce el 'Código obra' para procesar.", "warning");
+                return;
+            }
+
+            showLoading("Generando ZIP...");
+            try {
+                const zip = new JSZip();
+                const limpioSelect = document.getElementById('renom-limpio').value;
+                let pats_exist = state.df_patrones.map(r => normalizarParaComparar(r.Patron));
+                
+                let nuevosPatrones = [];
+
+                for (let arc of state.renom_files) {
+                    let sel_act = state.renom_selecciones[arc.name] || "Seleccionar...";
+                    if(sel_act === "Seleccionar..." || sel_act === "---") continue;
+
+                    let final_name = "";
+                    let nombre_sin_ext = arc.name.replace('.pdf', '');
+                    let patron_a_guardar = "";
+
+                    if(limpioSelect === "Si") patron_a_guardar = `*${nombre_sin_ext}*`;
+                    else if(limpioSelect === "No" && state.patrones_voluntarios[arc.name]) {
+                        patron_a_guardar = `*${state.patrones_voluntarios[arc.name].trim()}*`;
+                    }
+
+                    if(sel_act === "OTRO / EDITAR...") {
+                        let raw_man = state.renom_manuales[arc.name] || "";
+                        let n_nube = traductorInstrumento(raw_man, true, esAdrian);
+                        final_name = traductorInstrumento(n_nube, false, esAdrian);
+                        
+                        if(patron_a_guardar && !pats_exist.includes(normalizarParaComparar(patron_a_guardar))) {
+                            nuevosPatrones.push({Patron: patron_a_guardar, Renombrado: n_nube, Autor: state.user});
+                            pats_exist.push(normalizarParaComparar(patron_a_guardar));
+                        }
+                    } else if (sel_act === "Guion") {
+                        final_name = "Guion";
+                    } else {
+                        final_name = sel_act;
+                        if(patron_a_guardar && !pats_exist.includes(normalizarParaComparar(patron_a_guardar))) {
+                            let n_nube = traductorInstrumento(final_name, true, esAdrian);
+                            nuevosPatrones.push({Patron: patron_a_guardar, Renombrado: n_nube, Autor: state.user});
+                            pats_exist.push(normalizarParaComparar(patron_a_guardar));
+                        }
+                    }
+
+                    if(final_name) {
+                        let num_v = state.renom_orden[arc.name] || 0;
+                        let prefijo = (final_name === "Guion" || num_v === 0) ? "00" : String(num_v).padStart(2, '0');
+                        let f_zip = (esAdrian && codObra) ? `${codObra}-${prefijo} ${final_name}` : `${prefijo} ${final_name}`;
+                        
+                        // Agregar al ZIP
+                        const arrayBuffer = await arc.arrayBuffer();
+                        zip.file(`${f_zip}.pdf`, arrayBuffer);
+                    }
+                }
+
+                // Subir patrones nuevos si los hay
+                if (nuevosPatrones.length > 0) {
+                    await postSheet({pestaña: "Patrones", accion: "añadir", datos: nuevosPatrones});
+                }
+
+                const zipContent = await zip.generateAsync({type:"blob"});
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(zipContent);
+                a.download = "renombrados.zip";
+                a.click();
+                
+                toast("Proceso finalizado");
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error", "Ocurrió un error al procesar los archivos.", "error");
+            }
+            hideLoading();
+        }
+
+        // ==========================================
+        // VISTA: EXTRACTOR
+        // ==========================================
+        async function handleExtractorFile(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            state.ext_filename = file.name;
+            state.ext_pdf_bytes = await file.arrayBuffer();
+            state.ext_pdf_doc = await pdfjsLib.getDocument({data: state.ext_pdf_bytes}).promise;
+            
+            if(state.df_base.length === 0) {
+                showLoading("Cargando lista base...");
+                await preloadData();
+                hideLoading();
+            }
+            document.getElementById('ext-pt').value = state.ext_pdf_doc.numPages;
+        }
+
+        function interpretarPags(texto) {
+            let limpio = String(texto).replace(/[\[\]\ ]/g, "");
+            let pags = new Set();
+            let partes = limpio.split(",");
+            partes.forEach(p => {
+                if(p.includes("-")) {
+                    let [ini, fin] = p.split("-").map(Number);
+                    if(!isNaN(ini) && !isNaN(fin)) {
+                        for(let i=ini; i<=fin; i++) pags.add(i);
+                    }
+                } else if(!isNaN(parseInt(p))) {
+                    pags.add(parseInt(p));
+                }
+            });
+            return Array.from(pags).sort((a,b)=>a-b);
+        }
+
+        function compactarRango(pags) {
+            if(!pags || pags.length === 0) return "";
+            pags.sort((a,b)=>a-b);
+            let res = [], inicio = pags[0], anterior = pags[0];
+            for(let i=1; i<=pags.length; i++) {
+                let p = pags[i];
+                if(p !== anterior + 1) {
+                    res.push(inicio !== anterior ? `${inicio}-${anterior}` : `${inicio}`);
+                    inicio = p;
+                }
+                anterior = p;
+            }
+            return res.join(", ");
+        }
+
+        function generateExtractorTable() {
+            if(!state.ext_pdf_bytes) return Swal.fire("Aviso", "Sube un PDF primero", "warning");
+            
+            const iaText = document.getElementById('ext-ia').value;
+            let filas = [];
+            
+            if(iaText.trim()) {
+                iaText.split("\n").forEach(line => {
+                    if(line.includes(":")) {
+                        let [n, p] = line.split(/:(.+)/);
+                        let n_limpio = n.replace(/['"{}]+/g, "").trim();
+                        if(["nombre_archivo", "estructura_ia"].includes(n_limpio.toLowerCase())) return;
+                        filas.push({nombre: n_limpio, pags: interpretarPags(p)});
+                    }
+                });
+            } else {
+                let v_pt = parseInt(document.getElementById('ext-pt').value) || 20;
+                let v_pi = parseInt(document.getElementById('ext-pi').value) || 1;
+                let v_gi = parseInt(document.getElementById('ext-gi').value) || 0;
+                let v_gf = parseInt(document.getElementById('ext-gf').value) || 0;
+
+                if(v_gi !== 0 || v_gf !== 0) {
+                    let range = [];
+                    for(let i=v_gi; i<=v_gf; i++) range.push(i);
+                    filas.push({nombre: "GUION", pags: range});
+                }
+                
+                let p_usadas = new Set(filas.flatMap(f => f.pags));
+                let p_libres = [];
+                for(let i=1; i<=v_pt; i++) { if(!p_usadas.has(i)) p_libres.push(i); }
+                
+                for(let i=0; i<p_libres.length; i+=v_pi) {
+                    filas.push({nombre: "Seleccionar...", pags: p_libres.slice(i, i+v_pi)});
+                }
+            }
+            
+            state.ext_filas = filas;
+            document.getElementById('ext-btn-download').classList.remove('hidden');
+            renderExtractorTable();
+        }
+
+        async function renderExtractorTable() {
+            const container = document.getElementById('ext-table');
+            container.innerHTML = '';
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            const elegidos = new Set(state.ext_filas.map(f => f.nombre).filter(n => !["Seleccionar...", "---", "GUION", "OTRO / EDITAR..."].includes(n)));
+
+            for (let i = 0; i < state.ext_filas.length; i++) {
+                let f = state.ext_filas[i];
+                let p_str = compactarRango(f.pags);
+                
+                let div = document.createElement('div');
+                div.className = "bg-white p-3 rounded shadow-sm border border-gray-200 flex items-center gap-4 text-sm";
+                
+                // Miniatura
+                let canvasContainer = `<div class="w-24 text-center text-gray-400"><i class="fas fa-file-pdf text-2xl"></i></div>`;
+                if(f.pags && f.pags.length > 0) {
+                    canvasContainer = `<div class="w-24 miniatura-container" id="ext-canvas-cont-${i}"></div>`;
+                }
+
+                let isGuion = f.nombre.toUpperCase() === "GUION";
+                let selectHtml = "";
+                if (isGuion) {
+                    selectHtml = `<div class="font-bold text-lg text-gray-700">📑 GUION</div>`;
+                } else {
+                    let options = `<option value="Seleccionar...">Seleccionar...</option><option value="OTRO / EDITAR...">OTRO / EDITAR...</option><option disabled>---</option>`;
+                    lista_inst_ordenada.forEach(opt => {
+                        if(!elegidos.has(opt) || opt === f.nombre) {
+                            options += `<option value="${opt}" ${f.nombre === opt ? 'selected' : ''}>${opt}</option>`;
+                        }
+                    });
+                    selectHtml = `<select class="w-full border rounded px-2 py-2 font-semibold" onchange="state.ext_filas[${i}].nombre = this.value; renderExtractorTable()">${options}</select>`;
+                    
+                    if (f.nombre === "OTRO / EDITAR...") {
+                        selectHtml += `<input type="text" placeholder="Escribe el nombre..." class="w-full border rounded mt-2 px-2 py-1" onchange="state.ext_filas[${i}].nombre = this.value">`;
+                    }
+                }
+
+                div.innerHTML = `
+                    ${canvasContainer}
+                    <div class="flex-1">${selectHtml}</div>
+                    <div class="w-32 flex flex-col gap-1">
+                        <input type="text" value="${p_str}" id="ext-pags-${i}" class="w-full border rounded px-2 py-1 text-center font-mono" onchange="updateExtPags(${i}, this.value)">
+                        <button onclick="recalcularDesde(${i})" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs py-1 rounded"><i class="fas fa-sync"></i> Auto-rango</button>
+                    </div>
+                `;
+                container.appendChild(div);
+
+                if(f.pags && f.pags.length > 0) renderThumbnail(i, f.pags[0]);
+            }
+        }
+
+        async function renderThumbnail(idx, pageNum) {
+            if(!state.ext_pdf_doc) return;
+            try {
+                const page = await state.ext_pdf_doc.getPage(pageNum);
+                const zoom = parseFloat(document.getElementById('ext-zoom').value) || 1.0;
+                const viewport = page.getViewport({scale: zoom});
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                await page.render({canvasContext: ctx, viewport: viewport}).promise;
+                const cont = document.getElementById(`ext-canvas-cont-${idx}`);
+                if(cont) { cont.innerHTML = ''; cont.appendChild(canvas); }
+            } catch(e) { console.log("Error render miniatura", e); }
+        }
+
+        function renderAllThumbnails() {
+            state.ext_filas.forEach((f, i) => {
+                if(f.pags && f.pags.length > 0) renderThumbnail(i, f.pags[0]);
+            });
+        }
+
+        function updateExtPags(idx, val) {
+            state.ext_filas[idx].pags = interpretarPags(val);
+        }
+
+        function recalcularDesde(idx) {
+            updateExtPags(idx, document.getElementById(`ext-pags-${idx}`).value);
+            let ptr = Math.max(0, ...state.ext_filas[idx].pags) + 1;
+            for(let i = idx + 1; i < state.ext_filas.length; i++) {
+                let cant = state.ext_filas[i].pags.length || 1;
+                let newPags = [];
+                for(let j=0; j<cant; j++) newPags.push(ptr + j);
+                state.ext_filas[i].pags = newPags;
+                ptr += cant;
+            }
+            renderExtractorTable();
+        }
+
+        async function processExtractor() {
+            showLoading("Generando y empaquetando PDFs...");
+            try {
+                const pdfDoc = await PDFLib.PDFDocument.load(state.ext_pdf_bytes);
+                const zip = new JSZip();
+                const pestana = state.pestana_lb;
+                let pref = state.ext_filename.match(/^(\d+)/) ? state.ext_filename.match(/^(\d+)/)[1] : "Doc";
+                let cnt = 1;
+                let txtLines = [];
+
+                for (let f of state.ext_filas) {
+                    if (["Seleccionar...", "---", "OTRO / EDITAR..."].includes(f.nombre) || !f.pags || f.pags.length === 0) continue;
+                    
+                    const newPdf = await PDFLib.PDFDocument.create();
+                    // PDFLib utiliza índices 0-based
+                    const indicesToCopy = f.pags.map(p => p - 1).filter(p => p >= 0 && p < pdfDoc.getPageCount());
+                    if(indicesToCopy.length === 0) continue;
+
+                    const copiedPages = await newPdf.copyPages(pdfDoc, indicesToCopy);
+                    copiedPages.forEach(p => newPdf.addPage(p));
+
+                    let n_formateado = formatearNombreExtractor(f.nombre, pestana);
+                    let filename = "";
+
+                    if(pestana === "LB_BSMH") {
+                        if(f.nombre.toUpperCase() === "GUION") filename = `${pref}-00 Guion.pdf`;
+                        else {
+                            filename = `${pref}-${String(cnt).padStart(2, '0')} ${n_formateado}.pdf`;
+                            cnt++;
+                        }
+                    } else {
+                        filename = `${n_formateado}.pdf`;
+                    }
+                    
+                    txtLines.push(filename);
+                    const pdfBytesSaved = await newPdf.save();
+                    zip.file(filename, pdfBytesSaved);
+                }
+
+                if(txtLines.length > 0) zip.file(`${pref}.txt`, txtLines.join('\n'));
+
+                const zipContent = await zip.generateAsync({type:"blob"});
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(zipContent);
+                a.download = `${state.ext_filename.replace('.pdf', '')}_extraido.zip`;
+                a.click();
+
+                toast("Extracción completada");
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error", "No se pudo extraer el PDF.", "error");
+            }
+            hideLoading();
+        }
+
+        // ==========================================
+        // VISTA: EDITOR LISTA BASE
+        // ==========================================
+        async function loadEditorLB() {
+            showLoading("Cargando Lista Base...");
+            state.lb_data = await fetchSheet(state.pestana_lb);
+            
+            // Asegurar IDs secuenciales y flag Borrar
+            state.lb_data.forEach((r, idx) => {
+                r._id_ui = idx + 1; // Para ordenar/mover visualmente
+                r._borrar = false;
+            });
+            renderLBTable();
+            hideLoading();
+        }
+
+        function renderLBTable() {
+            const tbody = document.getElementById('lb-tbody');
+            tbody.innerHTML = '';
+            
+            // Ordenar por _id_ui
+            state.lb_data.sort((a,b) => a._id_ui - b._id_ui);
+
+            state.lb_data.forEach((r, i) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 border-b";
+                let colID = Object.keys(r).find(k => k !== '_id_ui' && k !== '_borrar' && k !== state.logicMode && k !== 'Autor');
+                
+                tr.innerHTML = `
+                    <td class="p-3 text-center w-16">
+                        <input type="checkbox" class="w-4 h-4 cursor-pointer" ${r._borrar ? 'checked' : ''} onchange="state.lb_data[${i}]._borrar = this.checked">
+                    </td>
+                    <td class="p-3 w-24">
+                        <input type="number" min="1" max="${state.lb_data.length}" value="${r._id_ui}" class="w-16 border rounded px-2 py-1 text-center" onchange="moveLBRow(${i}, this.value)">
+                    </td>
+                    <td class="p-3">
+                        <input type="text" value="${r[state.logicMode] || ''}" class="w-full bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none" onchange="state.lb_data[${i}]['${state.logicMode}'] = this.value">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function moveLBRow(oldIdx, newPosStr) {
+            let newPos = parseInt(newPosStr);
+            if (isNaN(newPos) || newPos < 1 || newPos > state.lb_data.length) return renderLBTable();
+            
+            let element = state.lb_data.splice(oldIdx, 1)[0];
+            state.lb_data.splice(newPos - 1, 0, element);
+            
+            // Reasignar _id_ui
+            state.lb_data.forEach((r, idx) => r._id_ui = idx + 1);
+            renderLBTable();
+        }
+
+        async function saveLB() {
+            showLoading("Guardando en Google Sheets...");
+            let aGuardar = state.lb_data.filter(r => !r._borrar);
+            let payloadDatos = [];
+            
+            let colID = Object.keys(state.lb_data[0] || {}).find(k => k !== '_id_ui' && k !== '_borrar' && k !== state.logicMode && k !== 'Autor') || "ID";
+
+            aGuardar.forEach((r, idx) => {
+                let obj = {};
+                obj[colID] = idx + 1;
+                obj[state.logicMode] = r[state.logicMode];
+                obj['Autor'] = state.user || 'Sistema';
+                payloadDatos.push(obj);
+            });
+
+            const exito = await postSheet({ pestaña: state.pestana_lb, accion: "sobrescribir", datos: payloadDatos });
+            if (exito) {
+                toast(`Guardados ${payloadDatos.length} instrumentos.`);
+                state.df_base = []; // Invalidar cache
+            } else {
+                Swal.fire("Error", "No se pudo guardar la lista base.", "error");
+            }
+            hideLoading();
+            loadEditorLB(); // Recargar
+        }
+
+        // ==========================================
+        // VISTA: EDITOR PATRONES
+        // ==========================================
+        async function loadEditorPatrones() {
+            showLoading("Conectando con la base de datos de Patrones...");
+            state.pat_data = await fetchSheet("Patrones");
+            // Marcar duplicados/incompletos
+            checkPatronesStatus();
+            renderPatronesTable();
+            hideLoading();
+            
+            document.getElementById('patrones-alerts').innerHTML = `<div class="bg-green-100 text-green-800 p-2 rounded text-sm mb-2 text-center">✅ Sincronización: ${state.pat_data.length} patrones cargados.</div>`;
+        }
+
+        function checkPatronesStatus() {
+            let conteos = {};
+            state.pat_data.forEach(r => {
+                let p = r.Patron ? String(r.Patron).trim() : "";
+                conteos[p] = (conteos[p] || 0) + 1;
+            });
+            
+            state.pat_data.forEach(r => {
+                let p = r.Patron ? String(r.Patron).trim() : "";
+                if(p === "" || p === "[EDITAR PATRÓN]") r._estado = "✍️ Incompleto";
+                else if (conteos[p] > 1) r._estado = "⚠️ Duplicado";
+                else r._estado = "";
+                
+                if (p === "") r.Patron = "[EDITAR PATRÓN]";
+            });
+            state.pat_data.sort((a,b) => String(a.Patron).localeCompare(String(b.Patron)));
+        }
+
+        function renderPatronesTable() {
+            const tbody = document.getElementById('pat-tbody');
+            tbody.innerHTML = '';
+            
+            let sP = document.getElementById('pat-search-p').value.toLowerCase();
+            let sI = document.getElementById('pat-search-i').value.toLowerCase();
+            
+            state.pat_data.forEach((r, i) => {
+                let pStr = String(r.Patron || "").toLowerCase();
+                let iStr = String(r.Renombrado || "").toLowerCase();
+                if(sP && !pStr.includes(sP)) return;
+                if(sI && !iStr.includes(sI)) return;
+                
+                let trClass = "hover:bg-gray-50 border-b";
+                if(r._estado.includes("Duplicado")) trClass += " bg-yellow-50";
+                if(r._estado.includes("Incompleto")) trClass += " bg-red-50";
+
+                const tr = document.createElement('tr');
+                tr.className = trClass;
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-xs text-gray-500">${r._estado}</td>
+                    <td class="p-3">
+                        <input type="text" value="${r.Patron}" class="w-full bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none" onchange="state.pat_data[${i}].Patron = this.value; checkPatronesStatus(); renderPatronesTable();">
+                    </td>
+                    <td class="p-3">
+                        <input type="text" value="${r.Renombrado}" class="w-full bg-transparent border-b border-dashed border-gray-300 focus:border-blue-500 outline-none" onchange="state.pat_data[${i}].Renombrado = this.value">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function savePatrones() {
+            showLoading("Guardando Patrones...");
+            let aGuardar = state.pat_data.filter(r => r.Patron && r.Patron !== "[EDITAR PATRÓN]");
+            
+            // Limpieza y formateo de asteriscos
+            let payloadDatos = aGuardar.map(r => {
+                let pLimpio = String(r.Patron).replace(/\*/g, '').trim();
+                return {
+                    Patron: `*${pLimpio}*`,
+                    Renombrado: r.Renombrado,
+                    Autor: r.Autor || state.user
+                };
+            });
+
+            const exito = await postSheet({ pestaña: "Patrones", accion: "sobrescribir", datos: payloadDatos });
+            if (exito) {
+                toast("¡Patrones sincronizados correctamente!");
+                state.df_patrones = []; // Invalidar cache
+            } else {
+                Swal.fire("Error", "No se pudo guardar los patrones.", "error");
+            }
+            hideLoading();
+            loadEditorPatrones();
+        }
+
+    </script>
+</body>
+</html>
