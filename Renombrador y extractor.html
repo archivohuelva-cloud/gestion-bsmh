@@ -107,21 +107,21 @@
             
             <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
                 <div class="flex items-center justify-between mb-4">
-                    <label class="font-bold text-gray-700">Subir PDFs</label>
+                    <label class="font-bold text-gray-700">Subir las partituras en PDFs</label>
                     <div id="renom-stats" class="text-sm font-bold text-green-600"></div>
                 </div>
                 <input type="file" id="renom-files" multiple accept="application/pdf" class="w-full border-2 border-dashed border-gray-300 p-8 rounded-lg text-center cursor-pointer mb-4" onchange="handleRenombradorFiles(event)">
                 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Nombre del archivo Limpio?</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Está limpio el nombre del archivo?</label>
                         <select id="renom-limpio" class="w-full border border-gray-300 rounded px-3 py-2">
                             <option value="Si">Sí</option>
                             <option value="No">No</option>
                         </select>
                     </div>
                     <div id="renom-cod-obra-container" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Código obra (Obligatorio):</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nº de registro de la obra (Obligatorio):</label>
                         <input type="text" id="renom-cod-obra" maxlength="5" class="w-full border border-gray-300 rounded px-3 py-2">
                     </div>
                 </div>
