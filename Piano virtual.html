@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano Pro - Acordes Ilimitados</title>
+    <script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        :root { --piano-height: 52vh; }
+        body {
+            margin: 0; padding: 0;
+            background-color: #121212;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column;
+            height: 100vh; overflow: hidden;
+        }
+        #header {
+            background: #1a1a1a; color: white;
+            padding: 5px 15px; display: flex;
+            justify-content: space-between; align-items: center;
+            height: 45px; border-bottom: 1px solid #333;
+        }
+        .btn {
+            padding: 6px 14px; cursor: pointer;
+            background: #333; color: white;
+            border: 1px solid #555; border-radius: 4px;
+            font-weight: bold;
+        }
+        #staff-container {
+            flex: 1; background: white;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #controls {
+            background: #222; display: flex;
+            justify-content: center; align-items: center;
+            gap: 15px; padding: 8px; color: white;
+        }
+        #piano-container {
+            width: 100%; height: var(--piano-height);
+            background: #000; display: flex; position: relative;
+        }
+        .key {
+            flex: 1; position: relative; cursor: pointer;
+            user-select: none; display: flex;
+            justify-content: center; align-items: flex-end;
+            padding-bottom: 10px; font-size: 9px;
+            box-sizing: border-box;
+        }
+        .white {
+            background: linear-gradient(to bottom, #fff 0%, #f0f0f0 100%);
+            border: 1px solid #bbb; z-index: 1; color: #999;
+            border-radius: 0 0 3px 3px;
+        }
+        .black {
+            background: linear-gradient(to bottom, #333 0%, #000 100%);
+            z-index: 2; height: 62%;
+            margin-left: -1.1%; margin-right: -1.1%;
+            border-radius: 0 0 2px 2px; color: #fff;
+            border: 1px solid #000; min-width: 15px;
+        }
+        .white.active { background: #3498db !important; color: white; }
+        .black.active { background: #2980b9 !important; }
+        #loading {
+            position: fixed; top:0; left:0; width:100%; height:100%;
+            background: #000; color: white; display: flex;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading"><h2>Cargando Piano Real...</h2><p>Pulsa cualquier tecla al iniciar</p></div>
+
+<div id="header">
+    <button class="btn" onclick="window.history.back()">← Volver</button>
+    <div style="font-size: 12px; color: #aaa;">Acordes: Pulsa varias teclas a la vez (A=DO,W=DO#,S=RE,E=RE#,D=MI,F=FA,T=FA#,G=SOL,Y=SOL#,H=LA,U=LA#,J=SI,K=DO,O=DO#,L=RE,P=RE#,Ñ=MI)</div>
+    <div style="width: 80px;"></div>
+</div>
+
+<div id="staff-container">
+    <div id="output"></div>
+</div>
+
+<div id="controls">
+    <span>OCTAVA TECLADO PC:</span>
+    <button class="btn" onclick="changeOctave(-1)">-</button>
+    <b id="octave-display" style="min-width: 30px; text-align: center; font-size: 18px;">4</b>
+    <button class="btn" onclick="changeOctave(1)">+</button>
+</div>
+
+<div id="piano-container"></div>
+
+<script>
+    const VF = Vex.Flow;
+    let currentBaseOctave = 4;
+    const activeNotes = new Set();
+    
+    const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    
+    const pcKeyMap = {
+        'a': { n: 'C',  o: 0 }, 'w': { n: 'C#', o: 0 }, 's': { n: 'D',  o: 0 }, 'e': { n: 'D#', o: 0 },
+        'd': { n: 'E',  o: 0 }, 'f': { n: 'F',  o: 0 }, 't': { n: 'F#', o: 0 }, 'g': { n: 'G',  o: 0 },
+        'y': { n: 'G#', o: 0 }, 'h': { n: 'A',  o: 0 }, 'u': { n: 'A#', o: 0 }, 'j': { n: 'B',  o: 0 },
+        'k': { n: 'C',  o: 1 }, 'o': { n: 'C#', o: 1 }, 'l': { n: 'D',  o: 1 }, 'p': { n: 'D#', o: 1 },
+        'ñ': { n: 'E',  o: 1 }
+    };
+
+    // Sampler con polifonía ilimitada
+    const sampler = new Tone.Sampler({
+        urls: { A0: "A0.mp3", C1: "C1.mp3", A1: "A1.mp3", C2: "C2.mp3", A2: "A2.mp3", C3: "C3.mp3", A3: "A3.mp3", C4: "C4.mp3", A4: "A4.mp3", C5: "C5.mp3", A5: "A5.mp3", C6: "C6.mp3" },
+        release: 1.5,
+        baseUrl: "https://tonejs.github.io/audio/salamander/",
+        onload: () => document.getElementById('loading').style.display = 'none'
+    }).toDestination();
+
+    function buildPiano() {
+        const container = document.getElementById('piano-container');
+        container.innerHTML = '';
+        const startOct = Math.max(1, currentBaseOctave - 2);
+        const endOct = startOct + 3;
+
+        for (let oct = startOct; oct <= endOct; oct++) {
+            noteNames.forEach(name => addKey(name, oct, container));
+        }
+        addKey("C", endOct + 1, container);
+    }
+
+    function addKey(name, oct, container) {
+        const toneNote = `${name}${oct}`;
+        const div = document.createElement('div');
+        div.className = `key ${name.includes('#') ? 'black' : 'white'}`;
+        div.id = `key-${toneNote}`;
+        div.innerHTML = `<span>${name}${oct}</span>`;
+        div.onmousedown = (e) => { e.preventDefault(); startNote(toneNote); };
+        div.onmouseup = () => stopNote(toneNote);
+        div.onmouseleave = () => stopNote(toneNote);
+        container.appendChild(div);
+    }
+
+    function changeOctave(dir) {
+        currentBaseOctave = Math.max(1, Math.min(7, currentBaseOctave + dir));
+        document.getElementById('octave-display').innerText = currentBaseOctave;
+        buildPiano();
+    }
+
+    function startNote(toneNote) {
+        if (activeNotes.has(toneNote)) return;
+        Tone.start();
+        activeNotes.add(toneNote);
+        const el = document.getElementById(`key-${toneNote}`);
+        if(el) el.classList.add('active');
+        sampler.triggerAttack(toneNote);
+        drawStaff();
+    }
+
+    function stopNote(toneNote) {
+        if (!activeNotes.has(toneNote)) return;
+        activeNotes.delete(toneNote);
+        const el = document.getElementById(`key-${toneNote}`);
+        if(el) el.classList.remove('active');
+        sampler.triggerRelease(toneNote);
+        drawStaff();
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        const keyData = pcKeyMap[e.key.toLowerCase()];
+        if (keyData) {
+            const targetOctave = currentBaseOctave + keyData.o;
+            startNote(`${keyData.n}${targetOctave}`);
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const keyData = pcKeyMap[e.key.toLowerCase()];
+        if (keyData) {
+            const targetOctave = currentBaseOctave + keyData.o;
+            stopNote(`${keyData.n}${targetOctave}`);
+        }
+    });
+
+    function drawStaff() {
+        const container = document.getElementById('output');
+        container.innerHTML = '';
+        const renderer = new VF.Renderer(container, VF.Renderer.Backends.SVG);
+        renderer.resize(800, 300);
+        const context = renderer.getContext();
+
+        const trebleStave = new VF.Stave(100, 20, 600).addClef("treble").setContext(context).draw();
+        const bassStave = new VF.Stave(100, 140, 600).addClef("bass").setContext(context).draw();
+        new VF.StaveConnector(trebleStave, bassStave).setType(3).setContext(context).draw();
+
+        if (activeNotes.size > 0) {
+            // Ordenar notas por altura para evitar errores en VexFlow
+            const sortedNotes = Array.from(activeNotes).sort((a, b) => {
+                const getVal = (s) => {
+                    const oct = parseInt(s.match(/\d+/)[0]);
+                    const name = s.replace(/\d+/, '');
+                    return oct * 12 + noteNames.indexOf(name);
+                };
+                return getVal(a) - getVal(b);
+            });
+
+            const trebleKeys = [], bassKeys = [];
+            sortedNotes.forEach(tn => {
+                const oct = parseInt(tn.match(/\d+/)[0]);
+                const formatted = tn.replace(/(\d+)/, '/$1');
+                // Notas de Do4 hacia arriba van a Clave de Sol
+                if (oct >= 4) trebleKeys.push(formatted);
+                else bassKeys.push(formatted);
+            });
+
+            // Dibujar acorde en Clave de Sol
+            if (trebleKeys.length > 0) {
+                const note = new VF.StaveNote({ clef: "treble", keys: trebleKeys, duration: "w" });
+                trebleKeys.forEach((k, i) => { if(k.includes('#')) note.addModifier(new VF.Accidental("#"), i); });
+                const voice = new VF.Voice({num_beats: 4, beat_value: 4}).addTickables([note]);
+                new VF.Formatter().joinVoices([voice]).format([voice], 400);
+                voice.draw(context, trebleStave);
+            }
+
+            // Dibujar acorde en Clave de Fa
+            if (bassKeys.length > 0) {
+                const note = new VF.StaveNote({ clef: "bass", keys: bassKeys, duration: "w" });
+                bassKeys.forEach((k, i) => { if(k.includes('#')) note.addModifier(new VF.Accidental("#"), i); });
+                const voice = new VF.Voice({num_beats: 4, beat_value: 4}).addTickables([note]);
+                new VF.Formatter().joinVoices([voice]).format([voice], 400);
+                voice.draw(context, bassStave);
+            }
+        }
+    }
+
+    window.onload = () => { buildPiano(); drawStaff(); };
+</script>
+</body>
+</html>
