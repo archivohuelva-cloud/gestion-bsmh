@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Audio Editor Pro - Scroll & Drop</title>
+    <!-- Librerías -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/regions.min.js"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7/dist/plugins/timeline.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+    
+    <style>
+        body { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        /* Toolbar Superior */
+        .toolbar { background-color: #2d2d2d; padding: 10px 20px; border-bottom: 1px solid #111; display: flex; gap: 8px; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; }
+        button, input[type="file"]::file-selector-button { background-color: #3a3a3a; color: white; border: 1px solid #555; padding: 6px 12px; cursor: pointer; font-size: 12px; border-radius: 3px; }
+        button:hover { background-color: #505050; }
+        button:disabled { background-color: #2a2a2a; color: #666; cursor: not-allowed; border-color: #333; }
+        
+        #btn-clear { background-color: #a33131; border-color: #722; }
+        #btn-clear:hover { background-color: #c43c3c; }
+        
+        button.export { background-color: #007acc; font-weight: bold; margin-left: auto; }
+
+        /* Área del Editor */
+        #main-editor { 
+            flex-grow: 1; 
+            position: relative; 
+            background-color: #000; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        #main-editor::-webkit-scrollbar { height: 12px; }
+        #main-editor::-webkit-scrollbar-track { background: #111; }
+        #main-editor::-webkit-scrollbar-thumb { background: #444; border-radius: 6px; border: 2px solid #111; }
+        #main-editor::-webkit-scrollbar-thumb:hover { background: #666; }
+
+        /* Contenedor de la línea de tiempo */
+        #timeline { background-color: #111; }
+
+        #waveform { flex-grow: 1; width: 100%; min-width: 100%; height: 100%; position: relative; }
+        #stereo-divider { position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background-color: rgba(255, 255, 255, 0.3); z-index: 2; pointer-events: none; }
+        
+        /* Barra de Navegación */
+        .nav-bar-container {
+            background-color: #252526;
+            padding: 5px 20px;
+            border-top: 1px solid #111;
+            display: flex;
+            align-items: center;
+        }
+        #nav-slider {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #444;
+            outline: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #nav-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #007acc;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Overlay Drag & Drop */
+        #drop-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: rgba(0, 122, 204, 0.7); color: white; 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 24px; font-weight: bold; z-index: 200; 
+            opacity: 0; pointer-events: none; transition: opacity 0.2s; 
+        }
+        #drop-overlay.active { opacity: 1; }
+
+        /* Transporte Central */
+        .transport-bar { background-color: #262626; border-top: 1px solid #111; padding: 8px 20px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .transport-group { display: flex; gap: 5px; align-items: center; }
+        .separator { width: 1px; height: 20px; background-color: #444; margin: 0 5px; }
+        .btn-icon { background: none; border: none; color: #aaa; font-size: 18px; cursor: pointer; padding: 5px 10px; }
+        .btn-icon:hover:not(:disabled) { color: #fff; }
+        .time-display { font-family: monospace; font-size: 15px; color: #00ffcc; min-width: 130px; text-align: center; }
+
+        /* Niveles Inferiores */
+        .levels-container { background-color: #222; padding: 5px 20px; border-top: 1px solid #111; height: 40px; width: 100%; }
+        .meter-row { display: flex; align-items: center; height: 12px; gap: 10px; margin-bottom: 2px; }
+        .meter-label { font-size: 10px; color: #888; width: 10px; }
+        .meter-bg { flex-grow: 1; background-color: #111; height: 100%; position: relative; }
+        .meter-bar { height: 100%; width: 0%; background: linear-gradient(to right, #00ff00 60%, #ffff00 85%, #ff0000 100%); transition: width 0.05s; }
+
+        #toast-container { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 100; pointer-events: none; }
+        .toast { background-color: rgba(0, 122, 204, 0.9); color: white; padding: 8px 20px; border-radius: 4px; font-size: 13px; margin-bottom: 10px; animation: fadeInOut 3s forwards; }
+        @keyframes fadeInOut { 0% {opacity:0;} 10% {opacity:1;} 80% {opacity:1;} 100% {opacity:0;} }
+    </style>
+</head>
+<body>
+
+    <div id="drop-overlay">Suelta el audio para abrirlo</div>
+
+    <div class="toolbar">
+        <button id="btn-clear">🗑 Limpiar Editor</button>
+        <div class="separator"></div>
+        <input type="file" id="audio-upload" accept="audio/*">
+        <div class="separator"></div>
+        <button id="btn-undo" disabled>↩ Deshacer</button>
+        <button id="btn-redo" disabled>↪ Rehacer</button>
+        <div class="separator"></div>
+        <button id="btn-normalize" disabled>Normalizar</button>
+        <button id="btn-fadein" disabled>Fade In</button>
+        <button id="btn-fadeout" disabled>Fade Out</button>
+        <button id="btn-cut" disabled>Cortar Selección</button>
+        <button id="btn-export" class="export" disabled>Exportar MP3</button>
+    </div>
+
+    <div id="main-editor">
+        <div id="timeline"></div>
+        <div id="waveform" tabindex="0">
+            <div id="stereo-divider"></div>
+        </div>
+        <div id="toast-container"></div>
+    </div>
+
+    <div class="nav-bar-container">
+        <input type="range" id="nav-slider" min="0" max="100" value="0" step="0.1">
+    </div>
+
+    <div class="transport-bar">
+        <div class="transport-group">
+            <button class="btn-icon" id="t-stop" disabled>⏹</button>
+            <button class="btn-icon" id="t-play" disabled>▶</button>
+            <button class="btn-icon" id="t-pause" disabled>⏸</button>
+        </div>
+        <div class="separator"></div>
+        <div class="time-display" id="time-display">00:00 / 00:00</div>
+        <div class="separator"></div>
+        <div class="transport-group">
+            <button class="btn-icon" id="t-start" disabled>⏮</button>
+            <button class="btn-icon" id="t-rew" disabled>⏪</button>
+            <button class="btn-icon" id="t-ff" disabled>⏩</button>
+            <button class="btn-icon" id="t-end" disabled>⏭</button>
+        </div>
+        <div class="separator"></div>
+        <div class="transport-group">
+            <button class="btn-icon" id="z-out" disabled>🔍-</button>
+            <button class="btn-icon" id="z-in" disabled>🔍+</button>
+            <button class="btn-icon" id="z-reset" disabled>🔄</button>
+        </div>
+    </div>
+
+    <div class="levels-container">
+        <div class="meter-row"><span class="meter-label">L</span><div class="meter-bg"><div id="meter-l" class="meter-bar"></div></div></div>
+        <div class="meter-row"><span class="meter-label">R</span><div class="meter-bg"><div id="meter-r" class="meter-bar"></div></div></div>
+    </div>
+
+    <script>
+        let wavesurfer, wsRegions, wsTimeline, audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let currentAudioBuffer = null, activeRegion = null, currentZoom = 0, currentObjectUrl = null;
+        let undoStack = [], redoStack = [];
+
+        function showToast(msg) {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast'; t.innerText = msg;
+            c.appendChild(t); setTimeout(() => t.remove(), 3000);
+        }
+
+        // --- INICIALIZACIÓN ---
+        wavesurfer = WaveSurfer.create({
+            container: '#waveform',
+            waveColor: '#00ffcc',
+            progressColor: '#00ffcc',
+            cursorColor: '#ff0000',
+            height: 'auto',
+            autoScroll: true,
+            splitChannels: [{ waveColor: '#00ffcc' }, { waveColor: '#00ffcc' }]
+        });
+
+        wsRegions = wavesurfer.registerPlugin(WaveSurfer.Regions.create());
+        wsRegions.enableDragSelection({ color: 'rgba(255, 255, 255, 0.2)' });
+        
+        // Plugin de Timeline configurado (Marcas de tiempo)
+        wsTimeline = wavesurfer.registerPlugin(WaveSurfer.Timeline.create({
+            container: '#timeline',
+            height: 25,
+            style: { fontSize: '12px', color: '#fff' },
+            timeInterval: 10,
+            primaryLabelInterval: 1,
+            secondaryLabelInterval: 1
+        }));
+
+        wsRegions.on('region-created', (r) => { if(activeRegion) activeRegion.remove(); activeRegion = r; toggleEditBtns(true); });
+        wavesurfer.on('click', () => { if(activeRegion) { activeRegion.remove(); activeRegion = null; toggleEditBtns(false); }});
+
+        // --- CARGA Y DRAG & DROP ---
+        function procesarArchivo(file) {
+            if (!file) return;
+            showToast("Procesando audio...");
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                if(audioContext.state === 'suspended') await audioContext.resume();
+                currentAudioBuffer = await audioContext.decodeAudioData(ev.target.result);
+                undoStack = []; redoStack = [];
+                loadBufferIntoWavesurfer(currentAudioBuffer);
+                wavesurfer.once('ready', () => { 
+                    wavesurfer.zoom(0); currentZoom = 0; 
+                    enableAllBtns(); showToast("Listo"); 
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('audio-upload').onchange = (e) => procesarArchivo(e.target.files[0]);
+
+        const dropOverlay = document.getElementById('drop-overlay');
+        window.addEventListener('dragover', (e) => { e.preventDefault(); dropOverlay.classList.add('active'); });
+        window.addEventListener('dragleave', (e) => { e.preventDefault(); dropOverlay.classList.remove('active'); });
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropOverlay.classList.remove('active');
+            if (e.dataTransfer.files.length > 0) procesarArchivo(e.dataTransfer.files[0]);
+        });
+
+        // --- BOTÓN LIMPIAR ---
+        document.getElementById('btn-clear').onclick = () => {
+            if (confirm("¿Seguro que quieres borrar todo? Se perderá el trabajo actual.")) {
+                wavesurfer.stop();
+                wavesurfer.empty();
+                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+                currentAudioBuffer = null;
+                currentObjectUrl = null;
+                undoStack = [];
+                redoStack = [];
+                activeRegion = null;
+                document.getElementById('audio-upload').value = "";
+                document.getElementById('time-display').innerText = "00:00 / 00:00";
+                disableAllBtns();
+                showToast("Editor reiniciado");
+            }
+        };
+
+        // --- HISTORIAL ---
+        function saveState() {
+            const clone = audioContext.createBuffer(currentAudioBuffer.numberOfChannels, currentAudioBuffer.length, currentAudioBuffer.sampleRate);
+            for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) clone.getChannelData(c).set(currentAudioBuffer.getChannelData(c));
+            undoStack.push(clone);
+            if (undoStack.length > 15) undoStack.shift();
+            redoStack = [];
+            updateUndoRedoBtns();
+        }
+
+        function undo() {
+            if (!undoStack.length) return;
+            redoStack.push(currentAudioBuffer);
+            currentAudioBuffer = undoStack.pop();
+            loadBufferIntoWavesurfer(currentAudioBuffer);
+            updateUndoRedoBtns();
+            showToast("Deshacer");
+        }
+
+        function redo() {
+            if (!redoStack.length) return;
+            undoStack.push(currentAudioBuffer);
+            currentAudioBuffer = redoStack.pop();
+            loadBufferIntoWavesurfer(currentAudioBuffer);
+            updateUndoRedoBtns();
+            showToast("Rehacer");
+        }
+
+        function updateUndoRedoBtns() {
+            document.getElementById('btn-undo').disabled = !undoStack.length;
+            document.getElementById('btn-redo').disabled = !redoStack.length;
+        }
+
+        document.getElementById('btn-undo').onclick = undo;
+        document.getElementById('btn-redo').onclick = redo;
+
+        // --- TRANSPORTE Y ZOOM ---
+        const navSlider = document.getElementById('nav-slider');
+        navSlider.oninput = () => {
+            if (!currentAudioBuffer) return;
+            wavesurfer.seekTo(navSlider.value / 100);
+        };
+
+        document.getElementById('t-play').onclick = () => wavesurfer.play();
+        document.getElementById('t-pause').onclick = () => wavesurfer.pause();
+        document.getElementById('t-stop').onclick = () => { wavesurfer.stop(); wavesurfer.seekTo(0); };
+        document.getElementById('t-start').onclick = () => wavesurfer.seekTo(0);
+        document.getElementById('t-end').onclick = () => wavesurfer.seekTo(1);
+        document.getElementById('t-rew').onclick = () => wavesurfer.skip(-5);
+        document.getElementById('t-ff').onclick = () => wavesurfer.skip(5);
+
+        function handleZoom(dir) {
+            if (!currentAudioBuffer) return;
+            if (dir === 'reset') { currentZoom = 0; wavesurfer.zoom(0); return; }
+            if (currentZoom === 0) currentZoom = 50;
+            if (dir === 'in') currentZoom *= 1.4; else currentZoom /= 1.4;
+            currentZoom = Math.min(Math.max(currentZoom, 10), 2000);
+            if (currentZoom <= 12) { currentZoom = 0; wavesurfer.zoom(0); }
+            else wavesurfer.zoom(currentZoom);
+        }
+
+        document.getElementById('z-in').onclick = () => handleZoom('in');
+        document.getElementById('z-out').onclick = () => handleZoom('out');
+        document.getElementById('z-reset').onclick = () => handleZoom('reset');
+        document.getElementById('waveform').onwheel = (e) => { e.preventDefault(); handleZoom(e.deltaY < 0 ? 'in' : 'out'); };
+
+        // --- UI UPDATES ---
+        function tick() {
+            if (currentAudioBuffer) {
+                const time = wavesurfer.getCurrentTime();
+                const dur = wavesurfer.getDuration();
+                const f = (s) => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+                document.getElementById('time-display').innerText = `${f(time)} / ${f(dur)}`;
+
+                if (!wavesurfer.isSeeking) navSlider.value = (time / dur) * 100;
+
+                if (wavesurfer.isPlaying()) {
+                    const idx = Math.floor(time * currentAudioBuffer.sampleRate);
+                    const win = Math.floor(currentAudioBuffer.sampleRate * 0.05);
+                    let pL = 0, pR = 0;
+                    const dL = currentAudioBuffer.getChannelData(0);
+                    const dR = currentAudioBuffer.numberOfChannels > 1 ? currentAudioBuffer.getChannelData(1) : dL;
+                    for (let i = 0; i < win; i++) {
+                        if (idx + i >= dL.length) break;
+                        pL = Math.max(pL, Math.abs(dL[idx+i]));
+                        pR = Math.max(pR, Math.abs(dR[idx+i]));
+                    }
+                    const db = (p) => p === 0 ? 0 : Math.min(100, ((20 * Math.log10(p) + 60) / 60) * 100);
+                    document.getElementById('meter-l').style.width = db(pL) + '%';
+                    document.getElementById('meter-r').style.width = db(pR) + '%';
+                } else {
+                    document.getElementById('meter-l').style.width = '0%';
+                    document.getElementById('meter-r').style.width = '0%';
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+        tick();
+
+        // --- EDICIÓN ---
+        document.getElementById('btn-normalize').onclick = () => {
+            saveState();
+            const target = Math.pow(10, -0.1/20);
+            let max = 0;
+            for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) {
+                const d = currentAudioBuffer.getChannelData(c);
+                for (let i = 0; i < d.length; i++) max = Math.max(max, Math.abs(d[i]));
+            }
+            if (max > 0) {
+                const m = target/max;
+                for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) {
+                    const d = currentAudioBuffer.getChannelData(c);
+                    for (let i = 0; i < d.length; i++) d[i] *= m;
+                }
+            }
+            loadBufferIntoWavesurfer(currentAudioBuffer);
+        };
+
+        document.getElementById('btn-cut').onclick = () => {
+            if (!activeRegion) return;
+            saveState();
+            const s = Math.floor(activeRegion.start * currentAudioBuffer.sampleRate);
+            const e = Math.floor(activeRegion.end * currentAudioBuffer.sampleRate);
+            const newBuf = audioContext.createBuffer(currentAudioBuffer.numberOfChannels, currentAudioBuffer.length - (e - s), currentAudioBuffer.sampleRate);
+            for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) {
+                const old = currentAudioBuffer.getChannelData(c), n = newBuf.getChannelData(c);
+                n.set(old.subarray(0, s), 0);
+                n.set(old.subarray(e), s);
+            }
+            currentAudioBuffer = newBuf; activeRegion.remove(); activeRegion = null; toggleEditBtns(false);
+            loadBufferIntoWavesurfer(currentAudioBuffer);
+        };
+
+        function applyFade(type) {
+            if (!activeRegion) return; saveState();
+            const s = Math.floor(activeRegion.start * currentAudioBuffer.sampleRate), e = Math.floor(activeRegion.end * currentAudioBuffer.sampleRate), len = e - s;
+            for (let c = 0; c < currentAudioBuffer.numberOfChannels; c++) {
+                const d = currentAudioBuffer.getChannelData(c);
+                for (let i = 0; i < len; i++) d[s + i] *= (type === 'in' ? (i/len) : (1 - i/len));
+            }
+            loadBufferIntoWavesurfer(currentAudioBuffer);
+        }
+        document.getElementById('btn-fadein').onclick = () => applyFade('in');
+        document.getElementById('btn-fadeout').onclick = () => applyFade('out');
+
+        // --- EXPORTAR ---
+        document.getElementById('btn-export').onclick = () => {
+            const reg = prompt("Número de registro:", "1235");
+            if (!reg) return;
+            const enc = new lamejs.Mp3Encoder(currentAudioBuffer.numberOfChannels, currentAudioBuffer.sampleRate, 320);
+            const data = [], l = currentAudioBuffer.getChannelData(0), r = currentAudioBuffer.numberOfChannels > 1 ? currentAudioBuffer.getChannelData(1) : l;
+            const lI = new Int16Array(l.length), rI = new Int16Array(r.length);
+            for (let i = 0; i < l.length; i++) {
+                lI[i] = l[i] < 0 ? l[i] * 32768 : l[i] * 32767;
+                rI[i] = r[i] < 0 ? r[i] * 32768 : r[i] * 32767;
+            }
+            for (let i = 0; i < lI.length; i += 1152) {
+                const lb = lI.subarray(i, i + 1152), rb = rI.subarray(i, i + 1152);
+                const b = currentAudioBuffer.numberOfChannels === 2 ? enc.encodeBuffer(lb, rb) : enc.encodeBuffer(lb);
+                if (b.length > 0) data.push(b);
+            }
+            const f = enc.flush(); if (f.length > 0) data.push(f);
+            const url = URL.createObjectURL(new Blob(data, { type: 'audio/mp3' }));
+            const a = document.createElement('a'); a.href = url; a.download = `${reg}-00 Audio.mp3`; a.click();
+        };
+
+        // --- TECLADO ---
+        window.onkeydown = (e) => {
+            if (!currentAudioBuffer) return;
+            if (e.code === 'Space') { e.preventDefault(); wavesurfer.playPause(); }
+            if (e.ctrlKey && e.code === 'KeyZ') { e.preventDefault(); undo(); }
+            if (e.ctrlKey && e.code === 'KeyY') { e.preventDefault(); redo(); }
+            if ((e.code === 'Backspace' || e.code === 'Delete') && activeRegion) document.getElementById('btn-cut').click();
+            if (e.code === 'ArrowLeft') { e.preventDefault(); wavesurfer.skip(-2); }
+            if (e.code === 'ArrowRight') { e.preventDefault(); wavesurfer.skip(2); }
+            if (e.code === 'ArrowUp') { e.preventDefault(); handleZoom('in'); }
+            if (e.code === 'ArrowDown') { e.preventDefault(); handleZoom('out'); }
+        };
+
+        // --- HELPERS ---
+        function enableAllBtns() { 
+            document.querySelectorAll('.toolbar button, .transport-bar button').forEach(b => {
+                if(b.id !== 'btn-undo' && b.id !== 'btn-redo') b.disabled = false;
+            }); 
+            updateUndoRedoBtns(); 
+            toggleEditBtns(false); 
+        }
+        function disableAllBtns() {
+            document.querySelectorAll('.toolbar button, .transport-bar button').forEach(b => {
+                if(b.id !== 'btn-clear') b.disabled = true;
+            });
+        }
+        function toggleEditBtns(a) { 
+            document.getElementById('btn-cut').disabled = !a; 
+            document.getElementById('btn-fadein').disabled = !a; 
+            document.getElementById('btn-fadeout').disabled = !a; 
+        }
+        
+        function loadBufferIntoWavesurfer(buffer) {
+            let ch = buffer.numberOfChannels, len = buffer.length * ch * 2 + 44;
+            let ab = new ArrayBuffer(len), v = new DataView(ab), pos = 0;
+            const s16 = (d) => { v.setUint16(pos, d, true); pos += 2; };
+            const s32 = (d) => { v.setUint32(pos, d, true); pos += 4; };
+            s32(0x46464952); s32(len - 8); s32(0x45564157); s32(0x20746d66); s32(16); s16(1); s16(ch);
+            s32(buffer.sampleRate); s32(buffer.sampleRate * 2 * ch); s16(ch * 2); s16(16); s32(0x61746164); s32(len - pos - 4);
+            for (let i = 0; i < buffer.length; i++) {
+                for (let c = 0; c < ch; c++) {
+                    let s = Math.max(-1, Math.min(1, buffer.getChannelData(c)[i]));
+                    v.setInt16(pos, s < 0 ? s * 32768 : s * 32767, true); pos += 2;
+                }
+            }
+            if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+            currentObjectUrl = URL.createObjectURL(new Blob([ab], { type: "audio/wav" }));
+            wavesurfer.load(currentObjectUrl);
+        }
+    </script>
+</body>
+</html>
