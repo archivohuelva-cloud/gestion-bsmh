@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Compresor de PDF de Alta Fidelidad</title>
+    <title>Comprimir Partituras</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -56,14 +56,13 @@
             }, []);
 
             const handleGoBack = () => {
-    setStep(0);
-    setFilesToProcess([]);
-    setOverallProgress(0);
-    // Limpieza del input para permitir subir el mismo archivo consecutivamente
-    if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-    }
-};
+                setStep(0);
+                setFilesToProcess([]);
+                setOverallProgress(0);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
+            };
 
             const processInput = async (files) => {
                 let extractedFiles = [];
@@ -153,20 +152,18 @@
 
             const handleDownload = async () => {
                 if (filesToProcess.length === 1) {
-                    // Descarga directa del PDF
                     const item = filesToProcess[0];
                     if (item.compressedBlob) {
                         const link = document.createElement('a');
                         link.href = URL.createObjectURL(item.compressedBlob);
-                        link.download = `comprimido_${item.file.name}`;
+                        link.download = item.file.name;
                         link.click();
                     }
                 } else {
-                    // Descarga de ZIP
                     const zip = new JSZip();
                     filesToProcess.forEach(item => {
                         if (item.compressedBlob) {
-                            zip.file(`comprimido_${item.file.name}`, item.compressedBlob);
+                            zip.file(item.file.name, item.compressedBlob);
                         }
                     });
                     const content = await zip.generateAsync({ type: "blob" });
@@ -286,28 +283,19 @@
             return (
                 <div className="flex flex-col h-screen w-full bg-[#f3f4f6]">
                     <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6 shrink-0 z-20">
-    {step === 0 ? (
-        /* Botón para volver al Index externo cuando estás en la pantalla principal */
-        <a 
-            href="index.html" 
-            className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium transition-colors"
-        >
-            <IconBack /> <span>Volver</span>
-        </a>
-    ) : (
-        /* Botón para volver al paso anterior dentro de la aplicación */
-        <button 
-            onClick={handleGoBack} 
-            className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium transition-colors"
-        >
-            <IconBack /> <span>Volver</span>
-        </button>
-    )}
-    
-    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest italic">
-        Banda Sinfónica Municipal de Huelva - Archivo
-    </span>
-</header>
+                        {step === 0 ? (
+                            <a href="index.html" className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium transition-colors">
+                                <IconBack /> <span>Volver</span>
+                            </a>
+                        ) : (
+                            <button onClick={handleGoBack} className="flex items-center gap-2 text-gray-600 hover:text-[#e53e3e] font-medium transition-colors">
+                                <IconBack /> <span>Volver</span>
+                            </button>
+                        )}
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest italic">
+                            Banda Sinfónica Municipal de Huelva - Archivo
+                        </span>
+                    </header>
                     {step === 0 && renderUploadView()}
                     {step === 1 && renderConfigureView()}
                     {step === 2 && renderProcessingView()}
