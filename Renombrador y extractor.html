@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema BSMH v.3.0.4 (Web Version)</title>
+    <title>Renombrador y Extractor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -21,7 +21,6 @@
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
         
-        /* Estilos Extractor Actualizados */
         .miniatura-container { 
             height: 180px; width: 240px; overflow: auto; border: 2px solid #e2e8f0; 
             background-color: #fff; border-radius: 8px; position: relative;
@@ -33,7 +32,6 @@
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
 
-        /* Modal Previa */
         #pdf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
         #pdf-modal-content { background: white; width: 95%; height: 95%; border-radius: 8px; position: relative; display: flex; flex-direction: column; }
     </style>
@@ -233,10 +231,7 @@
             <div class="flex-1 overflow-auto p-4 bg-gray-200 flex justify-center relative">
                 <canvas id="modal-canvas" class="shadow-2xl"></canvas>
             </div>
-            <!-- Controles de navegación del modal -->
-            <div id="modal-nav-controls" class="p-4 border-t bg-white flex justify-center items-center gap-6 rounded-b-lg">
-                <!-- Se rellena dinámicamente -->
-            </div>
+            <div id="modal-nav-controls" class="p-4 border-t bg-white flex justify-center items-center gap-6 rounded-b-lg"></div>
         </div>
     </div>
 
@@ -373,33 +368,65 @@
             state.renom_files = Array.from(e.target.files);
             if (state.renom_files.length === 0) return;
             document.getElementById('renom-limpio').value = state.renom_files.some(f => f.name.length > 25) ? "No" : "Si";
-            state.renom_orden = {}; state.renom_selecciones = {}; state.patron_texto_visual = {}; state.renom_manuales = {};
-            let dict_pesos = {};
-            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
-
+            state.renom_orden = {}; state.renom_selecciones = {}; state.patron_texto_visual = {}; state.renom_manuales = {}; state.patrones_voluntarios = {};
+            
             state.renom_files.forEach(arc => {
                 let nameLimpio = normalizarParaComparar(arc.name.replace(".pdf", ""));
-                if (arc.name.toUpperCase().includes("GUION")) {
-                    state.renom_selecciones[arc.name] = "Guion"; dict_pesos[arc.name] = -1; return;
-                }
                 let mejorMatch = null;
+                
+                // PRIORIDAD ABSOLUTA A LA BASE DE DATOS
                 for (let fila of state.df_patrones) {
-                    if (construirPatronRegex(String(fila.Patron)).test(nameLimpio)) { mejorMatch = fila; break; }
+                    if (construirPatronRegex(String(fila.Patron)).test(nameLimpio)) { 
+                        mejorMatch = fila; 
+                        break; 
+                    }
                 }
+
                 if (mejorMatch) {
                     let sug = traductorInstrumento(String(mejorMatch.Renombrado), false, state.user === "Adrian");
                     state.patron_texto_visual[arc.name] = String(mejorMatch.Patron);
-                    state.renom_selecciones[arc.name] = lista_inst_ordenada.includes(sug) ? sug : "OTRO / EDITAR...";
-                    dict_pesos[arc.name] = lista_inst_ordenada.includes(sug) ? lista_inst_ordenada.indexOf(sug) : 9999;
+                    state.renom_selecciones[arc.name] = (sug.toUpperCase() === "GUION") ? "Guion" : (state.df_base.some(r => r[state.logicMode] === sug) ? sug : "OTRO / EDITAR...");
+                } else if (arc.name.toUpperCase().includes("GUION")) {
+                    state.renom_selecciones[arc.name] = "Guion"; 
                 } else {
-                    state.renom_selecciones[arc.name] = "Seleccionar..."; dict_pesos[arc.name] = 10000;
+                    state.renom_selecciones[arc.name] = "Seleccionar..."; 
                 }
             });
 
-            state.renom_files.sort((a, b) => (dict_pesos[a.name] || 10000) - (dict_pesos[b.name] || 10000) || a.name.localeCompare(b.name));
-            let c_inst = 1;
-            state.renom_files.forEach(arc => state.renom_orden[arc.name] = (state.renom_selecciones[arc.name] === "Guion") ? 0 : c_inst++);
             document.getElementById('renom-actions').classList.remove('hidden');
+            reordenarPorListaBase();
+        }
+
+        function copyToClipboard(text) {
+            const cleanText = text.replace(/\.pdf$/i, "");
+            const el = document.createElement('textarea');
+            el.value = cleanText;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            toast(`Copiado: ${cleanText}`);
+        }
+
+        function reordenarPorListaBase() {
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            
+            state.renom_files.sort((a, b) => {
+                let selA = state.renom_selecciones[a.name];
+                let selB = state.renom_selecciones[b.name];
+
+                let pesoA = (selA === "Guion") ? -1 : (lista_inst_ordenada.indexOf(selA) !== -1 ? lista_inst_ordenada.indexOf(selA) : 10000);
+                let pesoB = (selB === "Guion") ? -1 : (lista_inst_ordenada.indexOf(selB) !== -1 ? lista_inst_ordenada.indexOf(selB) : 10000);
+
+                if (pesoA !== pesoB) return pesoA - pesoB;
+                return a.name.localeCompare(b.name);
+            });
+
+            let c = 1;
+            state.renom_files.forEach(arc => {
+                state.renom_orden[arc.name] = (state.renom_selecciones[arc.name] === "Guion") ? 0 : c++;
+            });
+
             renderRenombradorList();
         }
 
@@ -408,35 +435,85 @@
             container.innerHTML = '';
             if (state.renom_files.length === 0) return;
             const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
-            const limpioSelect = document.getElementById('renom-limpio').value;
 
-            let renderFiles = [...state.renom_files].sort((a, b) => {
-                let oA = state.renom_orden[a.name] || 0, oB = state.renom_orden[b.name] || 0;
-                if (oA === 0 && oB !== 0) return -1; if (oA !== 0 && oB === 0) return 1;
-                return oA - oB || a.name.localeCompare(b.name);
-            });
-
-            renderFiles.forEach(arc => {
+            state.renom_files.forEach(arc => {
                 let v_sel = state.renom_selecciones[arc.name] || "Seleccionar...", p_vis = state.patron_texto_visual[arc.name] || "";
-                container.insertAdjacentHTML('beforeend', `
+                let rowHtml = `
                 <div class="bg-white p-3 rounded shadow-sm border border-gray-200 flex items-center gap-4 text-sm cursor-move" data-id="${arc.name}">
                     <div class="w-8 text-gray-400 flex justify-center"><i class="fas fa-grip-vertical"></i></div>
                     <div class="w-16"><input type="number" class="w-12 border rounded px-1 py-1 text-center font-bold" value="${state.renom_orden[arc.name] || 0}" onchange="updateOrderManual('${arc.name}', this.value)"></div>
-                    <div class="flex-1 overflow-hidden"><div class="font-bold truncate">${arc.name}</div>
-                        ${(limpioSelect === "No" && !p_vis.replace(/\*/g,"").trim()) ? `<input type="text" placeholder="Patrón Manual..." class="text-xs border rounded px-2 py-1 mt-1 w-full" onchange="state.patrones_voluntarios['${arc.name}'] = this.value">` : ''}
+                    <div class="flex-1 overflow-hidden">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold truncate">${arc.name}</span>
+                            ${!p_vis ? `
+                            <button onclick="copyToClipboard('${arc.name}')" class="text-gray-400 hover:text-blue-500 transition" title="Copiar nombre sin extensión">
+                                <i class="far fa-copy"></i>
+                            </button>` : ''}
+                        </div>
+                        <div class="text-[10px] text-gray-400 italic mt-1">
+                            ${p_vis ? `<i class="fas fa-thumbtack mr-1"></i> Patrón detectado: <span class="text-blue-600 font-bold">${p_vis}</span>` : 
+                            `<input type="text" placeholder="Escribir patrón manual (ej: *Cl.1*)" class="border rounded px-2 py-0.5 w-full mt-1" value="${state.patrones_voluntarios[arc.name] || ''}" onchange="state.patrones_voluntarios['${arc.name}'] = this.value">`}
+                        </div>
                     </div>
-                    <div class="w-1/4"><select class="w-full border rounded px-2 py-1" onchange="state.renom_selecciones['${arc.name}'] = this.value; renderRenombradorList()">
-                        <option value="Seleccionar...">Seleccionar...</option><option value="Guion" ${v_sel === 'Guion' ? 'selected' : ''}>Guion</option><option value="OTRO / EDITAR..." ${v_sel === 'OTRO / EDITAR...' ? 'selected' : ''}>OTRO / EDITAR...</option>
-                        <option disabled>---</option>${lista_inst_ordenada.map(i => `<option value="${i}" ${v_sel === i ? 'selected' : ''}>${i}</option>`).join('')}
-                    </select></div>
-                    <div class="w-1/3 ${v_sel !== 'OTRO / EDITAR...' ? 'invisible' : ''}"><input type="text" placeholder="Nombre" class="w-full border rounded px-2 py-1 text-xs" value="${state.renom_manuales[arc.name] || ''}" onchange="state.renom_manuales['${arc.name}'] = this.value"></div>
-                </div>`);
+                    <div class="w-1/4">
+                        <select class="w-full border rounded px-2 py-1" onchange="state.renom_selecciones['${arc.name}'] = this.value; reordenarPorListaBase()">
+                            <option value="Seleccionar...">Seleccionar...</option>
+                            <option value="Guion" ${v_sel === 'Guion' ? 'selected' : ''}>Guion</option>
+                            <option value="OTRO / EDITAR..." ${v_sel === 'OTRO / EDITAR...' ? 'selected' : ''}>OTRO / EDITAR...</option>
+                            <option disabled>---</option>
+                            ${lista_inst_ordenada.map(i => `<option value="${i}" ${v_sel === i ? 'selected' : ''}>${i}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="w-1/3 ${v_sel !== 'OTRO / EDITAR...' ? 'hidden' : 'flex gap-1'}">
+                        <input type="text" placeholder="Nombre" class="w-full border rounded px-2 py-1 text-xs" value="${state.renom_manuales[arc.name] || ''}" onchange="state.renom_manuales['${arc.name}'] = this.value">
+                        <button onclick="addToLBFromRenom('${arc.name}')" class="bg-blue-500 text-white px-2 rounded text-[10px]" title="Añadir a Lista Base"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', rowHtml);
             });
             if (window.Sortable) new Sortable(container, { animation: 150, handle: '.cursor-move', onEnd: () => {
                 let c = 1; container.querySelectorAll('[data-id]').forEach(row => {
                     let n = row.getAttribute('data-id'); state.renom_orden[n] = (state.renom_selecciones[n] === "Guion") ? 0 : c++;
                 }); renderRenombradorList();
             }});
+        }
+
+        async function addToLBFromRenom(fileName) {
+            const nombre = state.renom_manuales[fileName];
+            if(!nombre) return toast("Escribe un nombre primero", "error");
+            
+            let optionsHtml = state.df_base.map((inst, idx) => 
+                `<option value="${idx + 1}">Después de: ${inst[state.logicMode]}</option>`
+            ).join('');
+            optionsHtml = `<option value="0">Al principio de todo</option>` + optionsHtml;
+
+            const { value: posIndex } = await Swal.fire({
+                title: 'Posicionar Instrumento',
+                html: `¿Dónde quieres añadir "<b>${nombre}</b>"?<br><br>
+                       <select id="swal-pos-select" class="swal2-input w-full">
+                        ${optionsHtml}
+                       </select>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                preConfirm: () => document.getElementById('swal-pos-select').value
+            });
+
+            if (posIndex !== undefined) {
+                showLoading("Actualizando Lista Base...");
+                let nuevaLista = [...state.df_base];
+                let nuevoObj = { ID: 0, Autor: state.user };
+                nuevoObj[state.logicMode] = nombre;
+                nuevaLista.splice(parseInt(posIndex), 0, nuevoObj);
+                let payload = nuevaLista.map((r, i) => { r.ID = i + 1; return r; });
+                const ok = await postSheet({ pestaña: state.pestana_lb, accion: "sobrescribir", datos: payload });
+                if(ok) {
+                    state.df_base = await fetchSheet(state.pestana_lb);
+                    state.renom_selecciones[fileName] = nombre;
+                    toast("Instrumento añadido y seleccionado");
+                    reordenarPorListaBase();
+                }
+                hideLoading();
+            }
         }
 
         function updateOrderManual(name, val) {
@@ -449,7 +526,7 @@
         }
 
         function clearRenombrador() {
-            state.renom_files = []; state.renom_orden = {}; state.renom_selecciones = {}; state.renom_manuales = {};
+            state.renom_files = []; state.renom_orden = {}; state.renom_selecciones = {}; state.renom_manuales = {}; state.patrones_voluntarios = {};
             document.getElementById('renom-files-input').value = ""; document.getElementById('renom-cod-obra').value = "";
             document.getElementById('renom-actions').classList.add('hidden'); renderRenombradorList();
         }
@@ -457,6 +534,44 @@
         async function processRenombrador() {
             const cod = document.getElementById('renom-cod-obra').value.trim();
             if (state.user === "Adrian" && !cod) return Swal.fire("Aviso", "Falta código obra", "warning");
+            
+            showLoading("Verificando y guardando nuevos patrones...");
+            
+            // 1. DESCARGAR PATRONES ACTUALES PARA EVITAR DUPLICADOS
+            let actualPats = await fetchSheet("Patrones");
+            let patronesExistentes = actualPats.map(p => normalizarParaComparar(p.Patron));
+            
+            let nuevosPatronesParaSubir = [];
+            for (let fileName in state.patrones_voluntarios) {
+                let patRaw = state.patrones_voluntarios[fileName];
+                if (patRaw && patRaw.trim() !== "") {
+                    let patNormalizado = patRaw.startsWith('*') ? patRaw : `*${patRaw}*`;
+                    
+                    // SOLO SI NO EXISTE YA EN LA NUBE
+                    if (!patronesExistentes.includes(normalizarParaComparar(patNormalizado))) {
+                        let sel = state.renom_selecciones[fileName];
+                        let finalName = (sel === "OTRO / EDITAR...") ? state.renom_manuales[fileName] : sel;
+                        
+                        if (finalName && finalName !== "Seleccionar...") {
+                            nuevosPatronesParaSubir.push({
+                                Patron: patNormalizado,
+                                Renombrado: finalName,
+                                Autor: state.user
+                            });
+                            // Añadir a la lista local para no repetir en el mismo proceso
+                            patronesExistentes.push(normalizarParaComparar(patNormalizado));
+                        }
+                    }
+                }
+            }
+
+            if (nuevosPatronesParaSubir.length > 0) {
+                let finalPats = [...nuevosPatronesParaSubir, ...actualPats];
+                await postSheet({ pestaña: "Patrones", accion: "sobrescribir", datos: finalPats });
+                state.df_patrones = await fetchSheet("Patrones"); // Recargar localmente
+            }
+
+            // 2. GENERAR ZIP
             showLoading("Generando ZIP...");
             try {
                 const zip = new JSZip();
@@ -470,11 +585,11 @@
                 }
                 const content = await zip.generateAsync({type:"blob"});
                 const a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = "renombrados.zip"; a.click();
-                toast("Completado");
+                toast("Completado y Base de Datos actualizada");
             } catch (e) { console.error(e); } hideLoading();
         }
 
-        // --- EXTRACTOR MODIFICADO ---
+        // --- EXTRACTOR ---
         async function handleExtractorFile(e) {
             const file = e.target.files[0]; if(!file) return;
             state.ext_filename = file.name; state.ext_pdf_bytes = await file.arrayBuffer();
