@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renombrador y Extractor</title>
+    <title>Sistema BSMH v.3.0.4 (Web Version)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -263,7 +263,8 @@
             ext_filas: [],
             lb_data: [],
             pat_data: [],
-            currentModalPage: 1
+            currentModalPage: 1,
+            currentModalPdfDoc: null
         };
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -332,6 +333,8 @@
         async function postSheet(payload) {
             try {
                 await fetch(URL_PUENTE, { method: 'POST', body: JSON.stringify(payload) });
+                localStorage.removeItem('bsmh_df_base');
+                localStorage.removeItem('bsmh_df_patrones');
                 return true; 
             } catch (e) { console.error(e); return false; }
         }
@@ -347,19 +350,35 @@
         }
 
         async function preloadData() {
-            if(state.df_base.length === 0) state.df_base = await fetchSheet(state.pestana_lb);
-            if(state.df_patrones.length === 0) {
+            const cachedBase = localStorage.getItem('bsmh_df_base');
+            const cachedPatrones = localStorage.getItem('bsmh_df_patrones');
+
+            if (cachedBase && cachedPatrones) {
+                state.df_base = JSON.parse(cachedBase);
+                state.df_patrones = JSON.parse(cachedPatrones);
+                refreshCacheInBackground();
+            } else {
+                showLoading("Cargando base de datos...");
+                state.df_base = await fetchSheet(state.pestana_lb);
                 let pats = await fetchSheet("Patrones");
                 state.df_patrones = pats.sort((a,b) => (String(b.Patron).length - String(a.Patron).length));
+                localStorage.setItem('bsmh_df_base', JSON.stringify(state.df_base));
+                localStorage.setItem('bsmh_df_patrones', JSON.stringify(state.df_patrones));
+                hideLoading();
             }
+        }
+
+        async function refreshCacheInBackground() {
+            const base = await fetchSheet(state.pestana_lb);
+            const pats = await fetchSheet("Patrones");
+            const sortedPats = pats.sort((a,b) => (String(b.Patron).length - String(a.Patron).length));
+            localStorage.setItem('bsmh_df_base', JSON.stringify(base));
+            localStorage.setItem('bsmh_df_patrones', JSON.stringify(sortedPats));
         }
 
         // --- RENOMBRADOR ---
         async function initRenombradorUI() {
             if (state.user === "Adrian") document.getElementById('renom-cod-obra-container').classList.remove('hidden');
-            if(state.df_base.length === 0 || state.df_patrones.length === 0) {
-                showLoading(); await preloadData(); hideLoading();
-            }
             document.getElementById('renom-stats').innerHTML = `✅ ${state.df_patrones.length} Patrones activos`;
             renderRenombradorList();
         }
@@ -373,8 +392,6 @@
             state.renom_files.forEach(arc => {
                 let nameLimpio = normalizarParaComparar(arc.name.replace(".pdf", ""));
                 let mejorMatch = null;
-                
-                // PRIORIDAD ABSOLUTA A LA BASE DE DATOS
                 for (let fila of state.df_patrones) {
                     if (construirPatronRegex(String(fila.Patron)).test(nameLimpio)) { 
                         mejorMatch = fila; 
@@ -397,6 +414,18 @@
             reordenarPorListaBase();
         }
 
+        async function openRenomPreview(fileName) {
+            const file = state.renom_files.find(f => f.name === fileName);
+            if (!file) return;
+            showLoading("Abriendo vista previa...");
+            const bytes = await file.arrayBuffer();
+            state.currentModalPdfDoc = await pdfjsLib.getDocument({data: bytes}).promise;
+            state.currentModalPage = 1;
+            updateModalContent(state.currentModalPdfDoc);
+            document.getElementById('pdf-modal').style.display = 'flex';
+            hideLoading();
+        }
+
         function copyToClipboard(text) {
             const cleanText = text.replace(/\.pdf$/i, "");
             const el = document.createElement('textarea');
@@ -414,19 +443,20 @@
             state.renom_files.sort((a, b) => {
                 let selA = state.renom_selecciones[a.name];
                 let selB = state.renom_selecciones[b.name];
-
                 let pesoA = (selA === "Guion") ? -1 : (lista_inst_ordenada.indexOf(selA) !== -1 ? lista_inst_ordenada.indexOf(selA) : 10000);
                 let pesoB = (selB === "Guion") ? -1 : (lista_inst_ordenada.indexOf(selB) !== -1 ? lista_inst_ordenada.indexOf(selB) : 10000);
-
                 if (pesoA !== pesoB) return pesoA - pesoB;
                 return a.name.localeCompare(b.name);
             });
 
+            actualizarNumeracionYRender();
+        }
+
+        function actualizarNumeracionYRender() {
             let c = 1;
             state.renom_files.forEach(arc => {
                 state.renom_orden[arc.name] = (state.renom_selecciones[arc.name] === "Guion") ? 0 : c++;
             });
-
             renderRenombradorList();
         }
 
@@ -444,6 +474,9 @@
                     <div class="w-16"><input type="number" class="w-12 border rounded px-1 py-1 text-center font-bold" value="${state.renom_orden[arc.name] || 0}" onchange="updateOrderManual('${arc.name}', this.value)"></div>
                     <div class="flex-1 overflow-hidden">
                         <div class="flex items-center gap-2">
+                            <button onclick="openRenomPreview('${arc.name}')" class="text-blue-500 hover:text-blue-700 transition" title="Previsualizar PDF">
+                                <i class="fas fa-eye"></i>
+                            </button>
                             <span class="font-bold truncate">${arc.name}</span>
                             ${!p_vis ? `
                             <button onclick="copyToClipboard('${arc.name}')" class="text-gray-400 hover:text-blue-500 transition" title="Copiar nombre sin extensión">
@@ -471,11 +504,23 @@
                 </div>`;
                 container.insertAdjacentHTML('beforeend', rowHtml);
             });
-            if (window.Sortable) new Sortable(container, { animation: 150, handle: '.cursor-move', onEnd: () => {
-                let c = 1; container.querySelectorAll('[data-id]').forEach(row => {
-                    let n = row.getAttribute('data-id'); state.renom_orden[n] = (state.renom_selecciones[n] === "Guion") ? 0 : c++;
-                }); renderRenombradorList();
-            }});
+
+            if (window.Sortable) {
+                new Sortable(container, { 
+                    animation: 150, 
+                    handle: '.cursor-move', 
+                    onEnd: () => {
+                        const newOrder = [];
+                        container.querySelectorAll('[data-id]').forEach(row => {
+                            const name = row.getAttribute('data-id');
+                            const file = state.renom_files.find(f => f.name === name);
+                            if(file) newOrder.push(file);
+                        });
+                        state.renom_files = newOrder;
+                        actualizarNumeracionYRender();
+                    }
+                });
+            }
         }
 
         async function addToLBFromRenom(fileName) {
@@ -517,12 +562,24 @@
         }
 
         function updateOrderManual(name, val) {
-            let nPos = parseInt(val); if (isNaN(nPos)) return;
-            let files = [...state.renom_files].sort((a,b) => (state.renom_orden[a.name]||0) - (state.renom_orden[b.name]||0));
-            let idx = files.findIndex(f => f.name === name); let [f] = files.splice(idx, 1);
-            files.splice(Math.max(0, nPos - 1), 0, f);
-            let c = 1; files.forEach(x => state.renom_orden[x.name] = (state.renom_selecciones[x.name] === "Guion") ? 0 : c++);
-            renderRenombradorList();
+            let nPos = parseInt(val); 
+            if (isNaN(nPos)) return;
+            
+            let idx = state.renom_files.findIndex(f => f.name === name);
+            if (idx === -1) return;
+            
+            let [file] = state.renom_files.splice(idx, 1);
+            
+            // Lógica de inserción exacta:
+            // Si es 0, va al principio. Si es > 0, va a la posición nPos visual.
+            let targetIdx = nPos === 0 ? 0 : Math.max(0, nPos);
+            if (targetIdx >= state.renom_files.length) {
+                state.renom_files.push(file);
+            } else {
+                state.renom_files.splice(targetIdx, 0, file);
+            }
+            
+            actualizarNumeracionYRender();
         }
 
         function clearRenombrador() {
@@ -537,7 +594,6 @@
             
             showLoading("Verificando y guardando nuevos patrones...");
             
-            // 1. DESCARGAR PATRONES ACTUALES PARA EVITAR DUPLICADOS
             let actualPats = await fetchSheet("Patrones");
             let patronesExistentes = actualPats.map(p => normalizarParaComparar(p.Patron));
             
@@ -546,19 +602,15 @@
                 let patRaw = state.patrones_voluntarios[fileName];
                 if (patRaw && patRaw.trim() !== "") {
                     let patNormalizado = patRaw.startsWith('*') ? patRaw : `*${patRaw}*`;
-                    
-                    // SOLO SI NO EXISTE YA EN LA NUBE
                     if (!patronesExistentes.includes(normalizarParaComparar(patNormalizado))) {
                         let sel = state.renom_selecciones[fileName];
                         let finalName = (sel === "OTRO / EDITAR...") ? state.renom_manuales[fileName] : sel;
-                        
                         if (finalName && finalName !== "Seleccionar...") {
                             nuevosPatronesParaSubir.push({
                                 Patron: patNormalizado,
                                 Renombrado: finalName,
                                 Autor: state.user
                             });
-                            // Añadir a la lista local para no repetir en el mismo proceso
                             patronesExistentes.push(normalizarParaComparar(patNormalizado));
                         }
                     }
@@ -568,10 +620,9 @@
             if (nuevosPatronesParaSubir.length > 0) {
                 let finalPats = [...nuevosPatronesParaSubir, ...actualPats];
                 await postSheet({ pestaña: "Patrones", accion: "sobrescribir", datos: finalPats });
-                state.df_patrones = await fetchSheet("Patrones"); // Recargar localmente
+                state.df_patrones = await fetchSheet("Patrones");
             }
 
-            // 2. GENERAR ZIP
             showLoading("Generando ZIP...");
             try {
                 const zip = new JSZip();
@@ -687,15 +738,16 @@
 
         async function openPdfModal(pNum) {
             if(!state.ext_pdf_doc) return;
+            state.currentModalPdfDoc = state.ext_pdf_doc;
             state.currentModalPage = pNum;
             const modal = document.getElementById('pdf-modal');
-            updateModalContent();
+            updateModalContent(state.currentModalPdfDoc);
             modal.style.display = 'flex';
         }
 
-        async function updateModalContent() {
+        async function updateModalContent(pdfDoc) {
             const canvas = document.getElementById('modal-canvas');
-            const page = await state.ext_pdf_doc.getPage(state.currentModalPage);
+            const page = await pdfDoc.getPage(state.currentModalPage);
             const viewport = page.getViewport({scale: 1.5});
             canvas.width = viewport.width; canvas.height = viewport.height;
             await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
@@ -703,20 +755,24 @@
             const navControls = document.getElementById('modal-nav-controls');
             navControls.innerHTML = `
                 <button onclick="changeModalPage(-1)" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-bold transition"><i class="fas fa-chevron-left mr-2"></i> Anterior</button>
-                <span class="font-bold text-gray-700">Página ${state.currentModalPage} de ${state.ext_pdf_doc.numPages}</span>
+                <span class="font-bold text-gray-700">Página ${state.currentModalPage} de ${pdfDoc.numPages}</span>
                 <button onclick="changeModalPage(1)" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-bold transition">Siguiente <i class="fas fa-chevron-right ml-2"></i></button>
             `;
         }
 
         function changeModalPage(delta) {
+            if (!state.currentModalPdfDoc) return;
             const newPage = state.currentModalPage + delta;
-            if (newPage >= 1 && newPage <= state.ext_pdf_doc.numPages) {
+            if (newPage >= 1 && newPage <= state.currentModalPdfDoc.numPages) {
                 state.currentModalPage = newPage;
-                updateModalContent();
+                updateModalContent(state.currentModalPdfDoc);
             }
         }
 
-        function closePdfModal() { document.getElementById('pdf-modal').style.display = 'none'; }
+        function closePdfModal() { 
+            document.getElementById('pdf-modal').style.display = 'none'; 
+            state.currentModalPdfDoc = null;
+        }
 
         function clearExtractor() {
             state.ext_pdf_bytes = null; state.ext_pdf_doc = null; state.ext_filas = [];
