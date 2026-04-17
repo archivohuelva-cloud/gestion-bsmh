@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renombrador | Extractor</title>
+    <title>Sistema BSMH v.3.0.4 (Web Version)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -34,10 +34,6 @@
 
         #pdf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
         #pdf-modal-content { background: white; width: 95%; height: 95%; border-radius: 8px; position: relative; display: flex; flex-direction: column; }
-
-        /* Estilos Visor Integrado Extractor */
-        #ext-viewer-container { background: #e2e8f0; border-radius: 12px; overflow: hidden; border: 2px solid #cbd5e1; }
-        #ext-canvas-main { background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="text-gray-800 antialiased font-sans flex h-screen overflow-hidden">
@@ -123,50 +119,36 @@
                 <h1 class="text-5xl font-black text-gray-800">Extractor PDF</h1>
                 <p class="text-lg text-gray-500">Versión 3.8.6 (Web)</p>
             </div>
-            
-            <!-- SUBIDA INICIAL -->
-            <div id="ext-upload-section" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
-                <label class="font-bold text-gray-700 block mb-2">Subir PDF para procesar</label>
-                <input type="file" id="ext-file" accept="application/pdf" class="w-full border-2 border-dashed border-gray-300 p-8 rounded-lg text-center cursor-pointer" onchange="handleExtractorFile(event)">
-            </div>
-
-            <!-- VISOR INTEGRADO Y CONFIGURACIÓN (Oculto hasta subir PDF) -->
-            <div id="ext-setup-section" class="hidden space-y-6">
-                <div id="ext-viewer-container" class="flex flex-col h-[600px]">
-                    <div class="bg-white p-3 border-b flex justify-between items-center">
-                        <span class="font-bold text-gray-600" id="ext-viewer-filename">Archivo.pdf</span>
-                        <div class="flex items-center gap-4">
-                            <button onclick="changeExtViewerPage(-1)" class="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg transition"><i class="fas fa-chevron-left"></i></button>
-                            <span class="font-mono font-bold" id="ext-viewer-page-info">Página 1 de 1</span>
-                            <button onclick="changeExtViewerPage(1)" class="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg transition"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-xs font-bold text-gray-400">ZOOM</label>
-                            <input type="range" id="ext-zoom" min="0.5" max="2.5" step="0.1" value="1.2" oninput="renderExtViewerPage()">
-                        </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="md:col-span-3">
+                        <label class="font-bold text-gray-700 block mb-2">Subir PDF</label>
+                        <input type="file" id="ext-file" accept="application/pdf" class="w-full border border-gray-300 p-2 rounded" onchange="handleExtractorFile(event)">
                     </div>
-                    <div class="flex-1 overflow-auto p-6 flex justify-center">
-                        <canvas id="ext-canvas-main"></canvas>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                        <div><label class="block text-xs font-bold text-gray-500 mb-1">Págs Totales</label><input type="number" id="ext-pt" class="w-full border p-2 rounded bg-gray-50 font-bold" readonly></div>
-                        <div><label class="block text-xs font-bold text-gray-500 mb-1">Págs/Inst</label><input type="number" id="ext-pi" value="1" class="w-full border p-2 rounded font-bold"></div>
-                        <div><label class="block text-xs font-bold text-gray-500 mb-1">Guion Ini</label><input type="number" id="ext-gi" value="1" class="w-full border p-2 rounded font-bold"></div>
-                        <div><label class="block text-xs font-bold text-gray-500 mb-1">Guion Fin</label><input type="number" id="ext-gf" value="8" class="w-full border p-2 rounded font-bold"></div>
-                        <button onclick="generateExtractorTable()" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition shadow-md h-[42px]"><i class="fas fa-table mr-2"></i> GENERAR TABLA</button>
-                    </div>
-                    <div class="mt-4">
-                        <label class="font-bold text-gray-700 block mb-2 text-sm">🤖 Opcional: Pegar análisis de la IA</label>
-                        <textarea id="ext-ia" rows="1" class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono placeholder-gray-400" placeholder="Estructura de la IA..."></textarea>
+                    <div>
+                        <label class="font-bold text-gray-700 block mb-2">🔍 Zoom Encabezado</label>
+                        <input type="range" id="ext-zoom" min="0.5" max="3.0" step="0.1" value="1.2" class="w-full" oninput="renderAllThumbnails()">
                     </div>
                 </div>
             </div>
 
-            <!-- TABLA DE RESULTADOS -->
-            <div id="ext-table" class="space-y-3 my-6"></div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <label class="font-bold text-gray-700 block mb-2">🤖 Pegar análisis de la IA aquí</label>
+                <textarea id="ext-ia" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm font-mono placeholder-gray-400" placeholder="Estructura de la IA..."></textarea>
+            </div>
+
+            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <h3 class="font-bold text-gray-700 mb-3"><i class="fas fa-tools"></i> Configuración</h3>
+                <div class="grid grid-cols-5 gap-4 items-end">
+                    <div><label class="block text-xs text-gray-500">Págs Totales</label><input type="number" id="ext-pt" value="20" class="w-full border p-2 rounded bg-gray-50"></div>
+                    <div><label class="block text-xs text-gray-500">Págs/Inst</label><input type="number" id="ext-pi" value="1" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs text-gray-500">Guion Ini</label><input type="number" id="ext-gi" value="1" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-xs text-gray-500">Guion Fin</label><input type="number" id="ext-gf" value="8" class="w-full border p-2 rounded"></div>
+                    <button onclick="generateExtractorTable()" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 transition shadow-md"><i class="fas fa-rocket mr-2"></i> GENERAR TABLA</button>
+                </div>
+            </div>
+
+            <div id="ext-table" class="space-y-3 mb-6"></div>
 
             <div id="ext-actions" class="hidden flex gap-4">
                 <button onclick="processExtractor()" class="flex-[2] bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-md"><i class="fas fa-download mr-2"></i> FINALIZAR Y DESCARGAR ZIP</button>
@@ -279,8 +261,7 @@
             ext_pdf_doc: null,
             ext_filename: "",
             ext_filas: [],
-            ext_manuales: {},
-            ext_viewer_page: 1,
+            ext_manuales: {}, // Nombres manuales para extractor
             lb_data: [],
             pat_data: [],
             currentModalPage: 1,
@@ -662,44 +643,10 @@
         // --- EXTRACTOR ---
         async function handleExtractorFile(e) {
             const file = e.target.files[0]; if(!file) return;
-            showLoading("Cargando PDF...");
-            state.ext_filename = file.name; 
-            state.ext_pdf_bytes = await file.arrayBuffer();
+            state.ext_filename = file.name; state.ext_pdf_bytes = await file.arrayBuffer();
             state.ext_pdf_doc = await pdfjsLib.getDocument({data: state.ext_pdf_bytes}).promise;
-            
             document.getElementById('ext-pt').value = state.ext_pdf_doc.numPages;
-            document.getElementById('ext-viewer-filename').innerText = file.name;
-            
-            // Mostrar visor y configuración
-            document.getElementById('ext-upload-section').classList.add('hidden');
-            document.getElementById('ext-setup-section').classList.remove('hidden');
-            
-            state.ext_viewer_page = 1;
-            renderExtViewerPage();
-            hideLoading();
             toast("PDF cargado correctamente");
-        }
-
-        async function renderExtViewerPage() {
-            if(!state.ext_pdf_doc) return;
-            const canvas = document.getElementById('ext-canvas-main');
-            const page = await state.ext_pdf_doc.getPage(state.ext_viewer_page);
-            const zoom = parseFloat(document.getElementById('ext-zoom').value || 1.2);
-            const viewport = page.getViewport({scale: zoom});
-            
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
-            
-            document.getElementById('ext-viewer-page-info').innerText = `Página ${state.ext_viewer_page} de ${state.ext_pdf_doc.numPages}`;
-        }
-
-        function changeExtViewerPage(delta) {
-            const newPage = state.ext_viewer_page + delta;
-            if (newPage >= 1 && newPage <= state.ext_pdf_doc.numPages) {
-                state.ext_viewer_page = newPage;
-                renderExtViewerPage();
-            }
         }
 
         function generateExtractorTable() {
@@ -733,10 +680,14 @@
         async function renderExtractorTable() {
             const container = document.getElementById('ext-table'); container.innerHTML = '';
             const listaCompleta = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            
+            // Obtener instrumentos ya seleccionados en otras filas (excluyendo la actual)
             const seleccionados = state.ext_filas.map(f => f.nombre).filter(n => n !== "Seleccionar..." && n !== "GUION" && n !== "OTRO / EDITAR...");
 
             state.ext_filas.forEach((f, i) => {
+                // Filtrar lista para esta fila: lista completa menos lo seleccionado en otras filas
                 const listaFiltrada = listaCompleta.filter(item => !seleccionados.includes(item) || f.nombre === item);
+
                 let div = document.createElement('div'); 
                 div.className = "bg-white p-4 rounded-xl shadow-md border border-gray-200 flex items-center gap-6 text-sm";
                 div.innerHTML = `
@@ -784,7 +735,8 @@
             if(!state.ext_pdf_doc || !pNum) return;
             try {
                 const page = await state.ext_pdf_doc.getPage(pNum);
-                const viewport = page.getViewport({scale: 0.4});
+                const zoom = parseFloat(document.getElementById('ext-zoom').value || 1.2);
+                const viewport = page.getViewport({scale: zoom});
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.width = viewport.width; canvas.height = viewport.height;
@@ -793,8 +745,13 @@
                 if(container) {
                     container.innerHTML = '';
                     container.appendChild(canvas);
+                    container.scrollTop = 0; container.scrollLeft = 0;
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function renderAllThumbnails() {
+            state.ext_filas.forEach((f, i) => renderThumbnail(i, f.pags[0]));
         }
 
         async function openPdfModal(pNum) {
@@ -841,8 +798,6 @@
             document.getElementById('ext-ia').value = "";
             document.getElementById('ext-table').innerHTML = "";
             document.getElementById('ext-actions').classList.add('hidden');
-            document.getElementById('ext-setup-section').classList.add('hidden');
-            document.getElementById('ext-upload-section').classList.remove('hidden');
             toast("Extractor reiniciado", "info");
         }
 
@@ -854,7 +809,9 @@
                 for(let i=0; i < state.ext_filas.length; i++) {
                     let f = state.ext_filas[i];
                     if(f.nombre === "Seleccionar...") continue;
+                    
                     let finalName = (f.nombre === "OTRO / EDITAR...") ? (state.ext_manuales[i] || "Sin_Nombre") : f.nombre;
+                    
                     const newPdf = await PDFLib.PDFDocument.create();
                     const pages = await newPdf.copyPages(pdf, f.pags.map(p=>p-1));
                     pages.forEach(p => newPdf.addPage(p));
