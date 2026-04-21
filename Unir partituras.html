@@ -53,7 +53,7 @@
             <p class="text-sm text-gray-600 italic">Unir en 1 solo PDF múltiples partichelas individuales</p>
         </header>
 
-        <!-- Dropzone corregido para clic directo -->
+        <!-- Dropzone -->
         <div id="dropzone" onclick="document.getElementById('fileInput').click()" class="relative border-2 border-dashed border-gray-300 rounded-xl p-6 text-center transition-all bg-white shadow-sm cursor-pointer hover:border-blue-400 group">
             <input type="file" id="fileInput" multiple accept="application/pdf" class="hidden">
             <div class="space-y-2 pointer-events-none">
@@ -73,9 +73,10 @@
             <div class="flex items-center justify-between mb-3 px-2 bg-gray-200 p-2 rounded-lg">
                 <div class="flex items-center gap-3">
                     <h2 class="text-sm font-bold text-gray-700">Lista</h2>
-                    <div id="fileCounterContainer" class="flex gap-1">
+                    <div id="fileCounterContainer" class="flex gap-1 flex-wrap">
                         <span id="fileCounter" class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">0 PDFs</span>
                         <span id="copyCounter" class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">0 Copias</span>
+                        <span id="pageCounter" class="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">0 Páginas</span>
                     </div>
                 </div>
                 <span class="text-[10px] text-gray-500 italic">Reordenar</span>
@@ -85,12 +86,23 @@
                 <!-- Items will be injected here -->
             </div>
 
-            <!-- Opción para Doble Cara -->
-            <div class="mt-4 flex items-center justify-center p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <input type="checkbox" id="doubleSidedCheckbox" class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                <label for="doubleSidedCheckbox" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
-                    Preparar para impresión a doble cara (añade página en blanco en partichelas impares)
-                </label>
+            <!-- Opciones de Configuración -->
+            <div class="mt-4 space-y-2">
+                <!-- Opción BSMHuelva -->
+                <div class="flex items-center justify-center p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                    <input type="checkbox" id="bsmhCheckbox" class="w-4 h-4 text-indigo-600 bg-white border-gray-300 rounded focus:ring-indigo-500 cursor-pointer">
+                    <label for="bsmhCheckbox" class="ml-2 text-xs font-bold text-indigo-800 cursor-pointer select-none">
+                        Copias para BSMHuelva (Ajuste automático de copias)
+                    </label>
+                </div>
+
+                <!-- Opción para Doble Cara -->
+                <div class="flex items-center justify-center p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                    <input type="checkbox" id="doubleSidedCheckbox" class="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="doubleSidedCheckbox" class="ml-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                        Preparar para impresión a doble cara (añade pág. en blanco en impares)
+                    </label>
+                </div>
             </div>
 
             <!-- Actions -->
@@ -140,6 +152,7 @@
         const listContainer = document.getElementById('listContainer');
         const fileCounter = document.getElementById('fileCounter');
         const copyCounter = document.getElementById('copyCounter');
+        const pageCounter = document.getElementById('pageCounter');
         const generateBtn = document.getElementById('generateBtn');
         const clearBtn = document.getElementById('clearBtn');
         const previewModal = document.getElementById('previewModal');
@@ -147,8 +160,10 @@
         const modalTitle = document.getElementById('modalTitle');
         const modalBody = document.getElementById('modalBody');
         const dateTimeDisplay = document.getElementById('currentDateTime');
+        const bsmhCheckbox = document.getElementById('bsmhCheckbox');
+        const doubleSidedCheckbox = document.getElementById('doubleSidedCheckbox');
 
-        let uploadedFiles = [];
+        let uploadedFiles =[];
 
         function updateDateTime() {
             const now = new Date();
@@ -192,64 +207,129 @@
         });
 
         dropzone.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.remove('drag-over');
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('drag-over');
 
-    const items = e.dataTransfer.items;
-    if (items) {
-        let allFiles = [];
-        const promises = [];
+            const items = e.dataTransfer.items;
+            const files = e.dataTransfer.files;
 
-        for (let i = 0; i < items.length; i++) {
-            const entry = items[i].webkitGetAsEntry();
-            if (entry) {
-                promises.push(scanFiles(entry));
+            if (items && items.length > 0 && items[0].webkitGetAsEntry) {
+                let allFiles =[];
+                const promises =[];
+
+                for (let i = 0; i < items.length; i++) {
+                    const entry = items[i].webkitGetAsEntry();
+                    if (entry) {
+                        promises.push(scanFiles(entry));
+                    }
+                }
+
+                const results = await Promise.all(promises);
+                allFiles = results.flat();
+
+                if (allFiles.length > 0) {
+                    handleFiles(allFiles);
+                }
+            } else if (files && files.length > 0) {
+                // Fallback por si el navegador no soporta webkitGetAsEntry o se arrastran archivos simples
+                handleFiles(files);
             }
-        }
-
-        const results = await Promise.all(promises);
-        allFiles = results.flat();
-
-        if (allFiles.length > 0) {
-            handleFiles(allFiles);
-        }
-    }
-});
-
-// Función recursiva para leer archivos dentro de carpetas
-async function scanFiles(entry) {
-    let files = [];
-    if (entry.isFile) {
-        const file = await new Promise((resolve) => entry.file(resolve));
-        if (file.type === 'application/pdf') {
-            files.push(file);
-        }
-    } else if (entry.isDirectory) {
-        const directoryReader = entry.createReader();
-        const entries = await new Promise((resolve) => {
-            directoryReader.readEntries(resolve);
         });
-        
-        const promises = entries.map(childEntry => scanFiles(childEntry));
-        const results = await Promise.all(promises);
-        files = results.flat();
-    }
-    return files;
-}
 
-        function getSortOrder(filename) {
-            const match = filename.match(/-(\d+)/);
-            return match ? parseInt(match[1], 10) : 999;
+        async function scanFiles(entry) {
+            let files =[];
+            if (entry.isFile) {
+                const file = await new Promise((resolve) => entry.file(resolve));
+                // Comprobamos tanto el tipo MIME como la extensión por si el navegador pierde el tipo al arrastrar
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    files.push(file);
+                }
+            } else if (entry.isDirectory) {
+                const directoryReader = entry.createReader();
+                const entries = await new Promise((resolve) => {
+                    directoryReader.readEntries(resolve);
+                });
+                
+                const promises = entries.map(childEntry => scanFiles(childEntry));
+                const results = await Promise.all(promises);
+                files = results.flat();
+            }
+            return files;
         }
+
+        // Normaliza el texto para buscar sin acentos ni mayúsculas
+        const normalizeText = (text) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        function applyBSMHRules() {
+            if (!bsmhCheckbox.checked) return;
+
+            const hasFile = (regex) => uploadedFiles.some(f => regex.test(normalizeText(f.name)));
+
+            const hasClarinetePral = hasFile(/clarinete\s*(pral|principal)/);
+            const hasSaxoAlto1 = hasFile(/saxo\s*alto\s*1/);
+            const hasSaxoAlto2 = hasFile(/saxo\s*alto\s*2/);
+            const hasSaxoTenor1 = hasFile(/saxo\s*tenor\s*1/);
+            const hasSaxoTenor2 = hasFile(/saxo\s*tenor\s*2/);
+            const hasTrompeta1 = hasFile(/trompeta\s*1/);
+            const hasTrompeta2 = hasFile(/trompeta\s*2/);
+            const hasTrombon1 = hasFile(/trombon\s*1/);
+            const hasTrombon2 = hasFile(/trombon\s*2/);
+            const hasTuba1 = hasFile(/tuba\s*1/);
+            const hasTuba2 = hasFile(/tuba\s*2/);
+
+            uploadedFiles.forEach(item => {
+                const name = normalizeText(item.name);
+                let copies = 1; // Por defecto 1
+
+                if (/flauta/.test(name)) copies = 1;
+                else if (/oboe/.test(name)) copies = 1;
+                else if (/requinto/.test(name)) copies = 1;
+                else if (/clarinete\s*pral\s*y\s*1/.test(name)) copies = 3;
+                else if (/clarinete\s*(pral|principal)/.test(name)) copies = 1;
+                else if (/clarinete\s*1/.test(name)) copies = hasClarinetePral ? 2 : 3;
+                else if (/clarinete\s*2/.test(name)) copies = 1;
+                else if (/clarinete\s*3/.test(name)) copies = 1;
+                else if (/saxo\s*alto\s*1/.test(name)) copies = 1;
+                else if (/saxo\s*alto\s*2/.test(name)) copies = 1;
+                else if (/saxo\s*alto/.test(name) && !hasSaxoAlto1 && !hasSaxoAlto2) copies = 2;
+                else if (/saxo\s*tenor\s*1/.test(name)) copies = 1;
+                else if (/saxo\s*tenor\s*2/.test(name)) copies = 1;
+                else if (/saxo\s*tenor/.test(name) && !hasSaxoTenor1 && !hasSaxoTenor2) copies = 2;
+                else if (/saxo\s*baritono/.test(name)) copies = 1;
+                else if (/trompa/.test(name)) copies = 1;
+                else if (/trompeta\s*1/.test(name)) copies = 1;
+                else if (/trompeta\s*2/.test(name)) copies = 1;
+                else if (/trompeta/.test(name) && !hasTrompeta1 && !hasTrompeta2) copies = 2;
+                else if (/trombon\s*1/.test(name)) copies = 1;
+                else if (/trombon\s*2/.test(name)) copies = 1;
+                else if (/trombon/.test(name) && !hasTrombon1 && !hasTrombon2) copies = 2;
+                else if (/tuba\s*1/.test(name)) copies = 1;
+                else if (/tuba\s*2/.test(name)) copies = 1;
+                else if (/tuba/.test(name) && !hasTuba1 && !hasTuba2) copies = 2;
+                else if (/bombo\s*y\s*platos|bombo|platos/.test(name)) copies = 2;
+
+                item.copies = copies;
+            });
+        }
+
+        bsmhCheckbox.addEventListener('change', () => {
+            applyBSMHRules();
+            renderList();
+        });
+
+        doubleSidedCheckbox.addEventListener('change', () => {
+            renderList(); // Recalcular páginas totales
+        });
 
         async function handleFiles(files) {
-            const validFiles = Array.from(files).filter(f => f.type === 'application/pdf');
+            // Filtramos también por extensión .pdf por si falla el MIME type
+            const validFiles = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
             if (validFiles.length === 0) return;
             
             const newFiles = await Promise.all(validFiles.map(async (file) => {
                 const id = Math.random().toString(36).substr(2, 9);
-                let pageCount = '?';
+                let pageCount = 0;
                 try {
                     const arrayBuffer = await file.arrayBuffer();
                     const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
@@ -262,12 +342,19 @@ async function scanFiles(entry) {
                     file: file,
                     copies: 1,
                     name: file.name,
-                    order: getSortOrder(file.name),
                     pageCount: pageCount
                 };
             }));
 
-            uploadedFiles = [...uploadedFiles, ...newFiles].sort((a, b) => a.order - b.order);
+            // Ordenación natural alfanumérica por nombre de archivo
+            uploadedFiles = [...uploadedFiles, ...newFiles].sort((a, b) => {
+                return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+            });
+            
+            if (bsmhCheckbox.checked) {
+                applyBSMHRules();
+            }
+
             renderList();
             fileInput.value = ''; 
         }
@@ -277,8 +364,21 @@ async function scanFiles(entry) {
                 listContainer.classList.remove('hidden');
                 const totalPdfs = uploadedFiles.length;
                 const totalCopies = uploadedFiles.reduce((sum, item) => sum + item.copies, 0);
+                
+                // Calcular páginas totales
+                const isDoubleSided = doubleSidedCheckbox.checked;
+                let totalPages = 0;
+                uploadedFiles.forEach(item => {
+                    let pagesPerCopy = item.pageCount;
+                    if (isDoubleSided && item.pageCount % 2 !== 0) {
+                        pagesPerCopy += 1; // Sumar la página en blanco
+                    }
+                    totalPages += (pagesPerCopy * item.copies);
+                });
+
                 fileCounter.innerText = `${totalPdfs} PDF${totalPdfs !== 1 ? 's' : ''}`;
                 copyCounter.innerText = `${totalCopies} Copia${totalCopies !== 1 ? 's' : ''}`;
+                pageCounter.innerText = `${totalPages} Página${totalPages !== 1 ? 's' : ''}`;
             } else {
                 listContainer.classList.add('hidden');
             }
@@ -342,12 +442,17 @@ async function scanFiles(entry) {
             const item = uploadedFiles.find(f => f.id === id);
             if (item) {
                 item.copies = Math.max(1, item.copies + change);
+                // Si el usuario cambia manualmente, desmarcamos el checkbox automático para que no se sobreescriba
+                if (bsmhCheckbox.checked) {
+                    bsmhCheckbox.checked = false;
+                }
                 renderList();
             }
         };
 
         window.removeFile = (id) => {
             uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+            if (bsmhCheckbox.checked) applyBSMHRules(); // Re-evaluar por si se borró un papel principal
             renderList();
         };
 
@@ -368,7 +473,7 @@ async function scanFiles(entry) {
 
         clearBtn.onclick = () => {
             if (uploadedFiles.length > 0 && confirm('¿Vaciar lista?')) {
-                uploadedFiles = [];
+                uploadedFiles =[];
                 renderList();
                 fileInput.value = '';
             }
@@ -380,7 +485,7 @@ async function scanFiles(entry) {
             generateBtn.disabled = true;
             generateBtn.innerHTML = "Generando...";
 
-            const isDoubleSided = document.getElementById('doubleSidedCheckbox').checked;
+            const isDoubleSided = doubleSidedCheckbox.checked;
 
             try {
                 const mergedPdf = await PDFLib.PDFDocument.create();
@@ -395,13 +500,11 @@ async function scanFiles(entry) {
 
                         copiedPages.forEach(p => {
                             mergedPdf.addPage(p);
-                            lastCopiedPage = p; // Guardamos referencia de la última página añadida
+                            lastCopiedPage = p; 
                         });
 
-                        // Lógica de inserción de página en blanco para partichelas impares
                         if (isDoubleSided && pageCount % 2 !== 0) {
                             if (lastCopiedPage) {
-                                // Respetamos las dimensiones originales de la partichela
                                 const { width, height } = lastCopiedPage.getSize();
                                 mergedPdf.addPage([width, height]);
                             } else {
