@@ -145,6 +145,44 @@
         </div>
     </div>
 
+    <!-- Download Options Modal -->
+    <div id="downloadModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="p-4 border-b bg-gray-50">
+                <h3 class="font-bold text-gray-800 text-lg">Guardar PDF Final</h3>
+            </div>
+            <div class="p-6 flex-grow bg-white space-y-4">
+                <p class="text-sm text-gray-600 mb-4">Seleccione el nombre para el archivo generado:</p>
+                
+                <div class="flex items-center">
+                    <input type="radio" id="radioDefault" name="fileNameOption" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 cursor-pointer" checked>
+                    <label for="radioDefault" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
+                        Nombre automático (<span id="defaultNameDisplay" class="italic text-gray-500"></span>)
+                    </label>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="radio" id="radioCustom" name="fileNameOption" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 cursor-pointer">
+                    <label for="radioCustom" class="ml-2 text-sm font-medium text-gray-700 cursor-pointer">
+                        Personalizar nombre
+                    </label>
+                </div>
+                
+                <div id="customNameContainer" class="hidden pl-6 pt-2">
+                    <input type="text" id="customNameInput" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Escriba el nombre del archivo...">
+                </div>
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                <button id="cancelDownloadBtn" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors text-sm">
+                    Cancelar
+                </button>
+                <button id="acceptDownloadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-md shadow-blue-200 transition-all text-sm">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
@@ -163,7 +201,19 @@
         const bsmhCheckbox = document.getElementById('bsmhCheckbox');
         const doubleSidedCheckbox = document.getElementById('doubleSidedCheckbox');
 
+        // Elementos del nuevo modal de descarga
+        const downloadModal = document.getElementById('downloadModal');
+        const cancelDownloadBtn = document.getElementById('cancelDownloadBtn');
+        const acceptDownloadBtn = document.getElementById('acceptDownloadBtn');
+        const radioDefault = document.getElementById('radioDefault');
+        const radioCustom = document.getElementById('radioCustom');
+        const customNameContainer = document.getElementById('customNameContainer');
+        const customNameInput = document.getElementById('customNameInput');
+        const defaultNameDisplay = document.getElementById('defaultNameDisplay');
+
         let uploadedFiles =[];
+        let defaultFileName = "Repertorio_BSMH";
+        let uploadedFolderName = null; // Variable para guardar el nombre de la carpeta
 
         function updateDateTime() {
             const now = new Date();
@@ -191,6 +241,7 @@
         }
 
         fileInput.addEventListener('change', (e) => {
+            if (uploadedFiles.length === 0) uploadedFolderName = null; // Si se suben sueltos y estaba vacío, no hay carpeta
             if (e.target.files.length > 0) handleFiles(e.target.files);
         });
 
@@ -213,6 +264,17 @@
 
             const items = e.dataTransfer.items;
             const files = e.dataTransfer.files;
+
+            // Detectar si se arrastra una única carpeta
+            if (uploadedFiles.length === 0) {
+                uploadedFolderName = null;
+                if (items && items.length === 1) {
+                    const entry = items[0].webkitGetAsEntry();
+                    if (entry && entry.isDirectory) {
+                        uploadedFolderName = entry.name;
+                    }
+                }
+            }
 
             if (items && items.length > 0 && items[0].webkitGetAsEntry) {
                 let allFiles =[];
@@ -262,7 +324,37 @@
         const normalizeText = (text) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
         function applyBSMHRules() {
-            if (!bsmhCheckbox.checked) return;
+            if (!bsmhCheckbox.checked) {
+                // Si se desmarca, todas las copias vuelven a 1
+                uploadedFiles.forEach(item => item.copies = 1);
+                return;
+            }
+
+            // Encontrar el índice del último archivo de Tuba
+            let lastTubaIndex = -1;
+            uploadedFiles.forEach((item, index) => {
+                if (/tuba/.test(normalizeText(item.name))) {
+                    lastTubaIndex = index;
+                }
+            });
+
+            // Filtrar instrumentos que no están en la lista base (manteniendo los que van después de la Tuba)
+            const isBaseInstrument = (name) => {
+                // Excluir explícitamente trompa 2 (o superior)
+                if (/trompa\s*[2-9]/.test(name)) return false;
+		// Excluir explícitamente trombon 3 (o superior)
+                if (/trombon\s*[3-9]/.test(name)) return false;
+                
+                // Solo aceptar saxo alto y tenor (excluye barítono, soprano, etc.)
+                return /flauta|oboe|requinto|clarinete|saxo\s*alto|saxo\s*tenor|trompa|trompeta|trombon|tuba/.test(name);
+            };
+
+            uploadedFiles = uploadedFiles.filter((item, index) => {
+                // Si hay una tuba y el archivo está después de ella, se mantiene (percusión, etc.)
+                if (lastTubaIndex !== -1 && index > lastTubaIndex) return true;
+                // Si está antes o es la tuba, solo se mantiene si es un instrumento base
+                return isBaseInstrument(normalizeText(item.name));
+            });
 
             const hasFile = (regex) => uploadedFiles.some(f => regex.test(normalizeText(f.name)));
 
@@ -296,7 +388,6 @@
                 else if (/saxo\s*tenor\s*1/.test(name)) copies = 1;
                 else if (/saxo\s*tenor\s*2/.test(name)) copies = 1;
                 else if (/saxo\s*tenor/.test(name) && !hasSaxoTenor1 && !hasSaxoTenor2) copies = 2;
-                else if (/saxo\s*baritono/.test(name)) copies = 1;
                 else if (/trompa/.test(name)) copies = 1;
                 else if (/trompeta\s*1/.test(name)) copies = 1;
                 else if (/trompeta\s*2/.test(name)) copies = 1;
@@ -347,7 +438,7 @@
             }));
 
             // Ordenación natural alfanumérica por nombre de archivo
-            uploadedFiles = [...uploadedFiles, ...newFiles].sort((a, b) => {
+            uploadedFiles =[...uploadedFiles, ...newFiles].sort((a, b) => {
                 return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
             });
             
@@ -432,7 +523,7 @@
             if (targetIdx < 0) targetIdx = 0;
             if (targetIdx >= uploadedFiles.length) targetIdx = uploadedFiles.length - 1;
             if (currentIdx !== targetIdx) {
-                const [item] = uploadedFiles.splice(currentIdx, 1);
+                const[item] = uploadedFiles.splice(currentIdx, 1);
                 uploadedFiles.splice(targetIdx, 0, item);
                 renderList();
             }
@@ -474,13 +565,62 @@
         clearBtn.onclick = () => {
             if (uploadedFiles.length > 0 && confirm('¿Vaciar lista?')) {
                 uploadedFiles =[];
+                uploadedFolderName = null; // Resetear el nombre de la carpeta
                 renderList();
                 fileInput.value = '';
             }
         };
 
-        generateBtn.onclick = async () => {
+        // Lógica para mostrar el modal de descarga
+        generateBtn.onclick = () => {
             if (uploadedFiles.length === 0) return;
+            
+            if (uploadedFolderName) {
+                // Si se subió una carpeta, por defecto se marca la opción automática con el nombre de la carpeta
+                defaultFileName = uploadedFolderName;
+                defaultNameDisplay.innerText = defaultFileName + ".pdf";
+                radioDefault.checked = true;
+                radioCustom.checked = false;
+                customNameContainer.classList.add('hidden');
+                customNameInput.value = defaultFileName;
+            } else {
+                // Si se subieron archivos sueltos, por defecto se marca la opción personalizar
+                defaultFileName = "Partituras Unificadas";
+                defaultNameDisplay.innerText = "Varios_archivos.pdf";
+                radioDefault.checked = false;
+                radioCustom.checked = true;
+                customNameContainer.classList.remove('hidden');
+                customNameInput.value = "Partituras Unificadas";
+            }
+            
+            downloadModal.classList.remove('hidden');
+        };
+
+        // Eventos de los radio buttons
+        radioDefault.addEventListener('change', () => {
+            if(radioDefault.checked) customNameContainer.classList.add('hidden');
+        });
+
+        radioCustom.addEventListener('change', () => {
+            if(radioCustom.checked) {
+                customNameContainer.classList.remove('hidden');
+                customNameInput.focus();
+            }
+        });
+
+        // Botón Cancelar
+        cancelDownloadBtn.onclick = () => {
+            downloadModal.classList.add('hidden');
+        };
+
+        // Botón Aceptar (Generar PDF)
+        acceptDownloadBtn.onclick = async () => {
+            downloadModal.classList.add('hidden');
+            
+            let finalName = radioDefault.checked ? defaultFileName : customNameInput.value.trim();
+            if(!finalName) finalName = "Partituras Unificadas";
+            if(!finalName.toLowerCase().endsWith('.pdf')) finalName += ".pdf";
+
             const originalHtml = generateBtn.innerHTML;
             generateBtn.disabled = true;
             generateBtn.innerHTML = "Generando...";
@@ -517,7 +657,7 @@
                 const bytes = await mergedPdf.save();
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-                link.download = `Repertorio_BSMH.pdf`;
+                link.download = finalName;
                 link.click();
             } catch (e) {
                 alert('Error al generar PDF');
@@ -527,7 +667,16 @@
             }
         };
 
+        // Evento para la tecla Enter en el modal de descarga
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !downloadModal.classList.contains('hidden')) {
+                e.preventDefault();
+                acceptDownloadBtn.click();
+            }
+        });
+
         previewModal.onclick = (e) => { if (e.target === previewModal) closeModal.click(); };
+        downloadModal.onclick = (e) => { if (e.target === downloadModal) cancelDownloadBtn.click(); };
     </script>
 </body>
 </html>
