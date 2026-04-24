@@ -598,6 +598,40 @@
     <div id="ticker" class="ticker-content"></div>
 </div>
 
+            <!-- BLOQUE BUSCADOR BIBLIO INTEGRADO -->
+<section class="max-w-2xl mx-auto mb-8 px-4">
+    <div class="relative flex items-center bg-white border-2 border-slate-200 rounded-2xl px-5 py-3 shadow-sm focus-within:border-blue-600 transition-all">
+        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input type="text" id="main-search-box" placeholder="Buscar partitura en Biblio..." 
+               class="flex-grow ml-4 outline-none text-lg text-slate-700 placeholder-slate-300 bg-transparent"
+               onkeyup="if(event.key === 'Enter') handleMainSearch()">
+        <button onclick="handleMainSearch()" class="bg-blue-600 text-white px-4 py-1.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-md">
+            Buscar
+        </button>
+    </div>
+</section>
+
+<!-- MODAL DE RESULTADOS BIBLIO -->
+<div id="biblio-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-slate-50 w-full max-w-4xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-white">
+        <div class="p-6 bg-white border-b border-slate-100 flex justify-between items-center">
+            <div>
+                <h2 class="text-2xl font-black text-slate-900 leading-tight">Resultados <span class="text-blue-600">Biblio.</span></h2>
+                <p id="search-term-display" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></p>
+            </div>
+            <button onclick="closeBiblioModal()" class="bg-slate-100 text-slate-400 hover:text-slate-600 p-2 rounded-full transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        
+        <div id="biblio-results-content" class="p-6 overflow-y-auto space-y-4">
+            <!-- Aquí se cargan los resultados -->
+        </div>
+    </div>
+</div>
+
         <!-- CUERPO PRINCIPAL: Calendarios -->
         <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12 relative z-0">
             
@@ -618,7 +652,7 @@
                     <iframe src="https://calendar.google.com/calendar/u/0/embed?src=archivo.huelva@gmail.com&color=%23039BE5&src=adrianbsmh@gmail.com&color=%23E67C73&ctz=Europe/Madrid&mode=AGENDA&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=0&showCalendars=0&showTz=0" style="border:0" width="100%" height="100%" class="flex-grow" frameborder="0" scrolling="no"></iframe>
                 </div>
             </div>
-
+            
             <!-- CALENDARIO 2: MENSUAL (66%) -->
             <div class="flex flex-col lg:col-span-8">
                 <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
@@ -1133,6 +1167,139 @@ function saveReminders() {
 
         // Iniciar el temporizador inicial
         resetInactivityTimer();
+        // --- LÓGICA INTEGRADA BUSCADOR BIBLIO ---
+const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+
+// --- LÓGICA MEJORADA BUSCADOR BIBLIO ---
+async function handleMainSearch() {
+    const query = document.getElementById('main-search-box').value.trim();
+    if (!query) return;
+
+    const resultsContent = document.getElementById('biblio-results-content');
+    const modal = document.getElementById('biblio-modal');
+    const termDisplay = document.getElementById('search-term-display');
+
+    termDisplay.innerText = `Buscando: "${query}"`;
+    resultsContent.innerHTML = `
+        <div class="flex flex-col items-center py-10">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Consultando Archivo Digital...</p>
+        </div>`;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    // Intentamos varios métodos de conexión (Directo y luego Proxy)
+    const url = `${CSV_SOURCE}&t=${new Date().getTime()}`;
+    
+    try {
+        let response = await fetch(url);
+        if (!response.ok) throw new Error('Direct fetch failed');
+        const csvText = await response.text();
+        renderBiblioResults(csvText, query);
+    } catch (err) {
+        console.warn("Intento directo fallido, probando proxy...");
+        try {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error('Proxy fetch failed');
+            const csvText = await response.text();
+            renderBiblioResults(csvText, query);
+        } catch (proxyErr) {
+            resultsContent.innerHTML = `
+                <div class="bg-red-50 border border-red-100 p-8 rounded-2xl text-center">
+                    <p class="text-red-600 font-bold mb-2">Error de conexión con la base de datos.</p>
+                    <p class="text-red-400 text-xs">Verifica tu conexión a internet o que el enlace de Google Sheets sea público.</p>
+                    <button onclick="handleMainSearch()" class="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Reintentar</button>
+                </div>`;
+        }
+    }
+}
+
+function renderBiblioResults(csvText, query) {
+    const container = document.getElementById('biblio-results-content');
+    
+    // Parser de CSV más robusto para manejar comas y comillas correctamente
+    function parseCSV(text) {
+        const result = [];
+        let row = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const nextChar = text[i + 1];
+            if (inQuotes) {
+                if (char === '"' && nextChar === '"') { current += '"'; i++; }
+                else if (char === '"') inQuotes = false;
+                else current += char;
+            } else {
+                if (char === '"') inQuotes = true;
+                else if (char === ',') { row.push(current.trim()); current = ''; }
+                else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
+                    row.push(current.trim()); result.push(row); row = []; current = '';
+                    if (char === '\r') i++; 
+                } else current += char;
+            }
+        }
+        if (current || row.length > 0) { row.push(current.trim()); result.push(row); }
+        return result;
+    }
+
+    const rows = parseCSV(csvText).filter(r => r.length > 1);
+    if (rows.length < 2) return;
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const normalizedQuery = query.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    const filtered = rows.slice(1).filter(row => 
+        row.some(cell => cell.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(normalizedQuery))
+    );
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 text-slate-400 italic">No se encontraron resultados para "${query}".</div>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    filtered.forEach(row => {
+        const getVal = (keys) => {
+            const idx = headers.findIndex(h => keys.some(k => h.includes(k)));
+            return (idx !== -1 && row[idx]) ? row[idx] : '---';
+        };
+
+        const titulo = getVal(['título', 'titulo', 'obra']);
+        const autor = getVal(['autor', 'compositor']);
+        const sig = getVal(['signatura', 'archivo']);
+        const link = getVal(['nube', 'enlace', 'drive', 'pdf']);
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl border border-slate-200 p-5 flex flex-col md:flex-row justify-between items-center gap-4 hover:border-blue-300 transition-colors';
+        
+        const hasLink = link.toLowerCase().startsWith('http');
+
+        card.innerHTML = `
+            <div class="flex-grow text-center md:text-left">
+                <h3 class="text-lg font-black text-slate-900 uppercase leading-tight">${titulo}</h3>
+                <p class="text-blue-600 text-xs font-bold uppercase tracking-widest">${autor}</p>
+                <div class="mt-2 inline-flex items-center bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                    <span class="text-[9px] font-black text-slate-400 uppercase mr-2 tracking-tighter">Signatura:</span>
+                    <span class="text-sm font-black text-slate-700">${sig}</span>
+                </div>
+            </div>
+            <div class="shrink-0 w-full md:w-auto">
+                ${hasLink ? 
+                    `<a href="${link}" target="_blank" class="w-full md:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-xs hover:bg-slate-900 transition flex justify-center items-center gap-2 shadow-lg shadow-blue-100">ABRIR PDF</a>` : 
+                    `<div class="text-center md:text-right"><span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-4 py-2 rounded-xl uppercase border border-slate-200">Solo Físico</span></div>`
+                }
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function closeBiblioModal() {
+    document.getElementById('biblio-modal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
     </script>
 </body>
 </html>
