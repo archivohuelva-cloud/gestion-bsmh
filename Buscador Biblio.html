@@ -5,55 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscador de Archivo - BSMH</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f1f5f9;
-        }
-        .search-container:focus-within {
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-            border-color: #2563eb;
-        }
-        .loader {
-            border-top-color: #2563eb;
-            animation: spinner 0.8s linear infinite;
-        }
-        @keyframes spinner {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .results-card {
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        .results-card:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        /* Estilo para el scroll del modal */
-        .modal-content-area::-webkit-scrollbar {
-            width: 6px;
-        }
-        .modal-content-area::-webkit-scrollbar-track {
-            background: #f8fafc;
-        }
-        .modal-content-area::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
+        body { font-family: 'Roboto', sans-serif; background-color: #f1f5f9; }
+        .search-container:focus-within { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); border-color: #2563eb; }
+        .loader { border-top-color: #2563eb; animation: spinner 0.8s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .results-card { transition: all 0.2s ease; cursor: pointer; }
+        .results-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .modal-content-area::-webkit-scrollbar { width: 6px; }
+        .modal-content-area::-webkit-scrollbar-track { background: #f8fafc; }
+        .modal-content-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col text-slate-800">
 
-    <!-- Encabezado Institucional -->
     <header class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
-
                 <div class="flex items-center gap-3">
                     <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest">Base de Datos BIBLIO BD Sincronizada</span>
+                    <span class="text-[10px] md:text-xs font-bold uppercase tracking-widest">Base de Datos Sincronizada con BIBLIO BD </span>
                 </div>
             </div>
             <div class="text-[10px] md:text-xs opacity-70 font-medium uppercase tracking-tighter">Banda Sinfónica Municipal de Huelva</div>
@@ -61,46 +34,34 @@
     </header>
 
     <main class="flex-grow flex flex-col items-center px-4 py-10 md:py-16">
-        <!-- Logo/Título -->
         <div class="text-center mb-10">
             <h1 class="text-5xl md:text-7xl font-black mb-2 tracking-tighter text-slate-900">
                 Biblio<span class="text-blue-600">.</span>
             </h1>
-            <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase">Buscador de Partituras de la Banda Sinfónica Municipal de Huelva</p>
+            <p class="text-slate-500 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase">Buscador online de Partituras del Archivo Musical</p>
             <div class="w-12 h-1 bg-red-600 mx-auto mt-4"></div>
         </div>
 
-        <!-- Buscador -->
-<div class="w-full max-w-2xl space-y-6">
-    <div class="search-container flex items-center bg-white border-2 border-slate-200 rounded-2xl px-5 py-4 transition-all duration-300">
-        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
-        <input type="text" id="search-box" placeholder="" 
-               class="flex-grow ml-4 outline-none text-lg md:text-xl text-slate-700 placeholder-slate-300 bg-transparent"
-               onkeyup="if(event.key === 'Enter') handleSearch()">
-    </div>
+        <div class="w-full max-w-2xl space-y-6">
+            <div class="search-container flex items-center bg-white border-2 border-slate-200 rounded-2xl px-5 py-4 transition-all duration-300">
+                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" id="search-box" placeholder="Buscar por título, compositor, nº de registro..." 
+                       class="flex-grow ml-4 outline-none text-lg md:text-xl text-slate-700 placeholder-slate-300 bg-transparent"
+                       onkeyup="if(event.key === 'Enter') handleSearch()">
+            </div>
 
-    <div class="flex justify-center gap-3">
-        <button onclick="handleSearch()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-xl transition shadow-lg shadow-blue-100 flex items-center gap-2">
-            <span>Buscar con Biblio</span>
-        </button>
-        <button onclick="clearSearch()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl transition" title="Limpiar búsqueda">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        </button>
-    </div>
+            <div class="flex justify-center gap-3">
+                <button onclick="handleSearch()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-10 rounded-xl transition shadow-lg shadow-blue-100 flex items-center gap-2">
+                    <span>Buscar con Biblio</span>
+                </button>
+                <button onclick="clearSearch()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-6 rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </button>
+            </div>
+        </div>
 
-    <div class="flex justify-center pt-2">
-        <button onclick="window.history.back()" class="inline-flex items-center px-8 py-2 rounded-xl text-blue-600 hover:bg-blue-50 transition font-bold border border-blue-100">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-            Volver atrás
-        </button>
-    </div>
-</div>
-
-        <!-- Resultados -->
         <div id="results-area" class="w-full max-w-3xl mt-12">
             <div id="loader" class="hidden flex flex-col items-center py-10">
                 <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-10 w-10 mb-4"></div>
@@ -113,60 +74,56 @@
     <!-- Modal de Detalles -->
     <div id="modal-container" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-start shrink-0">
-                <div>
-                    <span id="modal-reg-label" class="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase mb-2 inline-block tracking-tighter">Registro ---</span>
-                    <h2 id="modal-titulo" class="text-2xl font-black text-slate-900 leading-tight uppercase">Detalles de la Obra</h2>
+            
+            <!-- 1. QR Superior -->
+            <div id="modal-qr-header" class="pt-8 flex flex-col items-center bg-slate-50">
+                <div id="modal-qr" class="bg-white p-2 rounded-xl shadow-sm border border-slate-200"></div>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2 mb-4">Escanea para el móvil</p>
+            </div>
+
+            <!-- 2. Título y Compositor (Cabecera Fija) -->
+            <div class="p-6 border-b border-slate-100 flex justify-between items-start shrink-0 bg-white">
+                <div class="flex-grow">
+                    <h2 id="modal-titulo" class="text-2xl font-black text-slate-900 leading-tight uppercase"></h2>
+                    <p id="modal-autor" class="text-blue-600 text-base font-bold uppercase tracking-widest mt-1"></p>
                 </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition p-2">
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition p-2 ml-4">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
             
-            <div id="modal-content" class="p-6 overflow-y-auto modal-content-area space-y-4">
-                <!-- Se rellena dinámicamente -->
-            </div>
+            <!-- 3. Resto de Detalles (Scrollable) -->
+            <div id="modal-content" class="p-6 overflow-y-auto modal-content-area space-y-4"></div>
 
-            <div id="modal-footer" class="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
-                <!-- Se rellena dinámicamente -->
-            </div>
+            <!-- 4. Botón PDF -->
+            <div id="modal-footer" class="p-6 border-t border-slate-100 bg-slate-50 shrink-0"></div>
         </div>
     </div>
 
     <footer class="bg-white border-t border-slate-200 py-6 text-center">
-        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em]">Banda Sinfónica Municipal de Huelva | Adrián Díaz Giráldez | 2026</p>
+        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em]">Archivo Musical de la Banda Sinfónica Municipal de Huelva | Adrián Díaz Giráldez | 2026</p>
     </footer>
 
     <script>
         const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
 
-        // Función para limpiar búsqueda y resultados
         function clearSearch() {
             document.getElementById('search-box').value = '';
             document.getElementById('results-list').innerHTML = '';
             document.getElementById('search-box').focus();
         }
 
-        // Función para normalizar texto (quitar tildes y acentos)
         function normalizeText(text) {
-            return text.toString()
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase();
+            return text.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
         }
 
         async function fetchWithProxy(url) {
-            const isLocal = window.location.protocol === 'file:';
-            if (isLocal) {
-                try {
-                    const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
-                    if (res.ok) return await res.text();
-                } catch(e) { console.warn("Fallo proxy"); }
-            }
             try {
                 const res = await fetch(url);
                 if (res.ok) return await res.text();
             } catch(e) {}
+            const resProxy = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+            if (resProxy.ok) return await resProxy.text();
             throw new Error("Sin conexión");
         }
 
@@ -198,17 +155,15 @@
         async function handleSearch() {
             const query = document.getElementById('search-box').value.trim();
             if (!query) return;
-
             const resultsList = document.getElementById('results-list');
             const loader = document.getElementById('loader');
             resultsList.innerHTML = '';
             loader.classList.remove('hidden');
-
             try {
                 const csvText = await fetchWithProxy(`${CSV_SOURCE}&t=${new Date().getTime()}`);
                 renderResults(csvText, query);
             } catch (err) {
-                resultsList.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-red-600 font-bold">Error de sincronización con el archivo digital.</div>`;
+                resultsList.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-red-600 font-bold">Error de sincronización.</div>`;
             } finally {
                 loader.classList.add('hidden');
             }
@@ -218,18 +173,12 @@
             const list = document.getElementById('results-list');
             const rows = parseCSV(csvText);
             if (rows.length < 2) return;
-
             const headers = rows[0].map(h => h.toLowerCase().trim());
-            
-            // Normalizamos la consulta para búsqueda insensible a acentos
             const normalizedQuery = normalizeText(query);
-
-            const filteredRows = rows.slice(1).filter(row => 
-                row.some(cell => normalizeText(cell).includes(normalizedQuery))
-            );
+            const filteredRows = rows.slice(1).filter(row => row.some(cell => normalizeText(cell).includes(normalizedQuery)));
 
             if (filteredRows.length === 0) {
-                list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">No se encontraron resultados para "${query}".</div>`;
+                list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">No se encontraron resultados.</div>`;
                 return;
             }
 
@@ -252,34 +201,33 @@
 
             items.sort((a, b) => a.titulo.localeCompare(b.titulo, 'es', { sensitivity: 'base' }));
 
-            items.forEach(data => {
+            items.forEach((data, index) => {
                 const card = document.createElement('div');
-                card.className = 'bg-white rounded-2xl border border-slate-200 p-5 results-card flex flex-col md:flex-row gap-4 items-start relative';
-                
+                card.className = 'bg-white rounded-2xl border border-slate-200 p-5 results-card flex flex-col md:flex-row gap-4 items-center relative';
                 card.onclick = () => openModal(data);
 
                 const hasLink = data.link.toLowerCase().startsWith('http');
                 const linkBadge = hasLink 
-                    ? `<span class="bg-blue-600 text-white px-3 py-1 rounded-full text-[9px] font-bold">+ INFO</span>`
-                    : `<span class="bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[9px] font-bold border border-slate-200">FÍSICO</span>`;
+                    ? `<span class="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">EN PDF</span>`
+                    : `<span class="bg-slate-100 text-slate-400 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200">EN PAPEL</span>`;
 
                 card.innerHTML = `
-                    <div class="flex-grow">
+                    <div class="flex-grow w-full">
                         <div class="flex items-center justify-between mb-1">
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Reg. ${data.reg}</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Archivo BSMH</span>
                             ${linkBadge}
                         </div>
-                        <h3 class="text-xl font-bold text-slate-900 leading-tight uppercase">${data.titulo !== '---' ? data.titulo : 'OBRA SIN TITULAR'}</h3>
+                        <h3 class="text-xl font-black text-slate-900 leading-tight uppercase">${data.titulo}</h3>
                         <p class="text-blue-600 text-xs font-bold uppercase tracking-widest mt-1">${data.autor}</p>
                         
                         <div class="mt-4 grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
                             <div>
-                                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Signatura</p>
-                                <p class="text-lg font-black text-slate-900 uppercase">${data.sig}</p>
+                                <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Signatura</p>
+                                <p class="text-2xl font-black text-slate-900 uppercase leading-none">${data.sig}</p>
                             </div>
                             <div>
-                                <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Notas</p>
-                                <p class="text-[10px] text-slate-500 italic truncate font-medium">${data.obs}</p>
+                                <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Nº Registro</p>
+                                <p class="text-2xl font-black text-slate-900 leading-none">${data.reg}</p>
                             </div>
                         </div>
                     </div>
@@ -293,70 +241,86 @@
             const content = document.getElementById('modal-content');
             const footer = document.getElementById('modal-footer');
             const title = document.getElementById('modal-titulo');
-            const regLabel = document.getElementById('modal-reg-label');
+            const autor = document.getElementById('modal-autor');
+            const qrHeader = document.getElementById('modal-qr-header');
+            const qrContainer = document.getElementById('modal-qr');
 
-            title.innerText = item.titulo !== '---' ? item.titulo : 'DETALLES DE LA OBRA';
-            regLabel.innerText = `REGISTRO: ${item.reg}`;
-            
+            title.innerText = item.titulo;
+            autor.innerText = item.autor;
             content.innerHTML = '';
+            qrContainer.innerHTML = '';
             
-            // Definir columnas a excluir
-            const excludedHeaders = ['portada', 'instrumentación', 'instrumentacion', 'usuario'];
+            const hasLink = item.link.toLowerCase().startsWith('http');
+            
+            if (hasLink) {
+                qrHeader.classList.remove('hidden');
+                setTimeout(() => {
+                    new QRCode(qrContainer, { text: item.link, width: 150, height: 150 });
+                }, 50);
+            } else {
+                qrHeader.classList.add('hidden');
+            }
+
+            const orderedFields = [];
+            const sigIdx = item.headers.findIndex(h => h.includes('signatura'));
+            const regIdx = item.headers.findIndex(h => h.includes('registro') || h.includes('nº'));
+            
+            if (sigIdx !== -1) orderedFields.push({ header: item.headers[sigIdx], val: item.rawData[sigIdx] });
+            if (regIdx !== -1) orderedFields.push({ header: item.headers[regIdx], val: item.rawData[regIdx] });
 
             item.headers.forEach((header, index) => {
-                const headerLower = header.toLowerCase();
-                // Omitir si está en la lista de exclusión
+                if (index === sigIdx || index === regIdx) return;
+                orderedFields.push({ header: header, val: item.rawData[index] });
+            });
+
+            // Excluir de la lista de detalles lo que ya está en la cabecera
+            const excludedHeaders = ['portada', 'instrumentación', 'instrumentacion', 'usuario', 'título', 'titulo', 'obra', 'autor', 'compositor'];
+
+            orderedFields.forEach(field => {
+                const headerLower = field.header.toLowerCase();
                 if (excludedHeaders.some(ex => headerLower.includes(ex))) return;
 
-                const val = item.rawData[index];
+                const val = field.val;
                 if (val && val !== '' && val !== '---') {
                     const detailRow = document.createElement('div');
                     detailRow.className = "border-b border-slate-50 pb-3 last:border-0";
                     
                     let displayValue = val;
-                    let textClass = "text-sm font-bold text-slate-800"; // Clase por defecto
+                    let textClass = "text-base font-bold text-slate-800";
 
-                    // Lógica de resaltado específico para Signatura
-                    if (headerLower.includes('signatura')) {
-                        textClass = "text-xl font-black text-slate-900 uppercase";
-                    }
-                    
-                    // Lógica de color para Notas/Observaciones
-                    if (headerLower.includes('observaciones') || headerLower.includes('notas')) {
+                    // Solo Signatura y Registro (ID) tienen texto grande. 
+                    // "Fecha/Hora de registro" NO entra aquí porque no coincide exactamente con estas condiciones.
+                    if (headerLower === 'signatura') {
+                        textClass = "text-3xl font-black text-emerald-600 uppercase";
+                    } else if (headerLower === 'registro' || headerLower === 'nº' || headerLower === 'id') {
+                        textClass = "text-3xl font-black text-blue-600";
+                    } else if (headerLower.includes('observaciones')) {
                         textClass = "text-sm font-medium text-slate-500 italic";
                     }
 
-                    // Si el valor parece un enlace, hacerlo clicable mediante icono
                     if (val.toLowerCase().startsWith('http')) {
                         displayValue = `
-                            <div class="flex items-center gap-2 mt-1">
-                                <a href="${val}" target="_blank" class="text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                    <span class="text-xs font-bold underline">Abrir enlace externo</span>
-                                </a>
-                            </div>
-                        `;
+                            <a href="${val}" target="_blank" class="text-blue-600 hover:text-blue-800 flex items-center gap-2 transition mt-1">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                <span class="text-base font-bold underline">Abrir enlace externo</span>
+                            </a>`;
                     }
 
                     detailRow.innerHTML = `
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">${header}</p>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">${field.header}</p>
                         <div class="${textClass}">${displayValue}</div>
                     `;
                     content.appendChild(detailRow);
                 }
             });
 
-            footer.innerHTML = '';
-            const hasLink = item.link.toLowerCase().startsWith('http');
             if (hasLink) {
                 footer.innerHTML = `
-                    <a href="${item.link}" target="_blank" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-900 transition shadow-lg">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        ACCESO A PARTITURAS DIGITALES
-                    </a>
-                `;
+                    <a href="${item.link}" target="_blank" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-900 transition shadow-lg">
+                        ABRIR PARTITURA DIGITAL (PDF)
+                    </a>`;
             } else {
-                footer.innerHTML = `<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-2 italic">Sin copia digital disponible en la nube</p>`;
+                footer.innerHTML = `<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-2 italic">Sin copia digital disponible</p>`;
             }
 
             modal.classList.remove('hidden');
@@ -368,10 +332,7 @@
             document.body.style.overflow = 'auto';
         }
 
-        window.onclick = function(event) {
-            const modal = document.getElementById('modal-container');
-            if (event.target == modal) closeModal();
-        }
+        window.onclick = (e) => { if (e.target.id === 'modal-container') closeModal(); }
     </script>
 </body>
 </html>
