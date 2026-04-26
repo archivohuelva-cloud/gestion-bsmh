@@ -14,9 +14,13 @@
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .results-card { transition: all 0.2s ease; cursor: pointer; }
         .results-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .modal-content-area::-webkit-scrollbar { width: 6px; }
-        .modal-content-area::-webkit-scrollbar-track { background: #f8fafc; }
-        .modal-content-area::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .modal-content-area::-webkit-scrollbar, .dropdown-list::-webkit-scrollbar { width: 6px; }
+        .modal-content-area::-webkit-scrollbar-track, .dropdown-list::-webkit-scrollbar-track { background: #f8fafc; }
+        .modal-content-area::-webkit-scrollbar-thumb, .dropdown-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .dropdown-content { display: none; position: absolute; background-color: white; min-width: 240px; box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1); z-index: 50; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 4px; max-height: 400px; overflow: hidden; }
+        .dropdown-content.show { display: flex; flex-direction: column; }
+        .dropdown-list { overflow-y: auto; max-height: 300px; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col text-slate-800">
@@ -42,7 +46,7 @@
             <div class="w-12 h-1 bg-red-600 mx-auto mt-4"></div>
         </div>
 
-        <div class="w-full max-w-2xl space-y-6">
+        <div class="w-full max-w-4xl space-y-6">
             <div class="search-container flex items-center bg-white border-2 border-slate-200 rounded-2xl px-5 py-4 transition-all duration-300">
                 <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -50,6 +54,49 @@
                 <input type="text" id="search-box" placeholder="Buscar por título, compositor, nº de registro..." 
                        class="flex-grow ml-4 outline-none text-lg md:text-xl text-slate-700 placeholder-slate-300 bg-transparent"
                        onkeyup="if(event.key === 'Enter') handleSearch()">
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="relative dropdown-parent">
+                    <button onclick="toggleDropdown('drop-compositor')" class="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-600 flex justify-between items-center hover:bg-slate-50">
+                        <span>Compositor</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="drop-compositor" class="dropdown-content">
+                        <input type="text" placeholder="Filtrar..." class="p-3 text-sm border-b outline-none sticky top-0 bg-white" onkeyup="filterOptions(this)">
+                        <div class="dropdown-list" id="list-compositor"></div>
+                    </div>
+                </div>
+                <div class="relative dropdown-parent">
+                    <button onclick="toggleDropdown('drop-arreglos')" class="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-600 flex justify-between items-center hover:bg-slate-50">
+                        <span>Arreglos</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="drop-arreglos" class="dropdown-content">
+                        <input type="text" placeholder="Filtrar..." class="p-3 text-sm border-b outline-none sticky top-0 bg-white" onkeyup="filterOptions(this)">
+                        <div class="dropdown-list" id="list-arreglos"></div>
+                    </div>
+                </div>
+                <div class="relative dropdown-parent">
+                    <button onclick="toggleDropdown('drop-editorial')" class="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-600 flex justify-between items-center hover:bg-slate-50">
+                        <span>Editorial</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="drop-editorial" class="dropdown-content">
+                        <input type="text" placeholder="Filtrar..." class="p-3 text-sm border-b outline-none sticky top-0 bg-white" onkeyup="filterOptions(this)">
+                        <div class="dropdown-list" id="list-editorial"></div>
+                    </div>
+                </div>
+                <div class="relative dropdown-parent">
+                    <button onclick="toggleDropdown('drop-genero')" class="w-full bg-white border border-slate-200 p-3 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-600 flex justify-between items-center hover:bg-slate-50">
+                        <span>Género</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="drop-genero" class="dropdown-content">
+                        <input type="text" placeholder="Filtrar..." class="p-3 text-sm border-b outline-none sticky top-0 bg-white" onkeyup="filterOptions(this)">
+                        <div class="dropdown-list" id="list-genero"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="flex justify-center gap-3">
@@ -71,17 +118,12 @@
         </div>
     </main>
 
-    <!-- Modal de Detalles -->
     <div id="modal-container" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-            
-            <!-- 1. QR Superior -->
             <div id="modal-qr-header" class="pt-8 flex flex-col items-center bg-slate-50">
                 <div id="modal-qr" class="bg-white p-2 rounded-xl shadow-sm border border-slate-200"></div>
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2 mb-4">Escanea para el móvil</p>
             </div>
-
-            <!-- 2. Título y Compositor (Cabecera Fija) -->
             <div class="p-6 border-b border-slate-100 flex justify-between items-start shrink-0 bg-white">
                 <div class="flex-grow">
                     <h2 id="modal-titulo" class="text-2xl font-black text-slate-900 leading-tight uppercase"></h2>
@@ -91,11 +133,7 @@
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            
-            <!-- 3. Resto de Detalles (Scrollable) -->
             <div id="modal-content" class="p-6 overflow-y-auto modal-content-area space-y-4"></div>
-
-            <!-- 4. Botón PDF -->
             <div id="modal-footer" class="p-6 border-t border-slate-100 bg-slate-50 shrink-0"></div>
         </div>
     </div>
@@ -106,6 +144,92 @@
 
     <script>
         const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+        let globalData = [];
+        let globalHeaders = [];
+
+        window.onload = async () => {
+            try {
+                const csvText = await fetchWithProxy(`${CSV_SOURCE}&t=${new Date().getTime()}`);
+                const rows = parseCSV(csvText);
+                if (rows.length > 1) {
+                    globalHeaders = rows[0].map(h => h.toLowerCase().trim());
+                    globalData = rows.slice(1);
+                    populateFilters();
+                }
+            } catch (e) { console.error("Error inicializando filtros", e); }
+        };
+
+        function populateFilters() {
+            const getColIdx = (keys) => globalHeaders.findIndex(h => keys.some(k => h.includes(k)));
+            const config = [
+                { id: 'list-compositor', idx: getColIdx(['autor', 'compositor']) },
+                { id: 'list-arreglos', idx: getColIdx(['arreglista', 'arreglos']) },
+                { id: 'list-editorial', idx: getColIdx(['editorial', 'edicion']) },
+                { id: 'list-genero', idx: getColIdx(['genero', 'estilo']) }
+            ];
+            config.forEach(conf => {
+                if (conf.idx === -1) return;
+                const values = [...new Set(globalData.map(r => r[conf.idx]))]
+                    .filter(v => v && v !== '---' && v.trim() !== '')
+                    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+                const container = document.getElementById(conf.id);
+                container.innerHTML = values.map(v => `
+                    <div class="px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer text-slate-700 border-b border-slate-50" 
+                         onclick="selectFilter('${v}')">
+                        ${v}
+                    </div>
+                `).join('');
+            });
+        }
+
+        function toggleDropdown(id) {
+            const wasOpen = document.getElementById(id).classList.contains('show');
+            closeAllDropdowns();
+            if (!wasOpen) {
+                const drop = document.getElementById(id);
+                drop.classList.add('show');
+                const input = drop.querySelector('input');
+                input.value = '';
+                filterOptions(input);
+                input.focus();
+            }
+        }
+
+        function filterOptions(input) {
+            const filter = input.value.toLowerCase();
+            const items = input.nextElementSibling.querySelectorAll('div');
+            items.forEach(item => {
+                const text = item.textContent || item.innerText;
+                item.style.display = text.toLowerCase().includes(filter) ? "" : "none";
+            });
+        }
+
+        document.querySelectorAll('.dropdown-content input').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key.length === 1 && e.key.match(/[a-z0-9]/i)) {
+                    const list = e.target.nextElementSibling;
+                    const target = Array.from(list.querySelectorAll('div')).find(div => 
+                        div.innerText.trim().toLowerCase().startsWith(e.key.toLowerCase()) && div.style.display !== 'none'
+                    );
+                    if (target) list.scrollTop = target.offsetTop - list.offsetTop;
+                }
+            });
+        });
+
+        function selectFilter(value) {
+            document.getElementById('search-box').value = value;
+            closeAllDropdowns();
+            handleSearch();
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+        }
+
+        window.onclick = (e) => {
+            if (!e.target.closest('.dropdown-parent')) closeAllDropdowns();
+            if (e.target.id === 'modal-container') closeModal();
+        };
 
         function clearSearch() {
             document.getElementById('search-box').value = '';
@@ -160,7 +284,10 @@
             resultsList.innerHTML = '';
             loader.classList.remove('hidden');
             try {
-                const csvText = await fetchWithProxy(`${CSV_SOURCE}&t=${new Date().getTime()}`);
+                let csvText;
+                if (globalData.length === 0) {
+                    csvText = await fetchWithProxy(`${CSV_SOURCE}&t=${new Date().getTime()}`);
+                }
                 renderResults(csvText, query);
             } catch (err) {
                 resultsList.innerHTML = `<div class="bg-white p-6 rounded-2xl text-center text-red-600 font-bold">Error de sincronización.</div>`;
@@ -171,16 +298,28 @@
 
         function renderResults(csvText, query) {
             const list = document.getElementById('results-list');
-            const rows = parseCSV(csvText);
-            if (rows.length < 2) return;
-            const headers = rows[0].map(h => h.toLowerCase().trim());
+            let rows, headers;
+            if (csvText) {
+                const parsed = parseCSV(csvText);
+                headers = parsed[0].map(h => h.toLowerCase().trim());
+                rows = parsed.slice(1);
+            } else {
+                headers = globalHeaders;
+                rows = globalData;
+            }
             const normalizedQuery = normalizeText(query);
-            const filteredRows = rows.slice(1).filter(row => row.some(cell => normalizeText(cell).includes(normalizedQuery)));
+            const filteredRows = rows.filter(row => row.some(cell => normalizeText(cell).includes(normalizedQuery)));
 
             if (filteredRows.length === 0) {
-                list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">No se encontraron resultados.</div>`;
+                list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">No se encontraron resultados para "${query}".</div>`;
                 return;
             }
+
+            // AÑADIDO: Contador de obras encontradas
+            const countText = document.createElement('div');
+            countText.className = "text-[14px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6 text-center";
+            countText.innerHTML = `Se han encontrado <span class="text-green-600">${filteredRows.length}</span> obras relacionadas`;
+            list.appendChild(countText);
 
             const items = filteredRows.map(row => {
                 const getVal = (keys) => {
@@ -193,7 +332,6 @@
                     reg: getVal(['registro', 'nº', 'id', 'num']),
                     sig: getVal(['signatura', 'archivo', 'caja']),
                     link: getVal(['nube', 'enlace', 'drive', 'pdf', 'link']),
-                    obs: getVal(['observaciones', 'notas']),
                     rawData: row,
                     headers: headers
                 };
@@ -201,16 +339,14 @@
 
             items.sort((a, b) => a.titulo.localeCompare(b.titulo, 'es', { sensitivity: 'base' }));
 
-            items.forEach((data, index) => {
+            items.forEach(data => {
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-2xl border border-slate-200 p-5 results-card flex flex-col md:flex-row gap-4 items-center relative';
                 card.onclick = () => openModal(data);
-
                 const hasLink = data.link.toLowerCase().startsWith('http');
                 const linkBadge = hasLink 
                     ? `<span class="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">EN PDF</span>`
                     : `<span class="bg-orange-600 text-white px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200">EN PAPEL</span>`;
-
                 card.innerHTML = `
                     <div class="flex-grow w-full">
                         <div class="flex items-center justify-between mb-1">
@@ -219,14 +355,13 @@
                         </div>
                         <h3 class="text-xl font-black text-slate-900 leading-tight uppercase">${data.titulo}</h3>
                         <p class="text-blue-600 text-xs font-bold uppercase tracking-widest mt-1">${data.autor}</p>
-                        
                         <div class="mt-4 grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
                             <div>
                                 <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Signatura</p>
                                 <p class="text-2xl font-black text-slate-900 uppercase leading-none">${data.sig}</p>
                             </div>
                             <div>
-                                <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Nº Registro</p>
+                                <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Nº de Registro</p>
                                 <p class="text-2xl font-black text-slate-900 leading-none">${data.reg}</p>
                             </div>
                         </div>
@@ -251,77 +386,64 @@
             qrContainer.innerHTML = '';
             
             const hasLink = item.link.toLowerCase().startsWith('http');
-            
             if (hasLink) {
                 qrHeader.classList.remove('hidden');
-                setTimeout(() => {
-                    new QRCode(qrContainer, { text: item.link, width: 150, height: 150 });
-                }, 50);
+                setTimeout(() => { new QRCode(qrContainer, { text: item.link, width: 150, height: 150 }); }, 50);
             } else {
                 qrHeader.classList.add('hidden');
             }
 
-            const orderedFields = [];
-            const sigIdx = item.headers.findIndex(h => h.includes('signatura'));
-            const regIdx = item.headers.findIndex(h => h.includes('registro') || h.includes('nº'));
+            // --- LÓGICA DE ORDEN Y TAMAÑO CORREGIDA ---
             
-            if (sigIdx !== -1) orderedFields.push({ header: item.headers[sigIdx], val: item.rawData[sigIdx] });
-            if (regIdx !== -1) orderedFields.push({ header: item.headers[regIdx], val: item.rawData[regIdx] });
-
+            // 1. Identificamos los índices de Signatura y Registro para forzar el orden
+            const sigIdx = item.headers.findIndex(h => h.includes('signatura'));
+            const regIdx = item.headers.findIndex(h => h === 'registro' || h === 'nº' || h === 'id' || h === 'nº registro');
+            
+            // Creamos un array con el orden deseado
+            let orderedIndices = [];
+            if (sigIdx !== -1) orderedIndices.push(sigIdx);
+            if (regIdx !== -1) orderedIndices.push(regIdx);
+            
+            // Añadimos el resto de índices que no sean los anteriores ni los excluidos
+            const excludedHeaders = ['portada', 'instrumentación', 'instrumentacion', 'usuario', 'título', 'titulo', 'obra', 'autor', 'compositor'];
+            
             item.headers.forEach((header, index) => {
-                if (index === sigIdx || index === regIdx) return;
-                orderedFields.push({ header: header, val: item.rawData[index] });
+                if (index !== sigIdx && index !== regIdx && !excludedHeaders.some(ex => header.includes(ex))) {
+                    orderedIndices.push(index);
+                }
             });
 
-            // Excluir de la lista de detalles lo que ya está en la cabecera
-            const excludedHeaders = ['portada', 'instrumentación', 'instrumentacion', 'usuario', 'título', 'titulo', 'obra', 'autor', 'compositor'];
+            // 2. Renderizamos en el nuevo orden
+            orderedIndices.forEach(index => {
+                const header = item.headers[index];
+                const val = item.rawData[index];
 
-            orderedFields.forEach(field => {
-                const headerLower = field.header.toLowerCase();
-                if (excludedHeaders.some(ex => headerLower.includes(ex))) return;
-
-                const val = field.val;
                 if (val && val !== '' && val !== '---') {
                     const detailRow = document.createElement('div');
                     detailRow.className = "border-b border-slate-50 pb-3 last:border-0";
                     
-                    let displayValue = val;
-                    let textClass = "text-base font-bold text-slate-800";
-
-                    // Solo Signatura y Registro (ID) tienen texto grande. 
-                    // "Fecha/Hora de registro" NO entra aquí porque no coincide exactamente con estas condiciones.
-                    if (headerLower === 'signatura') {
+                    // Definir estilo de fuente
+                    let textClass = "text-base font-bold text-slate-800"; // Estándar
+                    
+                    // Solo Signatura y el ID numérico exacto van en grande
+                    if (header.includes('signatura')) {
                         textClass = "text-3xl font-black text-emerald-600 uppercase";
-                    } else if (headerLower === 'registro' || headerLower === 'nº' || headerLower === 'id') {
+                    } else if (header === 'registro' || header === 'nº' || header === 'id' || header === 'nº registro') {
                         textClass = "text-3xl font-black text-blue-600";
-                    } else if (headerLower.includes('observaciones')) {
-                        textClass = "text-sm font-medium text-slate-500 italic";
-                    }
-
-                    if (val.toLowerCase().startsWith('http')) {
-                        displayValue = `
-                            <a href="${val}" target="_blank" class="text-blue-600 hover:text-blue-800 flex items-center gap-2 transition mt-1">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                <span class="text-base font-bold underline">Abrir enlace externo</span>
-                            </a>`;
                     }
 
                     detailRow.innerHTML = `
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">${field.header}</p>
-                        <div class="${textClass}">${displayValue}</div>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">${header}</p>
+                        <div class="${textClass}">${val.startsWith('http') ? `<a href="${val}" target="_blank" class="text-blue-600 underline">Abrir enlace</a>` : val}</div>
                     `;
                     content.appendChild(detailRow);
                 }
             });
+            // --- FIN DE CORRECCIÓN ---
 
-            if (hasLink) {
-                footer.innerHTML = `
-                    <a href="${item.link}" target="_blank" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-900 transition shadow-lg">
-                        ABRIR PARTITURA DIGITAL (PDF)
-                    </a>`;
-            } else {
-                footer.innerHTML = `<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-2 italic">Sin copia digital disponible</p>`;
-            }
+            footer.innerHTML = hasLink 
+                ? `<a href="${item.link}" target="_blank" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-900 transition shadow-lg">ABRIR PARTITURA DIGITAL (PDF)</a>`
+                : `<p class="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest py-2 italic">Sin copia digital disponible</p>`;
 
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
@@ -331,8 +453,6 @@
             document.getElementById('modal-container').classList.add('hidden');
             document.body.style.overflow = 'auto';
         }
-
-        window.onclick = (e) => { if (e.target.id === 'modal-container') closeModal(); }
     </script>
 </body>
 </html>
