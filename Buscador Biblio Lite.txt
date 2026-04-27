@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Buscador Biblio | BSMHuelva</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        /* CSS COMPATIBLE CON IOS 12 (IPAD MINI) */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            background-color: #f1f5f9; margin: 0; color: #1e293b; 
+        }
+        header { background: #0f172a; color: white; padding: 15px; text-align: center; }
+        .status-bar { font-size: 10px; font-weight: bold; color: #10b981; text-transform: uppercase; letter-spacing: 1px; }
+        
+        main { padding: 20px; max-width: 900px; margin: 0 auto; }
+        .hero { text-align: center; margin-bottom: 25px; }
+        .hero h1 { font-size: 55px; margin: 0; font-weight: 900; letter-spacing: -2px; }
+        .hero h1 span { color: #2563eb; }
+        .hero p { font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* Buscador Principal */
+        .search-container { 
+            background: white; border: 2px solid #e2e8f0; border-radius: 15px; 
+            padding: 15px; display: flex; margin-bottom: 15px; 
+        }
+        .search-container input { width: 100%; border: none; font-size: 18px; outline: none; }
+
+        /* Grid de Filtros */
+        .filter-grid { 
+            display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; 
+        }
+        .filter-item { flex: 1; min-width: 160px; position: relative; }
+        .filter-btn { 
+            width: 100%; background: white; border: 1px solid #e2e8f0; padding: 12px; 
+            border-radius: 10px; font-size: 11px; font-weight: bold; text-align: left;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* Desplegables */
+        .dropdown-content { 
+            display: none; position: absolute; background: white; width: 100%; 
+            max-height: 250px; overflow-y: auto; z-index: 50; border-radius: 10px;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; margin-top: 5px;
+        }
+        .dropdown-content.show { display: block; }
+        .dropdown-search { 
+            position: sticky; top: 0; width: 100%; padding: 10px; 
+            border: none; border-bottom: 1px solid #f1f5f9; font-size: 13px; outline: none;
+        }
+        .option-item { padding: 10px; font-size: 13px; border-bottom: 1px solid #f8fafc; cursor: pointer; }
+        .option-item:hover { background: #eff6ff; }
+
+        /* Botones Acción */
+        .btn-group { display: flex; gap: 10px; margin-bottom: 30px; justify-content: center; }
+        .btn-search { background: #2563eb; color: white; border: none; padding: 15px 40px; border-radius: 12px; font-weight: bold; font-size: 16px; }
+        .btn-clear { background: #e2e8f0; color: #475569; border: none; padding: 15px 20px; border-radius: 12px; }
+
+        /* Tarjetas de Resultados */
+        .result-card { 
+            background: white; border-radius: 15px; padding: 20px; margin-bottom: 12px; 
+            border: 1px solid #e2e8f0; 
+        }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 9px; font-weight: bold; color: white; margin-bottom: 8px; }
+        .badge-pdf { background: #2563eb; }
+        .badge-paper { background: #ea580c; }
+        .result-title { font-size: 19px; font-weight: 800; margin: 0; text-transform: uppercase; }
+        .result-author { color: #2563eb; font-size: 12px; font-weight: bold; margin: 4px 0 12px 0; }
+        .result-grid { display: flex; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+        .grid-item { flex: 1; }
+        .grid-label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; }
+        .grid-value { font-size: 20px; font-weight: 900; margin: 0; }
+
+        /* Modal */
+        #modal-container { 
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(15, 23, 42, 0.8); display: none; z-index: 100; 
+            padding: 15px; overflow-y: auto;
+        }
+        .modal-content { 
+            background: white; border-radius: 20px; max-width: 500px; 
+            margin: 10px auto; padding: 20px; position: relative;
+        }
+        .detail-row { border-bottom: 1px solid #f1f5f9; padding: 12px 0; }
+        .detail-label { font-size: 9px; color: #94a3b8; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+        .detail-value { font-size: 15px; font-weight: bold; color: #1e293b; }
+        .val-sig { font-size: 28px; font-weight: 900; color: #10b981; }
+        .val-reg { font-size: 28px; font-weight: 900; color: #2563eb; }
+        .link-blue { color: #2563eb; text-decoration: underline; font-weight: bold; }
+
+        #loader { text-align: center; padding: 30px; display: none; }
+        .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #2563eb; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="status-bar">● Base de datos sincronizada con Biblio BD</div>
+    </header>
+
+    <main>
+        <div class="hero">
+            <h1>Biblio<span>.</span>(Lite)</h1>
+            <p>Buscador online de partituras (para navegadores antiguos) del archivo musical</p>
+            <p>Archivo Musical de la Banda Sinfónica Municipal de Huelva | Adrián Díaz Giráldez | 2026</p>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="search-box" placeholder="Buscar por título, compositor, nº de registro..." onkeypress="if(event.keyCode==13) handleSearch()">
+        </div>
+
+        <div class="filter-grid">
+            <div class="filter-item">
+                <button class="filter-btn" onclick="toggleDrop('drop-comp')">COMPOSITOR <span>▼</span></button>
+                <div id="drop-comp" class="dropdown-content">
+                    <input type="text" class="dropdown-search" placeholder="Filtrar..." onkeyup="filterList(this)">
+                    <div id="list-comp"></div>
+                </div>
+            </div>
+            <div class="filter-item">
+                <button class="filter-btn" onclick="toggleDrop('drop-arr')">ARREGLOS <span>▼</span></button>
+                <div id="drop-arr" class="dropdown-content">
+                    <input type="text" class="dropdown-search" placeholder="Filtrar..." onkeyup="filterList(this)">
+                    <div id="list-arr"></div>
+                </div>
+            </div>
+            <div class="filter-item">
+                <button class="filter-btn" onclick="toggleDrop('drop-edit')">EDITORIAL <span>▼</span></button>
+                <div id="drop-edit" class="dropdown-content">
+                    <input type="text" class="dropdown-search" placeholder="Filtrar..." onkeyup="filterList(this)">
+                    <div id="list-edit"></div>
+                </div>
+            </div>
+            <div class="filter-item">
+                <button class="filter-btn" onclick="toggleDrop('drop-gen')">GÉNERO <span>▼</span></button>
+                <div id="drop-gen" class="dropdown-content">
+                    <input type="text" class="dropdown-search" placeholder="Filtrar..." onkeyup="filterList(this)">
+                    <div id="list-gen"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-search" onclick="handleSearch()">BUSCAR</button>
+            <button class="btn-clear" onclick="clearSearch()">↺</button>
+        </div>
+
+        <div id="loader"><div class="spinner"></div></div>
+        <div id="results-count" style="text-align:center; font-size:11px; font-weight:bold; color:#64748b; margin-bottom:15px;"></div>
+        <div id="results-list"></div>
+    </main>
+
+    <div id="modal-container" onclick="if(event.target.id=='modal-container') closeModal()">
+        <div class="modal-content">
+            <button style="position:absolute; top:15px; right:15px; border:none; background:none; font-size:24px; color:#94a3b8;" onclick="closeModal()">×</button>
+            <div id="modal-qr-header" style="text-align:center; display:none;">
+                <div id="modal-qr" style="display:flex; justify-content:center; margin-bottom:10px;"></div>
+                <p style="font-size:9px; color:#94a3b8; font-weight:bold; margin-bottom:15px;">ESCANEAME PARA EL MÓVIL</p>
+            </div>
+            <h2 id="modal-titulo" style="margin:0; font-size:22px; text-transform:uppercase; padding-right:30px;"></h2>
+            <p id="modal-autor" style="color:#2563eb; font-weight:bold; margin:5px 0 20px 0;"></p>
+            <div id="modal-body"></div>
+            <div id="modal-footer"></div>
+        </div>
+    </div>
+
+    <script>
+        var CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+        var globalData = [];
+        var globalHeaders = [];
+
+        window.onload = function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", CSV_URL + "&t=" + new Date().getTime(), true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var rows = parseCSV(xhr.responseText);
+                    globalHeaders = rows[0].map(function(h){ return h.toLowerCase().trim(); });
+                    globalData = rows.slice(1);
+                    populateFilters();
+                }
+            };
+            xhr.send();
+        };
+
+        function parseCSV(text) {
+            var p = '', row = [], ret = [], inQuotes = false;
+            for (var i = 0; i < text.length; i++) {
+                var cur = text[i], next = text[i+1];
+                if (inQuotes) {
+                    if (cur === '"' && next === '"') { p += '"'; i++; }
+                    else if (cur === '"') inQuotes = false;
+                    else p += cur;
+                } else {
+                    if (cur === '"') inQuotes = true;
+                    else if (cur === ',') { row.push(p.trim()); p = ''; }
+                    else if (cur === '\n' || cur === '\r') {
+                        row.push(p.trim()); ret.push(row); row = []; p = '';
+                        if (cur === '\r' && next === '\n') i++;
+                    } else p += cur;
+                }
+            }
+            if (p || row.length > 0) { row.push(p.trim()); ret.push(row); }
+            return ret;
+        }
+
+        function populateFilters() {
+            var config = [
+                { id: 'list-comp', keys: ['autor', 'compositor'] },
+                { id: 'list-arr', keys: ['arreglista', 'arreglos'] },
+                { id: 'list-edit', keys: ['editorial', 'edicion'] },
+                { id: 'list-gen', keys: ['genero', 'estilo'] }
+            ];
+            config.forEach(function(conf) {
+                var idx = getIdx(conf.keys);
+                if (idx === -1) return;
+                var vals = [];
+                globalData.forEach(function(r){ if(r[idx] && r[idx]!=='---') vals.push(r[idx]); });
+                vals = vals.filter(function(v, i, a){ return a.indexOf(v) === i; }).sort();
+                var html = '';
+                vals.forEach(function(v){
+                    html += '<div class="option-item" onclick="selectFilter(\''+v.replace(/'/g, "\\'")+'\')">'+v+'</div>';
+                });
+                document.getElementById(conf.id).innerHTML = html;
+            });
+        }
+
+        function getIdx(keys) {
+            for(var i=0; i<globalHeaders.length; i++) {
+                var h = globalHeaders[i];
+                for(var j=0; j<keys.length; j++) {
+                    if(h.indexOf(keys[j]) !== -1) return i;
+                }
+            }
+            return -1;
+        }
+
+        function toggleDrop(id) {
+            var el = document.getElementById(id);
+            var isShow = el.classList.contains('show');
+            var all = document.querySelectorAll('.dropdown-content');
+            for(var i=0; i<all.length; i++) all[i].classList.remove('show');
+            if(!isShow) el.classList.add('show');
+        }
+
+        function filterList(input) {
+            var filter = normalizeText(input.value);
+            var items = input.nextElementSibling.querySelectorAll('.option-item');
+            for(var i=0; i<items.length; i++) {
+                var txt = normalizeText(items[i].innerText);
+                items[i].style.display = txt.indexOf(filter) > -1 ? "" : "none";
+            }
+        }
+
+        function selectFilter(val) {
+            document.getElementById('search-box').value = val;
+            var all = document.querySelectorAll('.dropdown-content');
+            for(var i=0; i<all.length; i++) all[i].classList.remove('show');
+            handleSearch();
+        }
+
+        // FUNCIÓN PARA ELIMINAR ACENTOS (Compatible iOS 12)
+        function normalizeText(text) {
+            if (!text) return "";
+            var accents = "ÀÁÂÃÄÅàáâãäåÒÓÔÕÕÖØòóôõöøÈÉÊËèéêëÇçÌÍÎÏìíîïÙÚÛÜùúûüÿÑñ";
+            var without = "AAAAAAaaaaaaOOOOOOOooooooEEEEeeeeCcIIIIiiiiUUUUuuuuyNn";
+            var str = text.toString().toLowerCase();
+            for (var i = 0; i < accents.length; i++) {
+                str = str.replace(new RegExp(accents.charAt(i), 'g'), without.charAt(i));
+            }
+            return str;
+        }
+
+        function handleSearch() {
+            var q = normalizeText(document.getElementById('search-box').value.trim());
+            if(!q) return;
+            document.getElementById('loader').style.display = 'block';
+            
+            var filtered = globalData.filter(function(r){
+                return r.some(function(c){ 
+                    return normalizeText(c).indexOf(q) !== -1; 
+                });
+            });
+            renderResults(filtered);
+        }
+
+        function renderResults(data) {
+            document.getElementById('loader').style.display = 'none';
+            var list = document.getElementById('results-list');
+            list.innerHTML = '';
+            document.getElementById('results-count').innerHTML = 'SE HAN ENCONTRADO <span style="color:#10b981">' + data.length + '</span> OBRAS RELACIONADAS';
+
+            data.forEach(function(row) {
+                var item = {
+                    t: row[getIdx(['título', 'titulo', 'obra', 'pieza'])] || '---',
+                    a: row[getIdx(['autor', 'compositor'])] || '---',
+                    r: row[getIdx(['registro', 'nº'])] || '---',
+                    s: row[getIdx(['signatura'])] || '---',
+                    l: row[getIdx(['nube', 'enlace'])] || ''
+                };
+                var card = document.createElement('div');
+                card.className = 'result-card';
+                card.onclick = function() { openModal(item, row); };
+                var badge = item.l.indexOf('http') !== -1 ? '<span class="badge badge-pdf">EN PDF</span>' : '<span class="badge badge-paper">EN PAPEL</span>';
+                card.innerHTML = badge + '<h3 class="result-title">'+item.t+'</h3><p class="result-author">'+item.a+'</p>' +
+                    '<div class="result-grid"><div class="grid-item"><p class="grid-label">Signatura</p><p class="grid-value" style="color:#10b981">'+item.s+'</p></div>' +
+                    '<div class="grid-item"><p class="grid-label">Nº Registro</p><p class="grid-value" style="color:#2563eb">'+item.r+'</p></div></div>';
+                list.appendChild(card);
+            });
+        }
+
+        function openModal(item, raw) {
+            document.getElementById('modal-titulo').innerText = item.t;
+            document.getElementById('modal-autor').innerText = item.a;
+            var body = document.getElementById('modal-body');
+            body.innerHTML = '';
+            var qrBox = document.getElementById('modal-qr');
+            qrBox.innerHTML = '';
+            if(item.l.indexOf('http') !== -1) {
+                document.getElementById('modal-qr-header').style.display = 'block';
+                new QRCode(qrBox, { text: item.l, width: 100, height: 100 });
+                document.getElementById('modal-footer').innerHTML = '<a href="'+item.l+'" target="_blank" class="btn-search" style="display:block; text-align:center; text-decoration:none; margin-top:20px;">ABRIR PARTITURA DIGITAL (PDF)</a>';
+            } else {
+                document.getElementById('modal-qr-header').style.display = 'none';
+                document.getElementById('modal-footer').innerHTML = '';
+            }
+            var sigIdx = getIdx(['signatura']);
+            var regIdx = getIdx(['registro', 'nº']);
+            var order = [];
+            if(sigIdx !== -1) order.push(sigIdx);
+            if(regIdx !== -1) order.push(regIdx);
+            globalHeaders.forEach(function(h, i){ if(i !== sigIdx && i !== regIdx) order.push(i); });
+            var exclude = ['portada', 'instrumentación', 'instrumentacion', 'usuario', 'título', 'titulo', 'obra', 'autor', 'compositor'];
+            order.forEach(function(idx) {
+                var h = globalHeaders[idx];
+                var v = raw[idx];
+                var isExcluded = false;
+                exclude.forEach(function(ex){ if(h.indexOf(ex)!==-1) isExcluded=true; });
+                if(v && v !== '---' && !isExcluded) {
+                    var rowDiv = document.createElement('div');
+                    rowDiv.className = 'detail-row';
+                    var valClass = '';
+                    if(idx === sigIdx) valClass = 'val-sig';
+                    else if(idx === regIdx) valClass = 'val-reg';
+                    var finalVal = v;
+                    if(v.indexOf('http') !== -1) finalVal = '<a href="'+v+'" target="_blank" class="link-blue">Abrir enlace</a>';
+                    rowDiv.innerHTML = '<p class="detail-label">'+h+'</p><div class="detail-value '+valClass+'">'+finalVal+'</div>';
+                    body.appendChild(rowDiv);
+                }
+            });
+            document.getElementById('modal-container').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-container').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function clearSearch() {
+            document.getElementById('search-box').value = '';
+            document.getElementById('results-list').innerHTML = '';
+            document.getElementById('results-count').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
