@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buscador Biblio (Lite) | BSMHuelva</title>
+    <title>Buscador Biblio | BSMHuelva</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         /* CSS COMPATIBLE CON IOS 12 (IPAD MINI) */
@@ -284,6 +284,19 @@
                     return normalizeText(c).indexOf(q) !== -1; 
                 });
             });
+
+            // ORDENAR ALFABÉTICAMENTE POR TÍTULO (A-Z)
+            var titleIdx = getIdx(['título', 'titulo', 'obra', 'pieza']);
+            if (titleIdx !== -1) {
+                filtered.sort(function(a, b) {
+                    var valA = normalizeText(a[titleIdx]);
+                    var valB = normalizeText(b[titleIdx]);
+                    if (valA < valB) return -1;
+                    if (valA > valB) return 1;
+                    return 0;
+                });
+            }
+
             renderResults(filtered);
         }
 
