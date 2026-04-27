@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión BSMH - iPad & PC</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <style>
+        * { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            box-sizing: border-box;
+        }
+
+        body { margin: 10px; background-color: #f0f0f7; color: #1c1c1e; }
+        
+        .container { 
+            background: white; padding: 20px; border-radius: 12px; 
+            max-width: 950px; margin: auto; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+        
+        .header-title { text-align: center; color: #004481; margin-bottom: 20px; font-size: 22px; font-weight: bold; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .info-item { display: flex; align-items: center; border-bottom: 1px solid #e5e5ea; padding: 8px 0; }
+        .info-item label { font-weight: bold; font-size: 13px; width: 90px; color: #004481; }
+        
+        input[type="text"], input[type="date"], input[type="time"], textarea { 
+            width: 100%; border: none; font-size: 16px; background: transparent; outline: none; color: #1c1c1e;
+        }
+        textarea { border-bottom: 1px solid #e5e5ea; margin-top: 10px; resize: none; width: 100%; }
+
+        .section-header { 
+            background: #f2f2f7; padding: 10px 15px; font-weight: bold; 
+            display: flex; justify-content: space-between; border-radius: 8px; 
+            margin: 20px 0 10px 0; border-left: 5px solid #004481; 
+        }
+        .count-badge { background: #004481; color: white; padding: 3px 10px; border-radius: 12px; font-size: 14px; }
+
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        tr { page-break-inside: avoid; break-inside: avoid; }
+        th { font-size: 12px; color: #8e8e93; text-transform: uppercase; padding: 10px; text-align: center; }
+        td { padding: 12px 5px; border-bottom: 1px solid #f2f2f7; text-align: center; font-size: 15px; }
+        
+        .row-base { background-color: #f0f7ff; } 
+        .row-refuerzo { background-color: #fff9f0; }
+        .inst-name { text-align: left; font-weight: 600; width: 30%; color: #1c1c1e; }
+
+        /* Checkbox estilizado */
+        .check-col { width: 40px; }
+        input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+
+        .stepper { display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .btn-step { 
+            width: 32px; height: 32px; border-radius: 50%; border: 1px solid #007aff;
+            background: white; font-size: 20px; font-weight: bold; color: #007aff;
+            display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+            cursor: pointer;
+        }
+        .btn-step:active { background: #007aff; color: white; }
+        
+        input[type="number"].qty-input {
+            width: 45px; text-align: center; font-size: 18px; font-weight: bold;
+            border: none; background: transparent; color: #1c1c1e; -moz-appearance: textfield;
+        }
+        input[type="number"].qty-input::-webkit-outer-spin-button,
+        input[type="number"].qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        .resumen { 
+            background: #004481; color: white; padding: 20px; 
+            text-align: center; border-radius: 10px; margin-top: 25px; 
+            font-size: 18px; line-height: 1.6;
+        }
+
+        .actions { margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        button.main-btn { padding: 18px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; }
+        .btn-pdf { background: #34c759; grid-column: span 2; }
+        .btn-clear { background: #ff3b30; }
+        .btn-back { background: #8e8e93; }
+        
+        .add-panel { background: #e5e5ea; padding: 15px; border-radius: 12px; margin-top: 15px; }
+
+        @media print {
+            .no-print { display: none !important; }
+            .container { box-shadow: none; border: none; width: 100%; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="contenido-pdf">
+    <h2 class="header-title">BANDA SINFÓNICA MUNICIPAL DE HUELVA</h2>
+    
+    <div class="info-grid">
+        <div class="info-item"><label>TÍTULO:</label> <input type="text" placeholder="Nombre del concierto"></div>
+        <div class="info-item"><label>FECHA:</label> <input type="date" id="fecha-actual"></div>
+        <div class="info-item"><label>UBICACIÓN:</label> <input type="text" placeholder="Lugar del evento"></div>
+        <div class="info-item"><label>HORA:</label> <input type="time" id="hora-actual"></div>
+    </div>
+    
+    <textarea rows="2" placeholder="Observaciones técnicas adicionales..."></textarea>
+
+    <!-- SECCIÓN BSMH -->
+    <div class="section-header">
+        <span>BSMHuelva</span>
+        <span class="count-badge">Componentes: <span id="subtotal-comp-base">0</span></span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th class="no-print check-col"></th>
+                <th style="text-align:left">Instrumento</th>
+                <th>Comp.</th>
+                <th>Atriles</th>
+                <th>Sillas</th>
+                <th class="no-print"></th>
+            </tr>
+        </thead>
+        <tbody id="tabla-base"></tbody>
+    </table>
+
+    <!-- SECCIÓN REFUERZOS -->
+    <div class="section-header">
+        <span>REFUERZOS</span>
+        <span class="count-badge">Componentes: <span id="subtotal-comp-ref">0</span></span>
+    </div>
+    <table>
+        <tbody id="tabla-refuerzo"></tbody>
+    </table>
+
+    <div class="resumen" id="resumen-final">
+        RESUMEN TÉCNICO:<br>
+        <b><span id="total-comp">0</span> Componentes</b> (<span id="det-base">0</span> BSMHuelva y <span id="det-ref">0</span> Refuerzos)<br>
+        <b><span id="total-atriles">0</span> Atriles y <span id="total-sillas">0</span> Sillas en total</b>
+    </div>
+</div>
+
+<!-- PANEL DE CONTROL -->
+<div class="container no-print add-panel">
+    <h4 style="margin:0 0 10px 0; color:#004481;">Añadir Instrumento Extra</h4>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="nuevo-nombre" placeholder="Ej: Arpa" style="background:white; border-radius:8px; padding:12px; border:1px solid #ccc;">
+        <select id="nuevo-tipo" style="font-size:16px; border-radius:8px;">
+            <option value="base">BSMHuelva</option>
+            <option value="refuerzo">Refuerzo</option>
+        </select>
+        <button onclick="agregarFilaManual()" style="background:#007aff; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:bold;">Añadir</button>
+    </div>
+
+    <div class="actions">
+        <button class="main-btn btn-pdf" onclick="generarPDF()">GENERAR PDF / COMPARTIR</button>
+        <button class="main-btn btn-back" onclick="window.history.go(-1); return false;">VOLVER</button>
+        <button class="main-btn btn-clear" onclick="confirmarLimpiar()">LIMPIAR TODO</button>
+    </div>
+</div>
+
+<script>
+    var listaBase = ["Flauta", "Oboe", "Requinto", "Clarinete 1º", "Clarinete 2º", "Clarinete 3º", "Clarinete Bajo", "Saxo Alto 1º", "Saxo Alto 2º", "Saxo Tenor 1º", "Saxo Tenor 2º", "Trompa", "Trompeta 1ª", "Trompeta 2ª", "Fliscorno", "Trombón 1º", "Trombón 2º", "Tuba 1ª", "Tuba 2ª", "Timbales", "Caja", "Bombo y Platos"];
+    var listaRefuerzos = ["Flauta", "Oboe", "Requinto", "Clarinete", "Fagot", "Saxo Soprano", "Saxo Alto", "Saxo Tenor", "Saxo Barítono", "Trompa", "Trompeta", "Fliscorno", "Trombón", "Bombardino", "Tuba", "Percusión"];
+
+    function inicializar() {
+        listaBase.forEach(function(inst) { crearFila(inst, 'base', true); });
+        listaRefuerzos.forEach(function(inst) { crearFila(inst, 'refuerzo', false); });
+        calcularTotales();
+    }
+
+    function crearFila(nombre, tipo, activo) {
+        var tablaId = tipo === 'base' ? 'tabla-base' : 'tabla-refuerzo';
+        var cuerpo = document.getElementById(tablaId);
+        var tr = document.createElement('tr');
+        tr.className = tipo === 'base' ? 'row-base' : 'row-refuerzo';
+        tr.setAttribute('data-tipo', tipo);
+        
+        var valorInicial = activo ? 1 : 0;
+        var checkedAttr = activo ? 'checked' : '';
+
+        tr.innerHTML = 
+            '<td class="no-print check-col"><input type="checkbox" ' + checkedAttr + ' onchange="toggleFila(this)"></td>' +
+            '<td class="inst-name">' + nombre + '</td>' +
+            '<td>' + crearStepper('comp', true, valorInicial) + '</td>' +
+            '<td>' + crearStepper('atril', false, valorInicial) + '</td>' +
+            '<td>' + crearStepper('silla', false, valorInicial) + '</td>' +
+            '<td class="no-print"><button style="color:red; border:none; background:none; font-size:22px; font-weight:bold; cursor:pointer;" onclick="eliminarFila(this)">✕</button></td>';
+        
+        cuerpo.appendChild(tr);
+    }
+
+    function crearStepper(clase, esComponente, valor) {
+        return '<div class="stepper">' +
+               '<button class="btn-step no-print" onclick="step(this, -1, ' + esComponente + ')">-</button>' +
+               '<input type="number" class="qty-input ' + clase + '" value="' + valor + '" min="0" oninput="manualInput(this, ' + esComponente + ')">' +
+               '<button class="btn-step no-print" onclick="step(this, 1, ' + esComponente + ')">+</button>' +
+               '</div>';
+    }
+
+    function toggleFila(cb) {
+        var fila = cb.closest('tr');
+        var inputs = fila.querySelectorAll('.qty-input');
+        var valor = cb.checked ? 1 : 0;
+        
+        inputs.forEach(function(input) {
+            input.value = valor;
+        });
+        calcularTotales();
+    }
+
+    function step(btn, val, esComponente) {
+        var fila = btn.closest('tr');
+        var cb = fila.querySelector('input[type="checkbox"]');
+        var input = btn.parentNode.querySelector('.qty-input');
+        
+        var actual = parseInt(input.value) || 0;
+        var nuevo = actual + val;
+        if (nuevo < 0) nuevo = 0;
+        
+        input.value = nuevo;
+
+        // Si aumentamos cantidad, marcamos el check automáticamente
+        if (nuevo > 0) cb.checked = true;
+        if (nuevo === 0 && esComponente) cb.checked = false;
+
+        if (esComponente) {
+            fila.querySelector('.atril').value = nuevo;
+            fila.querySelector('.silla').value = nuevo;
+        }
+        calcularTotales();
+    }
+
+    function manualInput(input, esComponente) {
+        var fila = input.closest('tr');
+        var cb = fila.querySelector('input[type="checkbox"]');
+        var valor = parseInt(input.value) || 0;
+        
+        if (valor < 0) input.value = 0;
+        if (valor > 0) cb.checked = true;
+        if (valor === 0 && esComponente) cb.checked = false;
+        
+        if (esComponente) {
+            fila.querySelector('.atril').value = valor;
+            fila.querySelector('.silla').value = valor;
+        }
+        calcularTotales();
+    }
+
+    function agregarFilaManual() {
+        var nombre = document.getElementById('nuevo-nombre').value;
+        var tipo = document.getElementById('nuevo-tipo').value;
+        if(nombre) {
+            crearFila(nombre, tipo, (tipo === 'base'));
+            document.getElementById('nuevo-nombre').value = '';
+            calcularTotales();
+        }
+    }
+
+    function eliminarFila(btn) {
+        var row = btn.parentNode.parentNode;
+        row.parentNode.removeChild(row);
+        calcularTotales();
+    }
+
+    function calcularTotales() {
+        var filas = document.querySelectorAll('tr[data-tipo]');
+        var tCompBase = 0, tCompRef = 0, tAtriles = 0, tSillas = 0;
+
+        filas.forEach(function(fila) {
+            var cb = fila.querySelector('input[type="checkbox"]');
+            if (cb.checked) {
+                var tipo = fila.getAttribute('data-tipo');
+                var c = parseInt(fila.querySelector('.comp').value) || 0;
+                var a = parseInt(fila.querySelector('.atril').value) || 0;
+                var s = parseInt(fila.querySelector('.silla').value) || 0;
+
+                if(tipo === 'base') tCompBase += c; else tCompRef += c;
+                tAtriles += a;
+                tSillas += s;
+            }
+        });
+
+        document.getElementById('subtotal-comp-base').innerText = tCompBase;
+        document.getElementById('subtotal-comp-ref').innerText = tCompRef;
+        document.getElementById('total-comp').innerText = tCompBase + tCompRef;
+        document.getElementById('det-base').innerText = tCompBase;
+        document.getElementById('det-ref').innerText = tCompRef;
+        document.getElementById('total-atriles').innerText = tAtriles;
+        document.getElementById('total-sillas').innerText = tSillas;
+    }
+
+    function generarPDF() {
+        var elemento = document.getElementById('contenido-pdf');
+        var opt = {
+            margin: [10, 10, 10, 10],
+            filename: 'concierto_BSMH.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        html2pdf().set(opt).from(elemento).save();
+    }
+
+    function confirmarLimpiar() {
+        if(confirm("¿Vaciar toda la lista para un nuevo registro?")) {
+            window.location.reload();
+        }
+    }
+
+    window.onload = inicializar;
+</script>
+
+</body>
+</html>
