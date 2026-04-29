@@ -69,7 +69,7 @@
     const clearBtn = document.getElementById('clearBtn');
     const processBtn = document.getElementById('processBtn');
 
-    let filesArray = [];
+    let filesArray =[];
 
     // --- MANEJO DE ARCHIVOS Y CARPETAS ---
     dropZone.onclick = () => fileInput.click();
@@ -81,11 +81,21 @@
     dropZone.ondrop = async (e) => {
         e.preventDefault();
         dropZone.classList.remove('dragover');
+        
         const items = e.dataTransfer.items;
+        const entries =[];
+        
+        // Extraer todas las entradas de forma síncrona primero
         for (let i = 0; i < items.length; i++) {
             const entry = items[i].webkitGetAsEntry();
-            if (entry) await traverseFileTree(entry);
+            if (entry) entries.push(entry);
         }
+        
+        // Procesar las entradas extraídas de forma asíncrona
+        for (let i = 0; i < entries.length; i++) {
+            await traverseFileTree(entries[i]);
+        }
+        
         renderFileList();
     };
 
@@ -102,7 +112,7 @@
 
     function addFilesToList(files) {
         const pdfs = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
-        filesArray = [...filesArray, ...pdfs];
+        filesArray =[...filesArray, ...pdfs];
         renderFileList();
     }
 
@@ -112,7 +122,7 @@
     }
 
     clearBtn.onclick = () => {
-        filesArray = [];
+        filesArray =[];
         fileInput.value = "";
         renderFileList();
         status.innerText = "";
@@ -128,7 +138,7 @@
 
         const zip = new JSZip();
         const targetSizeKey = document.getElementById('sizeSelect').value;
-        const [tWidth, tHeight] = PageSizes[targetSizeKey];
+        const[tWidth, tHeight] = PageSizes[targetSizeKey];
 
         try {
             for (const file of filesArray) {
@@ -155,7 +165,7 @@
 
             if (filesArray.length > 1) {
                 const zipContent = await zip.generateAsync({ type: "blob" });
-                downloadBlob(zipContent, "Guiones_A3_Procesados.zip", "application/zip");
+                downloadBlob(zipContent, "Guiones redimensionados.zip", "application/zip");
             }
 
             status.innerText = "¡Completado!";
