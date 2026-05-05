@@ -74,31 +74,6 @@
             pointer-events: auto !important;
         }
 
-        /* Post-its */
-        .post-it {
-            font-family: 'Kalam', cursive;
-            box-shadow: 3px 4px 10px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-        }
-        
-        .post-it:hover {
-            transform: scale(1.02) rotate(-1deg);
-            box-shadow: 5px 6px 15px rgba(0,0,0,0.15);
-        }
-
-        .post-it textarea {
-            font-family: 'Kalam', cursive;
-            resize: none;
-            background: transparent;
-            border: none;
-            width: 100%;
-            height: 100%;
-            outline: none;
-            color: #333;
-            line-height: 1.4;
-        }
-
         /* Weather widget animation */
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -195,52 +170,7 @@
     0% { transform: translateX(0%); }
     100% { transform: translateX(-100%); }
 }
-/* ===== SALVAPANTALLAS (TELEPROMPTER) ===== */
-#screensaver-overlay {
-    position: fixed;
-    inset: 0;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    z-index: 9998;
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    opacity: 0;
-    transition: opacity 0.6s ease-in-out;
-}
-#screensaver-overlay.active {
-    display: flex;
-    opacity: 1;
-}
-.teleprompter-container {
-    width: 90%;
-    max-width: 1200px;
-    height: 100vh;
-    position: relative;
-    overflow: hidden;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
-}
-.teleprompter-content {
-    position: absolute;
-    width: 100%;
-    text-align: center;
-    top: 100%;
-}
-.teleprompter-item {
-    font-size: 4.5rem;
-    font-weight: 900;
-    color: #0f172a;
-    margin-bottom: 3rem;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    text-shadow: 0 4px 10px rgba(255,255,255,0.8);
-}
-@keyframes scrollUp {
-    from { transform: translateY(0); }
-    to { transform: translateY(-200vh); }
-}
+
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -382,8 +312,6 @@
 					<a href="Impresión libros en A3.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Impresión libros en A3</a>
 					<a href="Unificador.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Unificador (Fase Beta)</a>
 					<a href="Generador de repertorios.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Generador de Repertorios</a>
-					<a href="Editor de audio.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Editor de Audio</a>
-					<a href="Piano virtual.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Piano virtual</a>
 
 <div class="relative group/sub">
     <div class="flex justify-between items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd] cursor-pointer select-none">
@@ -430,6 +358,21 @@
             <a href="Plantilla y refuerzos.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Plantilla y Refuerzos</a>
 			<a href="Rider BSMH.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Rider de Escenario</a>
 		    <a href="Logistica y transporte.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Organizar transporte</a>
+    </div>
+</div>
+
+<div class="relative group/sub">
+    <div class="flex justify-between items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd] cursor-pointer select-none">
+        <div class="flex items-center gap-1.5">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20" class="text-slate-400"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+            Software Musicales
+        </div>
+        <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+    </div>
+    
+    <div class="invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute left-full top-0 ml-0 w-56 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-[60] transition-all duration-200">
+            <a href="Editor de audio.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Editor de Audio</a>
+			      <a href="Piano virtual.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">Piano Virtual</a>
     </div>
 </div>  
 
@@ -587,11 +530,11 @@
             <span class="text-[12px] font-extrabold uppercase tracking-tight text-black text-center leading-tight">Ajustar guiones A3</span>
         </a>
 
-        <a href="Rider BSMH.html" class="flex flex-col items-center p-3 bg-white/5 hover:bg-blue-600/20 border border-white/10 rounded-xl transition-all group">
+        <a href="Plantilla y refuerzos.html" class="flex flex-col items-center p-3 bg-white/5 hover:bg-blue-600/20 border border-white/10 rounded-xl transition-all group">
             <div class="w-10 h-10 mb-2 flex items-center justify-center bg-blue-500/20 text-blue-400 rounded-lg group-hover:scale-110 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
             </div>
-            <span class="text-[12px] font-extrabold uppercase tracking-tight text-black text-center leading-tight">Rider Escenario</span>
+            <span class="text-[12px] font-extrabold uppercase tracking-tight text-black text-center leading-tight">Plantilla y Refuerzos</span>
         </a>
 
     </div>
@@ -675,31 +618,9 @@
             </div>
         </main>
 
-        <!-- ESCRITORIO DE POST-ITS -->
-        <section class="mb-12 relative z-0 bg-slate-100 rounded-xl p-6 border border-slate-200 border-dashed">
-            <div class="flex justify-between items-center mb-6">
-                <div class="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                    Escritorio de Notas
-                </div>
-                <button onclick="addPostIt()" class="bg-[#0000bd] text-white px-4 py-1.5 rounded-full text-xs font-bold hover:bg-blue-800 transition-colors shadow-sm flex items-center gap-1">
-                    <span>+</span> Nueva Nota
-                </button>
-            </div>
-
-            <div id="post-its-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 min-h-[200px]"></div>
-        </section>
-
         <footer class="mt-16 py-6 border-t border-slate-200 text-center">
             <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em]">© 2026 Adrián Díaz Giráldez | Ayuntamiento de Huelva</p>
         </footer>
-    </div>
-
-<div id="screensaver-overlay">
-        <div class="teleprompter-container">
-            <div id="teleprompter-content" class="teleprompter-content">
-                </div>
-        </div>
     </div>
 
     <script>
@@ -715,7 +636,6 @@
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             updateUI();
-            renderNotes();
             fetchWeather();
         }
 
@@ -841,68 +761,6 @@
             
             if (clock) clock.textContent = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
             if (dateDisplay) dateDisplay.textContent = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        }
-
-        // -- Sistema de Post-its --
-        const colors = ['bg-yellow-200', 'bg-pink-200', 'bg-blue-200', 'bg-green-200', 'bg-purple-200', 'bg-orange-200'];
-        let notes = JSON.parse(localStorage.getItem('bsmh_notes')) || [];
-
-        function renderNotes() {
-            const container = document.getElementById('post-its-container');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            if (notes.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center text-slate-400 text-sm italic py-10">El escritorio está vacío. Añade un Post-it.</div>`;
-                return;
-            }
-
-            notes.forEach((note, index) => {
-                const noteElement = document.createElement('div');
-                noteElement.className = `post-it ${note.color} p-4 rounded-md h-48 flex flex-col`;
-                noteElement.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <button onclick="changeColor(${index})" class="text-black/30 hover:text-black/60 transition-colors">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z"></path></svg>
-                        </button>
-                        <button onclick="deletePostIt(${index})" class="text-black/30 hover:text-red-600 transition-colors">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <textarea class="text-sm font-medium" placeholder="Escribe aquí..." oninput="updateNoteText(${index}, this.value)">${note.text}</textarea>
-                `;
-                container.appendChild(noteElement);
-            });
-        }
-
-        function addPostIt() {
-            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            notes.push({ text: '', color: randomColor });
-            saveNotes();
-            renderNotes();
-        }
-
-        function deletePostIt(index) {
-            notes.splice(index, 1);
-            saveNotes();
-            renderNotes();
-        }
-
-        function updateNoteText(index, newText) {
-            notes[index].text = newText;
-            saveNotes();
-        }
-
-        function changeColor(index) {
-            const currentColor = notes[index].color;
-            let nextColorIndex = (colors.indexOf(currentColor) + 1) % colors.length;
-            notes[index].color = colors[nextColorIndex];
-            saveNotes();
-            renderNotes();
-        }
-
-        function saveNotes() {
-            localStorage.setItem('bsmh_notes', JSON.stringify(notes));
         }
 
         window.onload = function() {
@@ -1108,68 +966,6 @@ function saveReminders() {
     }
 });
 
-// ===== SISTEMA DE SALVAPANTALLAS =====
-        let inactivityTimer;
-        const screensaverTimeout = 30000; // 30 segundos fijos
-        const screensaverOverlay = document.getElementById('screensaver-overlay');
-        const teleprompterContent = document.getElementById('teleprompter-content');
-
-        function resetInactivityTimer() {
-            // Si el salvapantallas está activo, ocultarlo
-            if (screensaverOverlay.classList.contains('active')) {
-                screensaverOverlay.classList.remove('active');
-                
-                // Esperar a que termine la transición de opacidad antes de detenerlo
-                setTimeout(() => {
-                    screensaverOverlay.style.display = 'none';
-                    teleprompterContent.style.animation = 'none';
-                    teleprompterContent.innerHTML = '';
-                }, 600);
-            }
-
-            // Reiniciar el contador
-            clearTimeout(inactivityTimer);
-            
-            // Solo activar si la sesión está validada
-            if (sessionStorage.getItem('bsmh_session') === 'true') {
-                inactivityTimer = setTimeout(showScreensaver, screensaverTimeout);
-            }
-        }
-
-        function showScreensaver() {
-            // Evitar que se superponga a la pantalla de login
-            if (document.getElementById('login-overlay').style.display !== 'none') return;
-
-            const activeReminders = reminders.filter(r => !r.completed);
-            
-            // Construir el HTML de los recordatorios (ahora numerados secuencialmente)
-            if (activeReminders.length === 0) {
-                teleprompterContent.innerHTML = '<div class="teleprompter-item" style="color: #94a3b8; font-size: 3.5rem;">Archivo al día.<br>No hay tareas pendientes.</div>';
-            } else {
-                teleprompterContent.innerHTML = activeReminders.map((r, index) => 
-                    `<div class="teleprompter-item">${index + 1}. ${r.text}</div>`
-                ).join('');
-            }
-
-            // Mostrar el contenedor
-            screensaverOverlay.style.display = 'flex';
-            
-            // Calcular velocidad: Mínimo 20 segundos, +6s por tarea
-            const animationDuration = Math.max(20, activeReminders.length * 6);
-            
-            setTimeout(() => {
-                screensaverOverlay.classList.add('active');
-                teleprompterContent.style.animation = `scrollUp ${animationDuration}s linear infinite`;
-            }, 50);
-        }
-
-        // Detectar cualquier actividad del usuario para reiniciar el contador
-        ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel'].forEach(evt => {
-            document.addEventListener(evt, resetInactivityTimer, true);
-        });
-
-        // Iniciar el temporizador inicial
-        resetInactivityTimer();
         // --- LÓGICA INTEGRADA BUSCADOR BIBLIO ---
 const CSV_SOURCE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
 
