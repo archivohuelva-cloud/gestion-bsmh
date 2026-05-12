@@ -129,7 +129,12 @@
         <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm overflow-y-auto">
             <div class="p-4 border-b bg-slate-50 flex items-center justify-between">
                 <button id="prev-page" class="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition" disabled><i data-lucide="chevron-left"></i></button>
-                <span class="text-sm font-bold">Pág. <span id="page-num">0</span> / <span id="page-count">0</span></span>
+                <div class="flex flex-col items-center">
+                    <span class="text-sm font-bold">Pág. <span id="page-num">0</span> / <span id="page-count">0</span></span>
+                    <button id="delete-page-btn" class="text-[10px] text-rose-600 font-bold flex items-center gap-1 hover:text-rose-800 transition mt-1" title="Eliminar esta página">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i> Eliminar PDF
+                    </button>
+                </div>
                 <button id="next-page" class="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition" disabled><i data-lucide="chevron-right"></i></button>
             </div>
             
@@ -282,6 +287,7 @@
         const newProcessBtn = document.getElementById('new-process-btn');
         const prevPageBtn = document.getElementById('prev-page');
         const nextPageBtn = document.getElementById('next-page');
+        const deletePageBtn = document.getElementById('delete-page-btn');
         const pageNumEl = document.getElementById('page-num');
         const pageCountEl = document.getElementById('page-count');
         const toolsContainer = document.getElementById('tools-container');
@@ -414,13 +420,32 @@
             ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         };
 
-        uploadInput.addEventListener('change', async (e) => {
-            const files = e.target.files;
+        // Función para eliminar la página actual
+        deletePageBtn.onclick = () => {
+            if (pagesData.length === 0) return;
+            if (confirm("¿Estás seguro de que quieres eliminar este PDF de la lista?")) {
+                pagesData.splice(currentIndex, 1);
+                if (currentIndex >= pagesData.length) {
+                    currentIndex = Math.max(0, pagesData.length - 1);
+                }
+                if (pagesData.length === 0) {
+                    newProcessBtn.click();
+                } else {
+                    updateUI();
+                    render();
+                }
+            }
+        };
+
+        async function processFiles(files) {
             if (!files || files.length === 0) return;
             showLoading("Procesando archivos PDF...");
             try {
                 for (let f = 0; f < files.length; f++) {
                     const file = files[f];
+                    // Solo procesar si es PDF
+                    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) continue;
+                    
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                     for(let i=1; i<=pdf.numPages; i++) {
@@ -446,13 +471,22 @@
                         pagesData.push(newPage);
                     }
                 }
-                currentIndex = 0;
-                toolsContainer.style.opacity = '1'; toolsContainer.style.pointerEvents = 'auto'; 
-                exportBtn.disabled = false; document.getElementById('zoom-fit').click();
-                updateUI(); render(); hideLoading();
-            } catch (err) { console.error(err);
-                alert("Error al cargar PDF."); hideLoading(); }
-        });
+                if (pagesData.length > 0) {
+                    toolsContainer.style.opacity = '1'; toolsContainer.style.pointerEvents = 'auto'; 
+                    exportBtn.disabled = false; 
+                    if (pagesData.length === files.length || currentIndex === 0) {
+                        document.getElementById('zoom-fit').click();
+                    }
+                    updateUI(); render();
+                }
+                hideLoading();
+            } catch (err) { 
+                console.error(err);
+                alert("Error al cargar PDF."); hideLoading(); 
+            }
+        }
+
+        uploadInput.addEventListener('change', (e) => processFiles(e.target.files));
 
         function worldToLocal(worldX, worldY, p) {
             const dx = worldX - p.x;
@@ -1028,7 +1062,6 @@
         function hideLoading() { loadingOverlay.classList.add('hidden'); }
 
         const dragOverlay = document.getElementById('drag-overlay');
-        const fileInput = document.querySelector('input[type="file"]');
         
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             document.addEventListener(eventName, preventDefaults, false);
@@ -1053,23 +1086,63 @@
             }
         });
         
-        document.addEventListener('drop', (e) => {
+        // Función recursiva para obtener archivos de carpetas arrastradas
+        async function getAllFiles(items) {
+            let files = [];
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i].webkitGetAsEntry();
+                if (item) {
+                    files = files.concat(await traverseFileTree(item));
+                }
+            }
+            return files;
+        }
+
+        function traverseFileTree(item, path = "") {
+            return new Promise((resolve) => {
+                if (item.isFile) {
+                    item.file((file) => {
+                        resolve([file]);
+                    });
+                } else if (item.isDirectory) {
+                    let dirReader = item.createReader();
+                    let entries = [];
+                    let readEntries = () => {
+                        dirReader.readEntries(async (results) => {
+                            if (results.length) {
+                                entries = entries.concat(results);
+                                readEntries();
+                            } else {
+                                let files = [];
+                                for (let entry of entries) {
+                                    files = files.concat(await traverseFileTree(entry, path + item.name + "/"));
+                                }
+                                resolve(files);
+                            }
+                        });
+                    };
+                    readEntries();
+                }
+            });
+        }
+
+        document.addEventListener('drop', async (e) => {
             dragCounter = 0;
             if (dragOverlay) {
                 dragOverlay.classList.add('hidden');
                 dragOverlay.classList.remove('flex');
             }
-            const files = e.dataTransfer.files;
-            if (files && files.length > 0) {
-                const hasPDF = Array.from(files).some(file => file.type === 'application/pdf');
-                if (!hasPDF) {
-                    alert('Por favor, asegúrese de arrastrar un archivo en formato PDF.');
+
+            const items = e.dataTransfer.items;
+            if (items) {
+                const allFiles = await getAllFiles(items);
+                const pdfFiles = allFiles.filter(file => file.name.toLowerCase().endsWith('.pdf'));
+                
+                if (pdfFiles.length === 0) {
+                    alert('No se han encontrado archivos PDF en la selección.');
                     return;
                 }
-                if (fileInput) {
-                    fileInput.files = files;
-                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-                }
+                processFiles(pdfFiles);
             }
         });
 
