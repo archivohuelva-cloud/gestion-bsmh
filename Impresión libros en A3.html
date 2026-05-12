@@ -3,158 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Cuadernillos Musicales para impresiones en A3</title>
-    <!-- Tailwind CSS -->
+    <title>Generador de Cuadernillos Musicales A3/A4</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF-lib para la manipulación de PDF en el cliente -->
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    <!-- JSZip para descargar múltiples archivos procesados -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'band-blue': '#1e3a8a',
-                        'band-gold': '#b45309',
-                    }
-                }
-            }
+            theme: { extend: { colors: { 'band-blue': '#1e3a8a', 'band-gold': '#b45309' } } }
         }
     </script>
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        .drag-active {
-            border-color: #1e3a8a !important;
-            background-color: #eff6ff !important;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #1e3a8a;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #1e3a8a; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+        .sortable-ghost { opacity: 0.3; background: #eff6ff; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col text-gray-800">
 
-    <!-- Cabecera -->
-    <header class="bg-band-blue text-white py-6 shadow-md">
-        <div class="max-w-4xl mx-auto px-4 flex items-center gap-4">
-            <button onclick="window.history.back()" class="p-2 -ml-2 text-blue-200 hover:text-white hover:bg-blue-800 rounded-full transition-colors flex-shrink-0" title="Volver a la página anterior">
-                <i data-lucide="arrow-left" class="w-6 h-6"></i>
-            </button>
-            <i data-lucide="music" class="w-8 h-8 text-band-gold hidden sm:block"></i>
-            <div>
-                <h1 class="text-2xl font-bold">Generador de Cuadernillos Musicales para impresiones en A3</h1>
-                <p class="text-blue-200 text-sm mt-1">Conversor de partituras individuales en A4 a formato de cuadernillo en A3 (Vertical)</p>
-            </div>
-        </div>
-    </header>
-
-    <!-- Contenido Principal -->
-    <main class="flex-grow max-w-4xl mx-auto px-4 py-8 w-full">
+<header class="bg-band-blue text-white py-6 shadow-md">
+    <div class="max-w-5xl mx-auto px-4 flex items-center gap-6">
+        <!-- Botón Volver ahora a la izquierda -->
+        <button onclick="window.history.back()" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition text-sm border border-white/20">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver
+        </button>
         
-        <div class="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8 border border-gray-100">
-            <h2 class="text-xl font-semibold mb-4 border-b pb-2 flex items-center gap-2">
-                <i data-lucide="file-up" class="w-5 h-5 text-gray-500"></i>
-                Sube los archivos PDFs o carpetas
-            </h2>
-            
-            <!-- Zona de Drop -->
-            <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center transition-all cursor-pointer hover:bg-gray-50 flex flex-col items-center justify-center gap-4">
-                <i data-lucide="upload-cloud" class="w-12 h-12 text-gray-400"></i>
-                <div>
-                    <p class="text-lg font-medium text-gray-700">Arrastra aquí tus PDFs o carpetas</p>
-                    <p class="text-sm text-gray-500 mt-1">El sistema organizará las páginas automáticamente para impresión en A3 vertical.</p>
-                </div>
-                <input type="file" id="file-input" accept="application/pdf" multiple class="hidden">
-                <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden">
-                <div class="flex flex-wrap justify-center gap-3 mt-2">
-                    <button onclick="document.getElementById('file-input').click()" class="bg-band-blue text-white px-5 py-2 rounded-md hover:bg-blue-800 transition font-medium flex items-center gap-2">
-                        <i data-lucide="file-plus" class="w-4 h-4"></i> Elegir Archivos
-                    </button>
-                    <button onclick="document.getElementById('folder-input').click()" class="bg-band-gold text-white px-5 py-2 rounded-md hover:bg-amber-700 transition font-medium flex items-center gap-2">
-                        <i data-lucide="folder-open" class="w-4 h-4"></i> Elegir Carpeta
-                    </button>
-                </div>
+        <!-- Título e Icono -->
+        <div class="flex items-center gap-4">
+            <i data-lucide="music" class="w-8 h-8 text-band-gold"></i>
+            <div>
+                <h1 class="text-2xl font-bold">Gestor de Impresión: Cuadernillos A3 y A4</h1>
+                <p class="text-blue-200 text-sm">Organización automática para el archivo de la Banda</p>
             </div>
+        </div>
+    </div>
+</header>
 
-            <!-- Panel de Procesamiento -->
-            <div id="processing-panel" class="hidden mt-6 text-center py-6 bg-blue-50 rounded-lg">
-                <div class="flex flex-col items-center justify-center gap-3">
-                    <div class="loader"></div>
-                    <p class="font-medium text-band-blue" id="processing-text">Procesando archivos...</p>
-                </div>
+    <main class="flex-grow max-w-5xl mx-auto px-4 py-8 w-full">
+        
+        <!-- Zona de Carga -->
+        <div id="drop-zone" class="bg-white border-2 border-dashed border-gray-300 rounded-xl p-10 text-center transition-all cursor-pointer hover:bg-gray-50 mb-8">
+            <i data-lucide="upload-cloud" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+            <p class="text-lg font-medium text-gray-700">Arrastra tus PDFs o carpetas aquí</p>
+            <div class="flex flex-wrap justify-center gap-3 mt-4">
+                <button onclick="document.getElementById('file-input').click()" class="bg-band-blue text-white px-5 py-2 rounded-md hover:bg-blue-800 transition flex items-center gap-2">
+                    <i data-lucide="file-plus" class="w-4 h-4"></i> Archivos
+                </button>
+                <button onclick="document.getElementById('folder-input').click()" class="bg-band-gold text-white px-5 py-2 rounded-md hover:bg-amber-700 transition flex items-center gap-2">
+                    <i data-lucide="folder-open" class="w-4 h-4"></i> Carpeta
+                </button>
             </div>
+            <input type="file" id="file-input" accept="application/pdf" multiple class="hidden">
+            <input type="file" id="folder-input" webkitdirectory directory multiple class="hidden">
+        </div>
 
-            <!-- Panel de Éxito -->
-            <div id="success-panel" class="hidden mt-6 bg-green-50 border border-green-200 rounded-lg p-6">
-                <div class="flex items-start gap-4">
-                    <div class="bg-green-100 p-2 rounded-full mt-1">
-                        <i data-lucide="check" class="w-6 h-6 text-green-600"></i>
-                    </div>
-                    <div class="flex-grow">
-                        <h3 class="text-lg font-bold text-green-800" id="success-title">Procesamiento completado</h3>
-                        <div class="text-sm text-green-700 mt-2 space-y-1 max-h-48 overflow-y-auto border-t border-green-200 pt-2" id="stats-text"></div>
-                        
-                        <div class="mt-4 bg-white p-4 rounded border border-green-100">
-                            <h4 class="font-bold text-gray-800 flex items-center gap-2 mb-2">
-                                <i data-lucide="printer" class="w-4 h-4"></i> Instrucciones de impresión:
-                            </h4>
-                            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
-                                <li><strong>Para A3:</strong> Papel A3, Escala 100%, Doble cara <strong>(voltear por borde largo / estándar)</strong>.</li>
-                                <li><strong>Para A4 (1 pág):</strong> Papel A4 normal, impresión estándar.</li>
-                            </ul>
-                        </div>
-
-                        <div class="mt-6 flex gap-4">
-                            <button id="download-btn" class="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition font-bold flex items-center gap-2 shadow-md">
-                                <i data-lucide="download" class="w-5 h-5"></i> <span id="download-text">Descargar</span>
-                            </button>
-                            <button onclick="resetApp()" class="bg-white text-gray-600 border border-gray-300 px-4 py-3 rounded-md hover:bg-gray-50 transition flex items-center gap-2">
-                                <i data-lucide="refresh-cw" class="w-4 h-4"></i> Volver a empezar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <!-- Lista de Archivos -->
+        <div id="file-list-container" class="hidden bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+            <div class="bg-gray-100 px-6 py-3 border-b flex justify-between items-center">
+                <h3 class="font-bold text-gray-700 uppercase text-xs tracking-wider">Partituras en cola</h3>
+                <span id="file-count" class="bg-band-blue text-white text-xs px-2 py-1 rounded-full">0 archivos</span>
             </div>
-
-            <!-- Panel de Error -->
-            <div id="error-panel" class="hidden mt-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 flex items-center gap-3">
-                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
-                <span id="error-text">Error en el proceso.</span>
+            <div id="file-list" class="divide-y divide-gray-100">
+                <!-- Los archivos se insertan aquí -->
+            </div>
+            <div class="p-6 bg-gray-50 flex justify-end gap-4 border-t border-gray-100">
+                <button onclick="resetApp()" class="text-gray-500 hover:text-red-600 transition text-sm font-medium">Limpiar todo</button>
+                <button id="process-btn" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition font-bold flex items-center gap-2 shadow-lg">
+                    <i data-lucide="download" class="w-5 h-5"></i> Generar ZIP de Impresión
+                </button>
             </div>
         </div>
 
-        <div class="grid md:grid-cols-2 gap-6 text-sm text-gray-600">
-            <div class="bg-gray-100 p-5 rounded-lg border border-gray-200">
-                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2 text-base">
-                    <i data-lucide="layers" class="w-5 h-5"></i> Lógica de Imposición (Vertical)
-                </h3>
-                <ul class="space-y-2">
-                    <li><strong>1 página:</strong> Se mantiene en formato original (A4).</li>
-                    <li><strong>2 páginas:</strong> Se genera una hoja A3 vertical con pág. 1 (arriba) y pág. 2 (abajo).</li>
-                    <li><strong>3 páginas:</strong> Se genera una hoja A3 a doble cara vertical con pág. 0 en blanco (arriba A), pág. 1 (abajo A), pág. 3 (arriba B), pág. 2 (abajo B).</li>
-                    <li><strong>4+ páginas:</strong> Se crea un cuadernillo (*booklet*) vertical para grapar en el centro.</li>
-                </ul>
-            </div>
-            <div class="bg-gray-100 p-5 rounded-lg border border-gray-200">
-                <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2 text-base">
-                    <i data-lucide="check-circle" class="w-5 h-5"></i> Nombres de Archivo
-                </h3>
-                <p>Los archivos exportados mantienen su nombre original exacto para facilitar la organización en el archivo de la Banda.</p>
+        <!-- Panel de Procesamiento -->
+        <div id="processing-panel" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl flex flex-col items-center gap-4">
+                <div class="loader"></div>
+                <p class="font-bold text-band-blue" id="processing-text">Generando archivos...</p>
             </div>
         </div>
+
     </main>
 
     <footer class="bg-gray-800 text-gray-400 py-6 text-center text-sm">
@@ -162,200 +92,326 @@
     </footer>
 
     <script>
-        lucide.createIcons();
-
+        let filesToProcess = [];
+        let detectedFolderName = ""; 
+        const fileListElement = document.getElementById('file-list');
+        const container = document.getElementById('file-list-container');
         const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const folderInput = document.getElementById('folder-input');
-        const processingPanel = document.getElementById('processing-panel');
-        const successPanel = document.getElementById('success-panel');
-        const errorPanel = document.getElementById('error-panel');
-        const statsText = document.getElementById('stats-text');
-        const downloadBtn = document.getElementById('download-btn');
-        const downloadText = document.getElementById('download-text');
-        const successTitle = document.getElementById('success-title');
 
-        let processedResults =[];
-
-        // Drag and Drop recursivo
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.add('drag-active')));
-        ['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-active')));
-
-        dropZone.addEventListener('drop', async (e) => {
-            let files =[];
-            if (e.dataTransfer.items) {
-                const items = Array.from(e.dataTransfer.items);
-                const promises = items.map(item => {
-                    if (item.kind === 'file') {
-                        const entry = item.webkitGetAsEntry();
-                        return entry ? traverseFileTree(entry) : Promise.resolve([]);
-                    }
-                    return Promise.resolve([]);
+        // Inicializar SortableJS para reordenar manualmente
+        const sortable = new Sortable(fileListElement, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function() {
+                // Re-sincronizar el array filesToProcess basado en el nuevo orden del DOM
+                const newOrder = [];
+                fileListElement.querySelectorAll('[data-id]').forEach(el => {
+                    const id = el.getAttribute('data-id');
+                    newOrder.push(filesToProcess.find(f => f.id === id));
                 });
-                const results = await Promise.all(promises);
-                files = results.flat();
-            } else {
-                files = Array.from(e.dataTransfer.files);
+                filesToProcess = newOrder;
             }
-            handleFiles(files);
         });
 
-        function traverseFileTree(item) {
-            return new Promise((res) => {
-                if (item.isFile) { item.file(f => res([f])); }
-                else if (item.isDirectory) {
-                    const reader = item.createReader();
-                    reader.readEntries(async entries => {
-                        const resList = await Promise.all(entries.map(e => traverseFileTree(e)));
-                        res(resList.flat());
-                    });
-                } else res([]);
+        lucide.createIcons();
+
+        function updateUI() {
+            if (filesToProcess.length > 0) {
+                container.classList.remove('hidden');
+                dropZone.classList.add('py-6'); 
+            } else {
+                container.classList.add('hidden');
+                dropZone.classList.remove('py-6');
+            }
+            
+            document.getElementById('file-count').textContent = `${filesToProcess.length} archivos`;
+            fileListElement.innerHTML = '';
+            
+            filesToProcess.forEach((fileObj, index) => {
+                let formatInfo = "";
+                if (fileObj.pages === 1) {
+                    formatInfo = "Mantenido en original (A4)";
+                } else if (fileObj.pages === 2) {
+                    formatInfo = "Convertido a 1 hoja A3 vertical";
+                } else {
+                    const sheets = Math.ceil(fileObj.pages / 4);
+                    formatInfo = `Convertido a cuadernillo A3 vertical (${sheets} ${sheets === 1 ? 'hoja' : 'hojas'})`;
+                }
+
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-4 hover:bg-blue-50 transition-colors";
+                row.setAttribute('data-id', fileObj.id);
+                row.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="drag-handle text-gray-400 hover:text-gray-600 px-1">
+                            <i data-lucide="menu" class="w-5 h-5"></i>
+                        </div>
+                        <i data-lucide="file-text" class="w-5 h-5 text-gray-400 flex-shrink-0"></i>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="truncate font-medium text-gray-700" title="${fileObj.file.name}">${fileObj.file.name}</span>
+                            <span class="text-xs text-band-blue font-semibold">${fileObj.pages} ${fileObj.pages === 1 ? 'página' : 'páginas'} • ${formatInfo}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button onclick="updateCopies('${fileObj.id}', -1)" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md transition shadow-sm text-gray-600">-</button>
+                            <input type="number" 
+                                   value="${fileObj.copies}" 
+                                   min="1"
+                                   onkeydown="handleKeyCopies(event, '${fileObj.id}')"
+                                   onchange="inputCopies(this, '${fileObj.id}')"
+                                   class="w-12 text-center font-bold text-band-blue bg-transparent border-none focus:ring-0 cursor-text appearance-none">
+                            <button onclick="updateCopies('${fileObj.id}', 1)" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md transition shadow-sm text-gray-600">+</button>
+                        </div>
+                        <button onclick="removeFile('${fileObj.id}')" class="text-gray-400 hover:text-red-500 transition">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                `;
+                fileListElement.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        // --- Funciones de Copias ---
+        function updateCopies(id, delta) {
+            const file = filesToProcess.find(f => f.id === id);
+            if (file) {
+                file.copies = Math.max(1, file.copies + delta);
+                updateUI();
+            }
+        }
+
+        function inputCopies(el, id) {
+            const val = parseInt(el.value);
+            const file = filesToProcess.find(f => f.id === id);
+            if (file) {
+                file.copies = isNaN(val) || val < 1 ? 1 : val;
+                updateUI();
+            }
+        }
+
+        function handleKeyCopies(e, id) {
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                updateCopies(id, 1);
+            } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                updateCopies(id, -1);
+            }
+        }
+
+        function removeFile(id) {
+            filesToProcess = filesToProcess.filter(f => f.id !== id);
+            if (filesToProcess.length === 0) detectedFolderName = "";
+            updateUI();
+        }
+
+        function resetApp() {
+            filesToProcess = [];
+            detectedFolderName = "";
+            updateUI();
+        }
+
+        // --- Drag & Drop de Archivos ---
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+            dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); });
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            const items = Array.from(e.dataTransfer.items || []);
+            for (const item of items) {
+                const entry = item.webkitGetAsEntry();
+                if (entry) {
+                    if (entry.isDirectory && !detectedFolderName) {
+                        detectedFolderName = entry.name.split('-')[0].trim();
+                    }
+                    await traverseEntry(entry);
+                }
+            }
+            sortFiles();
+            updateUI();
+        });
+
+        async function traverseEntry(entry) {
+            if (entry.isFile && entry.name.toLowerCase().endsWith('.pdf')) {
+                const file = await new Promise(res => entry.file(res));
+                await processNewFile(file);
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const entries = await new Promise(res => reader.readEntries(res));
+                for (const e of entries) await traverseEntry(e);
+            }
+        }
+
+        document.getElementById('file-input').onchange = async e => {
+            await addFiles(e.target.files);
+            sortFiles();
+            updateUI();
+        };
+        
+        document.getElementById('folder-input').onchange = async e => {
+            const files = e.target.files;
+            if (files.length > 0 && files[0].webkitRelativePath) {
+                const root = files[0].webkitRelativePath.split('/')[0];
+                detectedFolderName = root.split('-')[0].trim();
+            }
+            await addFiles(files);
+            sortFiles();
+            updateUI();
+        };
+
+        async function addFiles(list) {
+            const filtered = Array.from(list).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+            for (const f of filtered) {
+                await processNewFile(f);
+            }
+        }
+
+        async function processNewFile(f) {
+            // Evitar duplicados por nombre
+            if (filesToProcess.some(item => item.file.name === f.name)) return;
+            
+            const arrayBuffer = await f.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            filesToProcess.push({ 
+                id: Math.random().toString(36).substr(2, 9),
+                file: f, 
+                copies: 1, 
+                pages: pdfDoc.getPageCount() 
             });
         }
 
-        fileInput.onchange = e => handleFiles(e.target.files);
-        folderInput.onchange = e => handleFiles(e.target.files);
-
-        async function handleFiles(fileList) {
-            const files = Array.from(fileList).filter(f => f.name.toLowerCase().endsWith('.pdf'));
-            if (!files.length) return;
-
-            dropZone.classList.add('hidden');
-            processingPanel.classList.remove('hidden');
-            processedResults =[];
-            statsText.innerHTML = "";
-
-            for (let i = 0; i < files.length; i++) {
-                document.getElementById('processing-text').textContent = `Procesando (${i+1}/${files.length}): ${files[i].name}`;
-                try {
-                    const res = await processSinglePDF(files[i]);
-                    processedResults.push(res);
-                } catch (err) {
-                    const p = document.createElement('p');
-                    p.className = "text-red-600";
-                    p.textContent = `Error en: ${files[i].name}`;
-                    statsText.appendChild(p);
-                }
-            }
-
-            processingPanel.classList.add('hidden');
-            if (processedResults.length) {
-                successPanel.classList.remove('hidden');
-                successTitle.textContent = processedResults.length === 1 ? "Archivo procesado" : `${processedResults.length} archivos procesados`;
-                downloadText.textContent = processedResults.length === 1 ? "Descargar PDF" : "Descargar ZIP";
-            }
+        function sortFiles() {
+            filesToProcess.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, {numeric: true, sensitivity: 'base'}));
         }
 
-        async function processSinglePDF(file) {
+        // --- Procesamiento PDF ---
+
+        document.getElementById('process-btn').onclick = async () => {
+            if (!filesToProcess.length) return;
+            
+            document.getElementById('processing-panel').classList.remove('hidden');
+            const zip = new JSZip();
+            const folderA3 = zip.folder("Partichelas en A3");
+            const folderA4 = zip.folder("Partichelas en A4");
+            
+            const mergedA3 = await PDFLib.PDFDocument.create();
+            const mergedA4 = await PDFLib.PDFDocument.create();
+            let hasA3 = false;
+            let hasA4 = false;
+
+            for (const item of filesToProcess) {
+                document.getElementById('processing-text').textContent = `Procesando: ${item.file.name}`;
+                
+                const arrayBuffer = await item.file.arrayBuffer();
+                const sourcePdf = await PDFLib.PDFDocument.load(arrayBuffer);
+                const pageCount = sourcePdf.getPageCount();
+                
+                let processedPdfBytes;
+                let targetFolder;
+                let targetMerged;
+
+                if (pageCount === 1) {
+                    processedPdfBytes = await createMultiCopyPdf(sourcePdf, item.copies, false);
+                    targetFolder = folderA4;
+                    targetMerged = mergedA4;
+                    hasA4 = true;
+                } else {
+                    const a3Pdf = await convertToA3Vertical(sourcePdf);
+                    processedPdfBytes = await createMultiCopyPdf(a3Pdf, item.copies, true);
+                    targetFolder = folderA3;
+                    targetMerged = mergedA3;
+                    hasA3 = true;
+                }
+
+                targetFolder.file(item.file.name, processedPdfBytes);
+                
+                const tempPdf = await PDFLib.PDFDocument.load(processedPdfBytes);
+                const pages = await targetMerged.copyPages(tempPdf, tempPdf.getPageIndices());
+                pages.forEach(p => targetMerged.addPage(p));
+            }
+
+            const nameA3 = detectedFolderName ? `${detectedFolderName} A3.pdf` : "_TODO_UNIFICADO_A3.pdf";
+            const nameA4 = detectedFolderName ? `${detectedFolderName} A4.pdf` : "_TODO_UNIFICADO_A4.pdf";
+            const zipName = detectedFolderName ? `${detectedFolderName}.zip` : "Partituras_Impresion_Banda.zip";
+
+            if (hasA3) folderA3.file(nameA3, await mergedA3.save());
+            if (hasA4) folderA4.file(nameA4, await mergedA4.save());
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = zipName;
+            link.click();
+            
+            document.getElementById('processing-panel').classList.add('hidden');
+        };
+
+        async function createMultiCopyPdf(pdfDoc, copies, isA3) {
+            const newPdf = await PDFLib.PDFDocument.create();
+            for (let i = 0; i < copies; i++) {
+                const pages = await newPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                pages.forEach(p => newPdf.addPage(p));
+            }
+            return await newPdf.save();
+        }
+
+        async function convertToA3Vertical(originalPdf) {
             const { degrees } = PDFLib;
-            const arrayBuffer = await file.arrayBuffer();
-            const originalPdf = await PDFLib.PDFDocument.load(arrayBuffer);
             const pageCount = originalPdf.getPageCount();
             const newPdf = await PDFLib.PDFDocument.create();
             
             const refPage = originalPdf.getPage(0);
             const w = refPage.getWidth();
             const h = refPage.getHeight();
-            
-            // A3 en Vertical: El ancho es el alto del A4, el alto es el doble del ancho del A4
             const a3W = h;
             const a3H = w * 2;
 
-            let logMsg = "";
-
-            if (pageCount === 1) {
-                // CASO: 1 PÁGINA - Mantener original
-                const [p1] = await newPdf.copyPages(originalPdf, [0]);
-                newPdf.addPage(p1);
-                logMsg = `Mantenido en original (A4)`;
-            } else if (pageCount === 2) {
-                // CASO: 2 PÁGINAS - 1 arriba, 2 abajo (Vertical)
+            if (pageCount === 2) {
                 const page = newPdf.addPage([a3W, a3H]);
                 const [p1, p2] = await newPdf.embedPdf(originalPdf, [0, 1]);
-                // Rotamos -90 grados para que se lean correctamente al doblar
                 page.drawPage(p1, { x: 0, y: w * 2, rotate: degrees(-90) });
                 page.drawPage(p2, { x: 0, y: w, rotate: degrees(-90) });
-                logMsg = `Convertido a 1 hoja A3 vertical`;
             } else {
-                // CASO GENERAL: CUADERNILLO (múltiplos de 4)
                 const totalPages = Math.ceil(pageCount / 4) * 4;
                 const sheets = totalPages / 4;
                 const indices = Array.from({length: totalPages}, (_, i) => i < pageCount ? i : null);
 
                 for (let i = 0; i < sheets; i++) {
-                    // CARA A (Frontal)
                     const pA = newPdf.addPage([a3W, a3H]);
-                    const idxAL = indices[totalPages - 1 - 2 * i]; // Izquierda en apaisado (Arriba en vertical)
-                    const idxAR = indices[2 * i];                  // Derecha en apaisado (Abajo en vertical)
-                    await drawPair(newPdf, originalPdf, pA, idxAL, idxAR, w, h, true);
-                    
-                    // CARA B (Trasera)
+                    await drawPair(newPdf, originalPdf, pA, indices[totalPages - 1 - 2 * i], indices[2 * i], w, true);
                     const pB = newPdf.addPage([a3W, a3H]);
-                    const idxBL = indices[2 * i + 1];              // Izquierda en apaisado (Abajo en vertical)
-                    const idxBR = indices[totalPages - 2 - 2 * i]; // Derecha en apaisado (Arriba en vertical)
-                    await drawPair(newPdf, originalPdf, pB, idxBL, idxBR, w, h, false);
+                    await drawPair(newPdf, originalPdf, pB, indices[2 * i + 1], indices[totalPages - 2 - 2 * i], w, false);
                 }
-                logMsg = `Convertido a cuadernillo A3 vertical (${sheets} hojas)`;
             }
-
-            const bytes = await newPdf.save();
-            const p = document.createElement('p');
-            p.innerHTML = `<span>✓</span> <strong>${file.name}</strong> - <span class="text-gray-500 italic text-xs">${logMsg}</span>`;
-            statsText.appendChild(p);
-
-            return { name: file.name, bytes };
+            return newPdf;
         }
 
-        async function drawPair(targetDoc, sourceDoc, page, leftIdx, rightIdx, w, h, isFront) {
+        async function drawPair(targetDoc, sourceDoc, page, idxTop, idxBottom, w, isFront) {
             const { degrees } = PDFLib;
-            
             if (isFront) {
-                // Cara Frontal: Rotamos -90 grados (hacia la derecha)
-                if (leftIdx !== null) {
-                    const [img] = await targetDoc.embedPdf(sourceDoc, [leftIdx]);
+                if (idxTop !== null) {
+                    const [img] = await targetDoc.embedPdf(sourceDoc, [idxTop]);
                     page.drawPage(img, { x: 0, y: w * 2, rotate: degrees(-90) });
                 }
-                if (rightIdx !== null) {
-                    const [img] = await targetDoc.embedPdf(sourceDoc, [rightIdx]);
+                if (idxBottom !== null) {
+                    const [img] = await targetDoc.embedPdf(sourceDoc, [idxBottom]);
                     page.drawPage(img, { x: 0, y: w, rotate: degrees(-90) });
                 }
             } else {
-                // Cara Trasera: Rotamos +90 grados (hacia la izquierda) para que al voltear por borde largo coincidan
-                // Nota: En la cara trasera, la página derecha del apaisado va arriba, y la izquierda va abajo.
-                if (rightIdx !== null) {
-                    const [img] = await targetDoc.embedPdf(sourceDoc, [rightIdx]);
+                const h = page.getWidth();
+                if (idxBottom !== null) {
+                    const [img] = await targetDoc.embedPdf(sourceDoc, [idxBottom]);
                     page.drawPage(img, { x: h, y: w, rotate: degrees(90) });
                 }
-                if (leftIdx !== null) {
-                    const [img] = await targetDoc.embedPdf(sourceDoc, [leftIdx]);
+                if (idxTop !== null) {
+                    const [img] = await targetDoc.embedPdf(sourceDoc, [idxTop]);
                     page.drawPage(img, { x: h, y: 0, rotate: degrees(90) });
                 }
             }
-        }
-
-        downloadBtn.onclick = async () => {
-            if (processedResults.length === 1) {
-                const res = processedResults[0];
-                saveAs(new Blob([res.bytes]), res.name);
-            } else {
-                const zip = new JSZip();
-                processedResults.forEach(r => zip.file(r.name, r.bytes));
-                const content = await zip.generateAsync({type: "blob"});
-                saveAs(content, "Partituras impresión A3.zip");
-            }
-        };
-
-        function saveAs(blob, name) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = name; a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function resetApp() {
-            successPanel.classList.add('hidden');
-            dropZone.classList.remove('hidden');
-            fileInput.value = ""; folderInput.value = "";
         }
     </script>
 </body>
