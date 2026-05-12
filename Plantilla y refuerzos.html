@@ -50,6 +50,8 @@
         button.main-btn { padding: 18px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; touch-action: manipulation; }
         .btn-print { background: #34c759; }
         .btn-pdf { background: #007aff; }
+        .btn-save { background: #5856d6; }
+        .btn-open { background: #ff9500; }
         .btn-clear { background: #ff3b30; }
         .btn-back { background: #8e8e93; }
         
@@ -66,13 +68,13 @@
     <h2 class="header-title">BANDA SINFÓNICA MUNICIPAL DE HUELVA</h2>
     
     <div class="info-grid">
-        <div class="info-item"><label>TÍTULO:</label> <input type="text" placeholder=""></div>
+        <div class="info-item"><label>TÍTULO:</label> <input type="text" id="input-titulo" placeholder=""></div>
         <div class="info-item"><label>FECHA:</label> <input type="date" id="fecha-actual"></div>
-        <div class="info-item"><label>UBICACIÓN:</label> <input type="text" placeholder=""></div>
+        <div class="info-item"><label>UBICACIÓN:</label> <input type="text" id="input-ubicacion" placeholder=""></div>
         <div class="info-item"><label>HORA:</label> <input type="time" id="hora-actual"></div>
     </div>
     
-    <textarea rows="2" placeholder="Observaciones"></textarea>
+    <textarea rows="2" id="input-obs" placeholder="Observaciones"></textarea>
 
     <div class="section-header">
         <span>BSMHuelva</span>
@@ -127,7 +129,11 @@
         <button onclick="agregarFilaManual()" style="background:#007aff; color:white; border:none; padding:12px 20px; border-radius:8px; font-weight:bold; cursor:pointer; flex-grow:1;">Añadir</button>
     </div>
     <div class="actions">
-        <button class="main-btn btn-print" onclick="generarPDF()">IMPRIMIR</button>
+        <button class="main-btn btn-print" onclick="imprimirSistema()">IMPRIMIR</button>
+        <button class="main-btn btn-pdf" onclick="descargarPDF()">GENERAR PDF</button>
+        <button class="main-btn btn-save" onclick="guardarPlantilla()">GUARDAR PLANTILLA</button>
+        <button class="main-btn btn-open" onclick="document.getElementById('fileInput').click()">ABRIR PLANTILLA</button>
+        <input type="file" id="fileInput" style="display:none" accept=".json" onchange="abrirPlantilla(event)">
         <button class="main-btn btn-back" onclick="window.history.go(-1); return false;">VOLVER</button>
         <button class="main-btn btn-clear" onclick="confirmarLimpiar()">LIMPIAR TODO</button>
     </div>
@@ -141,6 +147,8 @@
     const listaRefuerzos = ["Flauta", "Oboe", "Requinto", "Clarinete", "Fagot", "Saxo Soprano", "Saxo Alto", "Saxo Tenor", "Saxo Barítono", "Trompa", "Trompeta", "Fliscorno", "Trombón", "Bombardino", "Tuba", "Percusión"];
 
     function inicializar() {
+        document.getElementById('tabla-base').innerHTML = '';
+        document.getElementById('tabla-refuerzo').innerHTML = '';
         listaBase.forEach(inst => {
             let v = 1; let act = true;
             if(inst.includes("Bajo")) { v = 0; act = false; }
@@ -151,7 +159,7 @@
         calcularTotales();
     }
 
-    function crearFila(nombre, tipo, activo, valor) {
+    function crearFila(nombre, tipo, activo, valor, atriles = null, sillas = null) {
         const tabla = document.getElementById(tipo === 'base' ? 'tabla-base' : 'tabla-refuerzo');
         const tr = document.createElement('tr');
         tr.className = tipo === 'base' ? 'row-base' : 'row-refuerzo';
@@ -160,8 +168,10 @@
         const check = activo ? 'checked' : '';
         
         let n = nombre.toLowerCase();
-        let valorSilla = valor;
-        if (n.includes("timbales") || n.includes("caja") || n.includes("bombo") || n.includes("platos") || n.includes("percusion") || n.includes("percusión")) {
+        let valorSilla = (sillas !== null) ? sillas : valor;
+        let valorAtril = (atriles !== null) ? atriles : valor;
+
+        if (sillas === null && (n.includes("timbales") || n.includes("caja") || n.includes("bombo") || n.includes("platos") || n.includes("percusion") || n.includes("percusión"))) {
             valorSilla = 0;
         }
         
@@ -169,7 +179,7 @@
             <td class="no-print"><input type="checkbox" ${check} onchange="toggleFila(this)" style="width:20px; height:20px;"></td>
             <td class="inst-name">${nombre}</td>
             <td>${crearStepper('comp', true, valor)}</td>
-            <td>${crearStepper('atril', false, valor)}</td>
+            <td>${crearStepper('atril', false, valorAtril)}</td>
             <td>${crearStepper('silla', false, valorSilla)}</td>
             <td class="no-print"><button style="color:red; border:none; background:none; font-size:24px; cursor:pointer; padding:0 10px;" onclick="this.closest('tr').remove(); calcularTotales();">✕</button></td>
         `;
@@ -287,26 +297,21 @@
         if(n) { crearFila(n, t, true, 1); document.getElementById('nuevo-nombre').value = ''; calcularTotales(); }
     }
 
-    function generarPDF() {
+    function prepararHTMLInforme() {
         const fechaInput = document.getElementById('fecha-actual').value;
         let fechaFormateada = "--";
         if (fechaInput) {
             const fechaObj = new Date(fechaInput + 'T00:00:00');
-            fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-            });
+            fechaFormateada = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             fechaFormateada = fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1);
         }
 
-        const titulo = document.querySelector('input[placeholder=""]').value || 'Sin concierto';
-        const ubicacion = document.querySelectorAll('input[placeholder=""]')[1].value || 'Sin lugar';
+        const titulo = document.getElementById('input-titulo').value || 'Sin concierto';
+        const ubicacion = document.getElementById('input-ubicacion').value || 'Sin lugar';
         const hora = document.getElementById('hora-actual').value || '--';
-        const obs = document.querySelector('textarea').value.replace(/\n/g, '<br>') || 'Ninguna';
+        const obs = document.getElementById('input-obs').value.replace(/\n/g, '<br>') || 'Ninguna';
 
-        const prioridad = ["Flauta", "Oboe", "Requinto", "Clarinete", "Fagot", "Saxo Soprano", "Saxo Alto", "Saxo Tenor", "Saxo Barítono", "Trompa", "Trompeta", "Fliscorno", "Trombón", "Bombardino", "Tuba", "Timbales", "Caja", "Bombo", "Percusión", "Piano", "Arpa"];
+        const prioridad = ["Flauta", "Oboe", "Requinto", "Clarinete", "Fagot", "Saxo Soprano", "Saxo Alto", "Saxo Tenor", "Saxo Barítono", "Trompa", "Trompeta", "Fliscorno", "Trombón", "Bombardino", "Tuba", "Timbales", "Caja", "Bombo", "Percusión"];
 
         let todosLosInstrumentos = [];
         document.querySelectorAll('tr[data-tipo]').forEach(fila => {
@@ -325,125 +330,164 @@
         todosLosInstrumentos.sort((a, b) => {
             let indexA = prioridad.findIndex(p => a.nombre.includes(p));
             let indexB = prioridad.findIndex(p => b.nombre.includes(p));
-            if (indexA === -1) indexA = 99;
-            if (indexB === -1) indexB = 99;
-            return indexA - indexB;
+            return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
         });
 
         let filasHTML = '';
         todosLosInstrumentos.forEach(inst => {
-            let claseSeccion = inst.seccion === 'BSMH' ? 'txt-bsmh' : 'txt-refuerzo';
+            const estiloFila = inst.seccion === 'Refuerzo' ? 'background-color: #fff4e6;' : '';
             filasHTML += `
-                <tr>
-                    <td style="text-align:center; font-weight:bold;">${inst.comp}</td>
-                    <td style="text-align:left;">${inst.nombre}</td>
-                    <td style="text-align:center;" class="${claseSeccion}">${inst.seccion}</td>
-                    <td style="text-align:center;">${inst.atriles}</td>
-                    <td style="text-align:center;">${inst.sillas}</td>
+                <tr style="${estiloFila}">
+                    <td style="border: 1px solid #004481; padding: 3px; text-align:center; font-weight:bold;">${inst.comp}</td>
+                    <td style="border: 1px solid #004481; padding: 3px; text-align:left;">${inst.nombre}</td>
+                    <td style="border: 1px solid #004481; padding: 3px; text-align:center; font-size:10px;">${inst.seccion}</td>
+                    <td style="border: 1px solid #004481; padding: 3px; text-align:center;">${inst.atriles}</td>
+                    <td style="border: 1px solid #004481; padding: 3px; text-align:center;">${inst.sillas}</td>
                 </tr>`;
         });
 
-        const listaAgrupadaHTML = document.getElementById('lista-agrupada').innerHTML;
-        const totalComp = document.getElementById('total-comp').innerText;
-        const detBase = document.getElementById('det-base').innerText;
-        const detRef = document.getElementById('det-ref').innerText;
-        const totAtr = document.getElementById('total-atriles').innerText;
-        const totSil = document.getElementById('total-sillas').innerText;
+        // Optimización del resumen agrupado para evitar cortes
+        const listaAgrupadaHTML = Array.from(document.querySelectorAll('#lista-agrupada .item-agrupado'))
+            .map(el => `<div style="display:inline-block; width:32%; font-size:10px; border-bottom:1px solid #eee; padding:1px 0; margin-bottom:2px;">${el.innerHTML}</div>`)
+            .join('');
 
-        const htmlFinal = `
-            <html>
-            <head>
-                <title>BSMH - ${titulo}</title>
-                <style>
-                    @page { size: A4 portrait; margin: 15mm; }
-                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #1c1c1e; line-height: 1.4; margin: 0; padding: 0; }
-                    #pdf-content { padding: 10px; }
-                    .header { text-align: center; border-bottom: 2px solid #004481; margin-bottom: 20px; padding-bottom: 10px; }
-                    .header h2 { color: #004481; margin: 0; text-transform: uppercase; font-size: 18px; }
-                    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; font-size: 13px; }
-                    .obs { background: #f9f9f9; padding: 10px; border-radius: 5px; font-size: 12px; margin-bottom: 20px; border: 1px solid #eee; border-left: 4px solid #004481; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th { background: #f2f2f7; color: #004481; border: 1px solid #004481; padding: 8px; font-size: 10px; text-transform: uppercase; }
-                    td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; }
-                    .txt-bsmh { color: #004481; font-weight: bold; }
-                    .txt-refuerzo { color: #28a745; font-weight: bold; }
-                    
-                    /* Salto de página vectorial real */
-                    .page-break-before { break-before: page; page-break-before: always; margin-top: 30px; }
-                    
-                    .grid-agrupado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px; border-top: 1px solid #004481; padding-top: 10px; margin-bottom: 20px; }
-                    .item-agrupado { border-bottom: 1px solid #eee; padding: 2px 0; }
-                    .resumen-final { border: 2px solid #004481; padding: 15px; text-align: center; border-radius: 8px; font-size: 14px; font-weight: bold; color: #004481; background-color: #f0f7ff; }
-                </style>
-            </head>
-            <body>
-                <div id="pdf-content">
-                    <div class="header">
-                        <h2>Banda Sinfónica Municipal de Huelva</h2>
-                        <div style="font-weight:bold; margin-top:5px; letter-spacing: 1px;">INFORME TÉCNICO DE ESCENARIO</div>
+        return `
+            <div style="padding: 10px; font-family: Arial, sans-serif; color: #1c1c1e;">
+                <div style="text-align: center; border-bottom: 2px solid #004481; margin-bottom: 10px;">
+                    <h2 style="color: #004481; margin: 0; font-size: 16px;">BANDA SINFÓNICA MUNICIPAL DE HUELVA</h2>
+                    <div style="font-size: 12px; font-weight: bold;">INFORME TÉCNICO DE ESCENARIO</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 11px; margin-bottom: 10px;">
+                    <div><b>TÍTULO:</b> ${titulo}</div>
+                    <div><b>FECHA:</b> ${fechaFormateada}</div>
+                    <div><b>UBICACIÓN:</b> ${ubicacion}</div>
+                    <div><b>HORA:</b> ${hora} h.</div>
+                </div>
+                <div style="border: 1px solid #ccc; padding: 5px; font-size: 10px; margin-bottom: 10px; background: #f9f9f9;">
+                    <b>OBSERVACIONES:</b> ${obs}
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 15px;">
+                    <thead>
+                        <tr style="background: #004481; color: white;">
+                            <th style="border: 1px solid #004481; width: 40px; padding: 4px;">C.</th>
+                            <th style="border: 1px solid #004481; text-align:left; padding: 4px;">Instrumento</th>
+                            <th style="border: 1px solid #004481; width: 70px; padding: 4px;">Sección</th>
+                            <th style="border: 1px solid #004481; width: 50px; padding: 4px;">Atriles</th>
+                            <th style="border: 1px solid #004481; width: 50px; padding: 4px;">Sillas</th>
+                        </tr>
+                    </thead>
+                    <tbody>${filasHTML}</tbody>
+                </table>
+                
+                <!-- Contenedor de resumen con protección contra saltos de página -->
+                <div style="page-break-inside: avoid; break-inside: avoid;">
+                    <div style="border-top: 2px solid #004481; padding-top: 8px; margin-top: 10px;">
+                        <h4 style="margin: 0 0 5px 0; font-size: 11px; color: #004481; text-transform: uppercase;">Listado Total de Instrumentos</h4>
+                        <div style="display: block; width: 100%;">${listaAgrupadaHTML}</div>
                     </div>
-                    <div class="info-grid">
-                        <div><b>TÍTULO:</b> ${titulo}</div>
-                        <div><b>FECHA:</b> ${fechaFormateada}</div>
-                        <div><b>UBICACIÓN:</b> ${ubicacion}</div>
-                        <div><b>HORA:</b> ${hora} horas</div>
-                    </div>
-                    <div class="obs"><b>OBSERVACIONES:</b><br>${obs}</div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width:10%;">Comp.</th>
-                                <th style="text-align:left; width:40%;">Instrumento</th>
-                                <th style="width:20%;">Sección</th>
-                                <th style="width:15%;">Atriles</th>
-                                <th style="width:15%;">Sillas</th>
-                            </tr>
-                        </thead>
-                        <tbody>${filasHTML}</tbody>
-                    </table>
-                    
-                    <div class="page-break-before">
-                        <h4 style="color:#004481; margin-bottom:5px; font-size:12px; text-transform: uppercase;">Listado Total de Instrumentos</h4>
-                        <div class="grid-agrupado">${listaAgrupadaHTML}</div>
-                        <div class="resumen-final">
-                            RESUMEN TOTAL:<br>
-                            ${totalComp} Componentes (${detBase} BSMHuelva y ${detRef} Refuerzos)<br>
-                            ${totAtr} Atriles y ${totSil} Sillas
-                        </div>
+                    <div style="margin-top: 10px; background: #f0f7ff; border: 2px solid #004481; padding: 8px; text-align: center; font-size: 12px; font-weight: bold; color: #004481; border-radius: 4px;">
+                        TOTAL: ${document.getElementById('total-comp').innerText} Componentes | 
+                        ${document.getElementById('total-atriles').innerText} Atriles | 
+                        ${document.getElementById('total-sillas').innerText} Sillas
                     </div>
                 </div>
-            </body>
-            </html>
-        `;
+            </div>`;
+    }
 
-        // MÉTODO VECTORIAL REAL:
-        // Abrimos una ventana nueva con el contenido HTML puro.
-        // Al usar window.print() en esa ventana, el sistema operativo genera un PDF 
-        // basado en vectores de texto, no en una captura de pantalla.
-        const ventana = window.open('', '_blank');
-        ventana.document.write(htmlFinal);
-        ventana.document.close();
+    function descargarPDF() {
+        const elemento = document.createElement('div');
+        elemento.innerHTML = prepararHTMLInforme();
+        const titulo = document.getElementById('input-titulo').value || 'Informe_BSMH';
         
-        // Esperamos a que cargue y lanzamos el diálogo de impresión del sistema.
-        // Para guardar como PDF, el usuario solo debe elegir "Guardar como PDF" en su impresora.
-        ventana.onload = function() {
-            setTimeout(() => { 
-                ventana.print(); 
-                ventana.close(); 
-            }, 500);
+        const opciones = {
+            margin: [10, 10, 10, 10],
+            filename: `${titulo}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                logging: false,
+                letterRendering: true
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
+        
+        html2pdf().set(opciones).from(elemento).save();
+    }
+
+    function imprimirSistema() {
+        const ventana = window.open('', '_blank');
+        ventana.document.write(`<html><head><style>
+            @page { size: A4 portrait; margin: 10mm; }
+            body { margin: 0; padding: 0; }
+        </style></head><body>${prepararHTMLInforme()}</body></html>`);
+        ventana.document.close();
+        ventana.onload = () => { setTimeout(() => { ventana.print(); ventana.close(); }, 500); };
+    }
+
+    function guardarPlantilla() {
+        const datos = {
+            titulo: document.getElementById('input-titulo').value,
+            ubicacion: document.getElementById('input-ubicacion').value,
+            fecha: document.getElementById('fecha-actual').value,
+            hora: document.getElementById('hora-actual').value,
+            observaciones: document.getElementById('input-obs').value,
+            instrumentos: []
+        };
+
+        document.querySelectorAll('tr[data-tipo]').forEach(fila => {
+            datos.instrumentos.push({
+                nombre: fila.querySelector('.inst-name').innerText,
+                tipo: fila.getAttribute('data-tipo'),
+                activo: fila.querySelector('input[type="checkbox"]').checked,
+                comp: fila.querySelector('.comp').value,
+                atril: fila.querySelector('.atril').value,
+                silla: fila.querySelector('.silla').value
+            });
+        });
+
+        const blob = new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Plantilla y Refuerzos ${datos.titulo || 'BSMH'}.json`;
+        a.click();
+    }
+
+    function abrirPlantilla(event) {
+        const archivo = event.target.files[0];
+        if (!archivo) return;
+
+        const lector = new FileReader();
+        lector.onload = function(e) {
+            try {
+                const datos = JSON.parse(e.target.result);
+                document.getElementById('input-titulo').value = datos.titulo || '';
+                document.getElementById('input-ubicacion').value = datos.ubicacion || '';
+                document.getElementById('fecha-actual').value = datos.fecha || '';
+                document.getElementById('hora-actual').value = datos.hora || '';
+                document.getElementById('input-obs').value = datos.observaciones || '';
+
+                document.getElementById('tabla-base').innerHTML = '';
+                document.getElementById('tabla-refuerzo').innerHTML = '';
+
+                datos.instrumentos.forEach(inst => {
+                    crearFila(inst.nombre, inst.tipo, inst.activo, inst.comp, inst.atril, inst.silla);
+                });
+
+                calcularTotales();
+                alert("Plantilla cargada correctamente");
+            } catch (err) {
+                alert("Error al leer el archivo JSON");
+            }
+        };
+        lector.readAsText(archivo);
     }
 
     function confirmarLimpiar() { if(confirm("¿Vaciar todo?")) window.location.reload(); }
 
     window.onload = inicializar;
-    
-    document.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-            e.preventDefault();
-            generarPDF();
-        }
-    });
 </script>
 </body>
 </html>
