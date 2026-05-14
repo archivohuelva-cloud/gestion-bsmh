@@ -1,3 +1,5 @@
+<!-- START OF FILE Impresión libros en A3.html -->
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -94,6 +96,7 @@
     <script>
         let filesToProcess = [];
         let detectedFolderName = ""; 
+        let fullFolderName = ""; // Para guardar el nombre completo con registro
         const fileListElement = document.getElementById('file-list');
         const container = document.getElementById('file-list-container');
         const dropZone = document.getElementById('drop-zone');
@@ -104,7 +107,6 @@
             animation: 150,
             ghostClass: 'sortable-ghost',
             onEnd: function() {
-                // Re-sincronizar el array filesToProcess basado en el nuevo orden del DOM
                 const newOrder = [];
                 fileListElement.querySelectorAll('[data-id]').forEach(el => {
                     const id = el.getAttribute('data-id');
@@ -174,7 +176,6 @@
             lucide.createIcons();
         }
 
-        // --- Funciones de Copias ---
         function updateCopies(id, delta) {
             const file = filesToProcess.find(f => f.id === id);
             if (file) {
@@ -204,17 +205,19 @@
 
         function removeFile(id) {
             filesToProcess = filesToProcess.filter(f => f.id !== id);
-            if (filesToProcess.length === 0) detectedFolderName = "";
+            if (filesToProcess.length === 0) {
+                detectedFolderName = "";
+                fullFolderName = "";
+            }
             updateUI();
         }
 
         function resetApp() {
             filesToProcess = [];
             detectedFolderName = "";
+            fullFolderName = "";
             updateUI();
         }
-
-        // --- Drag & Drop de Archivos ---
 
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
             dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); });
@@ -222,15 +225,18 @@
 
         dropZone.addEventListener('drop', async (e) => {
             const items = Array.from(e.dataTransfer.items || []);
+            const promises = [];
             for (const item of items) {
                 const entry = item.webkitGetAsEntry();
                 if (entry) {
-                    if (entry.isDirectory && !detectedFolderName) {
+                    if (entry.isDirectory && !fullFolderName) {
+                        fullFolderName = entry.name.trim();
                         detectedFolderName = entry.name.split('-')[0].trim();
                     }
-                    await traverseEntry(entry);
+                    promises.push(traverseEntry(entry));
                 }
             }
+            await Promise.all(promises);
             sortFiles();
             updateUI();
         });
@@ -256,6 +262,7 @@
             const files = e.target.files;
             if (files.length > 0 && files[0].webkitRelativePath) {
                 const root = files[0].webkitRelativePath.split('/')[0];
+                fullFolderName = root.trim();
                 detectedFolderName = root.split('-')[0].trim();
             }
             await addFiles(files);
@@ -271,7 +278,6 @@
         }
 
         async function processNewFile(f) {
-            // Evitar duplicados por nombre
             if (filesToProcess.some(item => item.file.name === f.name)) return;
             
             const arrayBuffer = await f.arrayBuffer();
@@ -288,15 +294,18 @@
             filesToProcess.sort((a, b) => a.file.name.localeCompare(b.file.name, undefined, {numeric: true, sensitivity: 'base'}));
         }
 
-        // --- Procesamiento PDF ---
-
         document.getElementById('process-btn').onclick = async () => {
             if (!filesToProcess.length) return;
             
             document.getElementById('processing-panel').classList.remove('hidden');
             const zip = new JSZip();
-            const folderA3 = zip.folder("Partichelas en A3");
-            const folderA4 = zip.folder("Partichelas en A4");
+            
+            // Crear carpeta raíz dentro del ZIP
+            const rootFolderName = fullFolderName || "Partituras para imprimir";
+            const rootFolder = zip.folder(rootFolderName);
+            
+            const folderA3 = rootFolder.folder("Partichelas en A3");
+            const folderA4 = rootFolder.folder("Partichelas en A4");
             
             const mergedA3 = await PDFLib.PDFDocument.create();
             const mergedA4 = await PDFLib.PDFDocument.create();
@@ -334,9 +343,9 @@
                 pages.forEach(p => targetMerged.addPage(p));
             }
 
-            const nameA3 = detectedFolderName ? `${detectedFolderName} A3.pdf` : "_TODO_UNIFICADO_A3.pdf";
-            const nameA4 = detectedFolderName ? `${detectedFolderName} A4.pdf` : "_TODO_UNIFICADO_A4.pdf";
-            const zipName = detectedFolderName ? `${detectedFolderName}.zip` : "Partituras_Impresion_Banda.zip";
+            const nameA3 = detectedFolderName ? `${detectedFolderName} A3.pdf` : "Partichelas unificadas en A3.pdf";
+            const nameA4 = detectedFolderName ? `${detectedFolderName} A4.pdf` : "Partichelas unificadas en A4.pdf";
+            const zipName = detectedFolderName ? `${detectedFolderName}.zip` : "Partituras para imprimir.zip";
 
             if (hasA3) folderA3.file(nameA3, await mergedA3.save());
             if (hasA4) folderA4.file(nameA4, await mergedA4.save());
