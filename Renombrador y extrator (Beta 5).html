@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renombrador | Extractor (BETA 5)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        body { background-color: #f5f7f9; }
+        .big-button { transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .big-button:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Estilos Extractor Beta 4 */
+        #extractor-workspace { display: none; position: fixed; inset: 0; background: #1a1a1a; z-index: 100; flex-direction: row; }
+        #extractor-viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        #extractor-sidebar { width: 350px; background: white; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; z-index: 110; }
+        .canvas-container { flex: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 20px; background: #333; }
+        #extractor-canvas { box-shadow: 0 0 20px rgba(0,0,0,0.5); max-width: 100%; }
+        
+        .search-dropdown { position: relative; width: 100%; }
+        .search-results { 
+            position: absolute; bottom: 100%; left: 0; right: 0; z-index: 999; 
+            background: white; border: 2px solid #cbd5e1; border-radius: 0.5rem;
+            max-height: 250px; overflow-y: auto; box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
+            display: none; margin-bottom: 4px;
+        }
+        .search-item { padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; border-bottom: 1px solid #f1f5f9; }
+        .search-item:hover { background-color: #2563eb; color: white; }
+
+        .queue-item { border-left: 4px solid #10b981; background: #f0fdf4; margin-bottom: 8px; padding: 8px; border-radius: 4px; font-size: 12px; }
+        #ext-drop-zone.drag-over { border-color: #2563eb; background-color: #eff6ff; }
+
+        /* Estilos Renombrador Beta 2 */
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        #pdf-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: center; justify-content: center; }
+        #pdf-modal-content { background: white; width: 95%; height: 95%; border-radius: 8px; position: relative; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased font-sans flex h-screen overflow-hidden">
+
+    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-col flex z-20">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-gray-800" id="sb-user">👤 Usuario</h2>
+            <p class="text-xs text-gray-500 mb-2 font-mono" id="sb-logic">Lógica: Nombre_BSMH</p>
+            <div class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded inline-block font-medium">Versión Web 3.0.4</div>
+        </div>
+        <hr class="border-gray-100">
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button onclick="navigate('menu')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-home w-6"></i> Inicio</button>
+            <button onclick="navigate('renombrador')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-tags w-6"></i> Renombrador</button>
+            <button onclick="navigate('extractor')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-file-export w-6"></i> Extractor</button>
+            <hr class="border-gray-100 my-2">
+            <button onclick="navigate('editorLB')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-cog w-6"></i> Gestionar Lista Base</button>
+            <button id="btn-gestionar-patrones" onclick="navigate('editorPatrones')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition hidden"><i class="fas fa-puzzle-piece w-6"></i> Gestionar Patrones</button>
+            <button onclick="window.history.back()" class="w-full text-left px-4 py-2 rounded text-blue-600 hover:bg-blue-50 transition font-bold border border-blue-100 mb-2"><i class="fas fa-arrow-left w-6"></i> Volver atrás</button>
+        </nav>
+        <div class="p-4 border-t border-gray-200">
+            <button onclick="logout()" class="w-full bg-red-50 text-red-600 px-4 py-2 rounded hover:bg-red-100 font-medium transition"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
+        </div>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto relative">
+        
+        <div id="view-menu" class="p-8 max-w-5xl mx-auto mt-10">
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-gray-800">Selecciona una herramienta <span class="text-sm text-gray-500 align-middle">BETA 5</span></h1>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <button onclick="navigate('renombrador')" class="big-button bg-blue-600 text-white rounded-2xl h-48 flex flex-col items-center justify-center text-2xl font-bold">
+                    <i class="fas fa-tags text-4xl mb-4"></i>
+                    RENOMBRADOR
+                </button>
+                <button onclick="navigate('extractor')" class="big-button bg-blue-600 text-white rounded-2xl h-48 flex flex-col items-center justify-center text-2xl font-bold">
+                    <i class="fas fa-folder-open text-4xl mb-4"></i>
+                    EXTRACTOR
+                </button>
+            </div>
+        </div>
+
+        <!-- VISTA: RENOMBRADOR (BETA 2) -->
+        <div id="view-renombrador" class="hidden p-8 max-w-6xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-black text-gray-800">Renombrador</h1>
+                <p class="text-lg text-gray-500">BETA 5</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <label class="font-bold text-gray-700">Subir las partituras en PDFs</label>
+                    <div id="renom-stats" class="text-sm font-bold text-green-600"></div>
+                </div>
+                <input type="file" id="renom-files-input" multiple accept="application/pdf" class="w-full border-2 border-dashed border-gray-300 p-8 rounded-lg text-center cursor-pointer mb-4" onchange="handleRenombradorFiles(event)">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Está limpio el nombre del archivo?</label>
+                        <select id="renom-limpio" class="w-full border border-gray-300 rounded px-3 py-2">
+                            <option value="Si">Sí</option>
+                            <option value="No">No</option>
+                        </select>
+                    </div>
+                    <div id="renom-cod-obra-container" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nº de registro de la obra (Obligatorio):</label>
+                        <input type="text" id="renom-cod-obra" maxlength="5" class="w-full border border-gray-300 rounded px-3 py-2">
+                    </div>
+                </div>
+            </div>
+            <div id="renom-list" class="space-y-2 mb-6"></div>
+            <div id="renom-actions" class="hidden flex gap-4">
+                <button onclick="processRenombrador()" class="flex-[2] bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition shadow-md"><i class="fas fa-rocket mr-2"></i> PROCESAR Y DESCARGAR ZIP</button>
+                <button onclick="clearRenombrador()" class="flex-1 bg-gray-200 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-300 transition shadow-md"><i class="fas fa-trash-alt mr-2"></i> LIMPIAR</button>
+            </div>
+        </div>
+
+        <!-- VISTA: EXTRACTOR (BETA 4) -->
+        <div id="view-extractor" class="hidden p-8 max-w-6xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-5xl font-black text-gray-800">Extractor</h1>
+                <p class="text-lg text-gray-500">BETA 5</p>
+            </div>
+            <div id="ext-drop-zone" 
+                 class="bg-white p-12 rounded-2xl shadow-sm border-2 border-dashed border-blue-200 text-center transition-all cursor-pointer"
+                 onclick="document.getElementById('ext-file-input').click()"
+                 ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                 ondragleave="this.classList.remove('drag-over')"
+                 ondrop="handleExtractorDrop(event)">
+                <i class="fas fa-file-pdf text-6xl text-blue-500 mb-4"></i>
+                <h3 class="text-2xl font-bold mb-2">Subir PDF para extraer</h3>
+                <p class="text-gray-500">Se abrirá el visor de extracción al cargar el archivo.</p>
+                <input type="file" id="ext-file-input" accept="application/pdf" class="hidden" onchange="handleExtractorFile(event)">
+            </div>
+        </div>
+
+        <!-- WORKSPACE EXTRACTOR (BETA 4) -->
+        <div id="extractor-workspace">
+            <div id="extractor-viewer">
+                <div class="bg-gray-800 text-white p-3 flex justify-between items-center">
+                    <div class="flex items-center gap-4">
+                        <button onclick="closeExtractorWorkspace()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+                        <span id="ext-filename-display" class="font-bold truncate max-w-xs">Archivo.pdf</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button onclick="changeExtPage(-1)" class="bg-gray-700 px-3 py-1 rounded hover:bg-gray-600"><i class="fas fa-chevron-left"></i></button>
+                        <span class="font-mono">Página <span id="ext-current-page">1</span> de <span id="ext-total-pages">1</span></span>
+                        <button onclick="changeExtPage(1)" class="bg-gray-700 px-3 py-1 rounded hover:bg-gray-600"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="undoExt()" title="Deshacer (Ctrl+Z)" class="bg-gray-700 p-2 rounded hover:bg-gray-600"><i class="fas fa-undo"></i></button>
+                        <button onclick="redoExt()" title="Rehacer (Ctrl+Y)" class="bg-gray-700 p-2 rounded hover:bg-gray-600"><i class="fas fa-redo"></i></button>
+                    </div>
+                </div>
+                <div class="canvas-container" id="ext-canvas-container">
+                    <canvas id="extractor-canvas"></canvas>
+                </div>
+            </div>
+
+            <aside id="extractor-sidebar">
+                <div class="p-4 border-b bg-gray-50">
+                    <h3 class="font-bold text-gray-700 uppercase text-xs mb-4">Panel de Extracción</h3>
+                    
+                    <div class="space-y-3 mb-6">
+                        <label class="block text-xs font-black text-blue-600 uppercase">Definir Rango</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" id="check-p-ini" onchange="markRange('ini')">
+                                <span class="text-xs font-bold">Pág. Inicial</span>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-blue-50">
+                                <input type="checkbox" id="check-p-fin" onchange="markRange('fin')">
+                                <span class="text-xs font-bold">Pág. Final</span>
+                            </label>
+                        </div>
+                        <div class="text-[10px] text-gray-500 italic">Rango actual: <span id="range-display" class="font-bold text-blue-600">Ninguno</span></div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-xs font-black text-gray-600 uppercase mb-2">Rango Estándar</label>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex gap-2">
+                                <input type="number" id="ext-std-range" placeholder="Págs" class="w-16 border rounded p-1 text-sm">
+                                <button onclick="applyStdRange(false)" class="flex-1 bg-gray-200 text-[10px] font-bold py-1 rounded hover:bg-gray-300">APLICAR</button>
+                            </div>
+                            <button onclick="applyStdRange(true)" class="w-full bg-blue-100 text-blue-700 text-[10px] font-bold py-1 rounded hover:bg-blue-200 border border-blue-200">APLICAR A TODOS</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-xs font-black text-blue-600 uppercase mb-2">Vincular Instrumento</label>
+                        <div class="search-dropdown" id="ext-inst-dropdown-container">
+                            <input type="text" id="ext-inst-search" placeholder="Escribir para buscar..." 
+                                class="w-full border-2 border-gray-200 rounded-lg p-2 text-sm font-bold focus:border-blue-500 outline-none"
+                                onfocus="showExtSearchResults()" oninput="filterExtSearchResults(this.value)"
+                                onkeydown="if(event.key === 'Enter') { event.preventDefault(); addToQueue(); }">
+                            <div id="ext-inst-results" class="search-results"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="addToQueue()" class="flex-1 bg-green-600 text-white font-bold py-2 rounded shadow hover:bg-green-700 transition">
+                            <i class="fas fa-plus mr-1"></i> AÑADIR A COLA
+                        </button>
+                        <button onclick="deleteCurrentPage()" class="bg-red-100 text-red-600 px-3 py-2 rounded hover:bg-red-200" title="Eliminar página actual">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4">
+                    <h4 class="font-bold text-xs text-gray-400 uppercase mb-3">Cola de Impresión</h4>
+                    <div id="ext-queue-list" class="space-y-2"></div>
+                </div>
+
+                <div class="p-4 border-t bg-gray-50">
+                    <button onclick="prepareExport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-file-archive mr-2"></i> EXPORTAR .ZIP
+                    </button>
+                </div>
+            </aside>
+        </div>
+
+        <div id="view-editorLB" class="hidden p-8 max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-4xl font-black text-gray-800">⚙️ Gestión de Lista Base</h1>
+                <button onclick="addLBRow()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md">
+                    <i class="fas fa-plus mr-2"></i> Añadir Instrumento
+                </button>
+            </div>
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+                <div class="max-h-[600px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <tbody id="lb-tbody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            <button onclick="saveLB()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md"><i class="fas fa-save mr-2"></i> GUARDAR CAMBIOS EN LA NUBE</button>
+        </div>
+
+        <div id="view-editorPatrones" class="hidden p-8 max-w-5xl mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-black text-gray-800">🧩 Editor de Patrones</h1>
+                <p class="text-lg text-gray-500">Versión 4.2.2 (Web)</p>
+            </div>
+            <div class="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
+                <h3 class="font-bold text-blue-800 mb-2"><i class="fas fa-plus-circle"></i> Añadir Nuevo Patrón</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <input type="text" id="new-pat-pattern" placeholder="Ej: *Cl.1*" class="border p-2 rounded text-sm">
+                    <input type="text" id="new-pat-real" placeholder="Ej: Clarinete 1" class="border p-2 rounded text-sm">
+                    <button onclick="addPatronRow()" class="bg-green-600 text-white font-bold rounded hover:bg-green-700 transition">AÑADIR</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <input type="text" id="pat-search-p" placeholder="🔍 Buscar Patrón..." class="w-full border border-gray-300 p-2 rounded" onkeyup="renderPatronesTable()">
+                <input type="text" id="pat-search-i" placeholder="🔍 Buscar Instrumento..." class="w-full border border-gray-300 p-2 rounded" onkeyup="renderPatronesTable()">
+            </div>
+            <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
+                <div class="max-h-[500px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10">
+                            <tr>
+                                <th class="p-3 w-32 text-sm font-semibold text-gray-600">Estado</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">Patrón</th>
+                                <th class="p-3 text-sm font-semibold text-gray-600">Instrumento Real</th>
+                                <th class="p-3 w-24 text-center text-sm font-semibold text-gray-600">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pat-tbody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            <button onclick="savePatrones()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md"><i class="fas fa-save mr-2"></i> GUARDAR CAMBIOS EN LA NUBE</button>
+        </div>
+    </main>
+
+    <!-- MODAL PREVIA PDF (BETA 2) -->
+    <div id="pdf-modal" onclick="closePdfModal()">
+        <div id="pdf-modal-content" onclick="event.stopPropagation()">
+            <div class="p-4 border-b flex justify-between items-center bg-white rounded-t-lg">
+                <h3 class="font-bold text-lg" id="modal-title">Vista Previa Completa</h3>
+                <button onclick="closePdfModal()" class="text-3xl text-gray-500 hover:text-black">&times;</button>
+            </div>
+            <div class="flex-1 overflow-auto p-4 bg-gray-200 flex justify-center relative">
+                <canvas id="modal-canvas" class="shadow-2xl"></canvas>
+            </div>
+            <div id="modal-nav-controls" class="p-4 border-t bg-white flex justify-center items-center gap-6 rounded-b-lg"></div>
+        </div>
+    </div>
+
+    <div id="loading-overlay" class="fixed inset-0 bg-white bg-opacity-90 z-[300] flex flex-col items-center justify-center hidden">
+        <i class="fas fa-circle-notch fa-spin text-6xl text-blue-600 mb-4"></i>
+        <h2 id="loading-text" class="text-xl font-bold text-gray-800">Cargando...</h2>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        const URL_PUENTE = "https://script.google.com/macros/s/AKfycbzMdvGYaHXAW_h5TGw3JphefqTtc-10WoVtR5KP87bA_4ek6_3A1fkrVMHsrbJ98h8hJQ/exec";
+        
+        const state = {
+            user: "Adrian",
+            logicMode: "Nombre_BSMH",
+            pestana_lb: "LB_BSMH",
+            df_base: [],
+            df_patrones: [],
+            
+            // Estado Renombrador (Beta 2)
+            renom_files: [],
+            renom_orden: {},
+            renom_selecciones: {},
+            renom_manuales: {},
+            patron_texto_visual: {},
+            patrones_voluntarios: {},
+            
+            // Estado Extractor (Beta 4)
+            ext_pdf_bytes: null,
+            ext_pdf_doc: null,
+            ext_pages_pool: [],
+            ext_current_idx: 0,
+            ext_range_ini: null,
+            ext_range_fin: null,
+            ext_queue: [],
+            ext_history: [],
+            ext_redo_stack: [],
+            ext_selected_inst: null,
+            ext_batch_mode: false,
+            ext_batch_size: 0,
+            
+            // Estado Modal
+            currentModalPage: 1,
+            currentModalPdfDoc: null,
+            
+            // Estado Editores
+            lb_data: [],
+            pat_data: []
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('sb-user').innerText = `👤 ${state.user}`;
+            document.getElementById('sb-logic').innerText = `Lógica: ${state.logicMode}`;
+            document.getElementById('btn-gestionar-patrones').classList.remove('hidden');
+            preloadData(); 
+            initKeyboardEvents();
+            
+            window.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('ext-inst-dropdown-container');
+                const results = document.getElementById('ext-inst-results');
+                if (dropdown && !dropdown.contains(e.target)) {
+                    results.style.display = 'none';
+                }
+            });
+        });
+
+        function initKeyboardEvents() {
+            window.addEventListener('keydown', (e) => {
+                if (document.getElementById('extractor-workspace').style.display === 'flex') {
+                    if (e.key === 'ArrowRight') changeExtPage(1);
+                    if (e.key === 'ArrowLeft') changeExtPage(-1);
+                    if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoExt(); }
+                    if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redoExt(); }
+                    
+                    if (e.key === 'Enter') {
+                        if (state.ext_selected_inst) {
+                            e.preventDefault();
+                            addToQueue();
+                        }
+                    }
+                    
+                    if (e.key === 'Delete') {
+                        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                            e.preventDefault();
+                            deleteCurrentPage();
+                        }
+                    }
+                }
+            });
+        }
+
+        const showLoading = (text = "Cargando...") => {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        };
+        const hideLoading = () => document.getElementById('loading-overlay').classList.add('hidden');
+        const toast = (msg, icon = 'success') => {
+            Swal.fire({ toast: true, position: 'top-end', icon: icon, title: msg, showConfirmButton: false, timer: 3000 });
+        };
+
+        function normalizarParaComparar(texto) {
+            if (!texto) return "";
+            return texto.toString().replace(/\*/g, "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        function construirPatronRegex(patronUsuario) {
+            const p = normalizarParaComparar(patronUsuario);
+            if (!p) return "$.^";
+            const pEsc = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\ /g, '\\s*');
+            return new RegExp(`.*${pEsc}.*`, 'i');
+        }
+
+        function traductorInstrumento(nombre, haciaNube, esAdrian) {
+            nombre = String(nombre).trim();
+            if (haciaNube) {
+                let res = nombre.toUpperCase().replace(/([A-Z])(\d)/g, '$1 $2');
+                if (res.includes("CLARINETEPRAL")) res = res.replace("CLARINETEPRAL", "CLARINETE PRAL");
+                return res.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            } else {
+                if (esAdrian) {
+                    let existeEnBase = state.df_base.find(r => normalizarParaComparar(r[state.logicMode]) === normalizarParaComparar(nombre));
+                    if (existeEnBase) return existeEnBase[state.logicMode];
+                    let res = nombre.replace(/(CLARINETE)(BAJO)/ig, '$1 $2');
+                    return res.split(' ').filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                } else {
+                    let res = nombre.toUpperCase();
+                    if (res.includes("CLARINETE")) res = res.replace(/ /g, "");
+                    if (res.includes("SAXO ")) res = res.replace("SAXO ", "");
+                    return res.toUpperCase();
+                }
+            }
+        }
+
+        async function fetchSheet(pestana) {
+            try {
+                const res = await fetch(`${URL_PUENTE}?pestaña=${pestana}&nocache=${Math.random().toString(36).substring(7)}`);
+                const data = await res.json();
+                if (data && data.length > 1) {
+                    const headers = data[0];
+                    return data.slice(1).map(row => {
+                        let obj = {};
+                        headers.forEach((h, i) => obj[h] = row[i]);
+                        return obj;
+                    });
+                }
+                return [];
+            } catch (e) { console.error(e); return []; }
+        }
+
+        async function postSheet(payload) {
+            try {
+                await fetch(URL_PUENTE, { method: 'POST', body: JSON.stringify(payload) });
+                localStorage.removeItem('bsmh_df_base');
+                localStorage.removeItem('bsmh_df_patrones');
+                return true; 
+            } catch (e) { console.error(e); return false; }
+        }
+
+        function navigate(viewId) {
+            ['menu', 'renombrador', 'extractor', 'editorLB', 'editorPatrones'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+            });
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            if(viewId === 'renombrador') initRenombradorUI();
+            if(viewId === 'editorLB') loadEditorLB();
+            if(viewId === 'editorPatrones') loadEditorPatrones();
+        }
+
+        async function preloadData() {
+            const cachedBase = localStorage.getItem('bsmh_df_base');
+            const cachedPatrones = localStorage.getItem('bsmh_df_patrones');
+            if (cachedBase && cachedPatrones) {
+                state.df_base = JSON.parse(cachedBase);
+                state.df_patrones = JSON.parse(cachedPatrones);
+                refreshCacheInBackground();
+            } else {
+                showLoading("Cargando base de datos...");
+                state.df_base = await fetchSheet(state.pestana_lb);
+                let pats = await fetchSheet("Patrones");
+                state.df_patrones = pats.sort((a,b) => (String(b.Patron).length - String(a.Patron).length));
+                localStorage.setItem('bsmh_df_base', JSON.stringify(state.df_base));
+                localStorage.setItem('bsmh_df_patrones', JSON.stringify(state.df_patrones));
+                hideLoading();
+            }
+        }
+
+        async function refreshCacheInBackground() {
+            const base = await fetchSheet(state.pestana_lb);
+            const pats = await fetchSheet("Patrones");
+            const sortedPats = pats.sort((a,b) => (String(b.Patron).length - String(a.Patron).length));
+            localStorage.setItem('bsmh_df_base', JSON.stringify(base));
+            localStorage.setItem('bsmh_df_patrones', JSON.stringify(sortedPats));
+        }
+
+        // --- RENOMBRADOR (BETA 2) ---
+        async function initRenombradorUI() {
+            if (state.user === "Adrian") document.getElementById('renom-cod-obra-container').classList.remove('hidden');
+            document.getElementById('renom-stats').innerHTML = `✅ ${state.df_patrones.length} Patrones activos`;
+            renderRenombradorList();
+        }
+
+        function handleRenombradorFiles(e) {
+            state.renom_files = Array.from(e.target.files);
+            if (state.renom_files.length === 0) return;
+            document.getElementById('renom-limpio').value = state.renom_files.some(f => f.name.length > 25) ? "No" : "Si";
+            state.renom_orden = {}; state.renom_selecciones = {}; state.patron_texto_visual = {}; state.renom_manuales = {}; state.patrones_voluntarios = {};
+            state.renom_files.forEach(arc => {
+                let nameLimpio = normalizarParaComparar(arc.name.replace(".pdf", ""));
+                let mejorMatch = null;
+                for (let fila of state.df_patrones) {
+                    if (construirPatronRegex(String(fila.Patron)).test(nameLimpio)) { 
+                        mejorMatch = fila; 
+                        break; 
+                    }
+                }
+                if (mejorMatch) {
+                    let sug = traductorInstrumento(String(mejorMatch.Renombrado), false, state.user === "Adrian");
+                    state.patron_texto_visual[arc.name] = String(mejorMatch.Patron);
+                    let coincidenciaBase = state.df_base.find(r => normalizarParaComparar(r[state.logicMode]) === normalizarParaComparar(sug));
+                    if (sug.toUpperCase() === "GUION") {
+                        state.renom_selecciones[arc.name] = "Guion";
+                    } else if (coincidenciaBase) {
+                        state.renom_selecciones[arc.name] = coincidenciaBase[state.logicMode];
+                    } else {
+                        state.renom_selecciones[arc.name] = "OTRO / EDITAR...";
+                        state.renom_manuales[arc.name] = sug;
+                    }
+                } else if (arc.name.toUpperCase().includes("GUION")) {
+                    state.renom_selecciones[arc.name] = "Guion"; 
+                } else {
+                    state.renom_selecciones[arc.name] = "Seleccionar..."; 
+                }
+            });
+            document.getElementById('renom-actions').classList.remove('hidden');
+            reordenarPorListaBase();
+        }
+
+        async function openRenomPreview(fileName) {
+            const file = state.renom_files.find(f => f.name === fileName);
+            if (!file) return;
+            showLoading("Abriendo vista previa...");
+            const bytes = await file.arrayBuffer();
+            state.currentModalPdfDoc = await pdfjsLib.getDocument({data: bytes}).promise;
+            state.currentModalPage = 1;
+            updateModalContent(state.currentModalPdfDoc);
+            document.getElementById('pdf-modal').style.display = 'flex';
+            hideLoading();
+        }
+
+        function copyToClipboard(text) {
+            const cleanText = text.replace(/\.pdf$/i, "");
+            const el = document.createElement('textarea');
+            el.value = cleanText;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            toast(`Copiado: ${cleanText}`);
+        }
+
+        function reordenarPorListaBase() {
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            state.renom_files.sort((a, b) => {
+                let selA = state.renom_selecciones[a.name];
+                let selB = state.renom_selecciones[b.name];
+                let pesoA = (selA === "Guion") ? -1 : (lista_inst_ordenada.indexOf(selA) !== -1 ? lista_inst_ordenada.indexOf(selA) : 10000);
+                let pesoB = (selB === "Guion") ? -1 : (lista_inst_ordenada.indexOf(selB) !== -1 ? lista_inst_ordenada.indexOf(selB) : 10000);
+                if (pesoA !== pesoB) return pesoA - pesoB;
+                return a.name.localeCompare(b.name);
+            });
+            actualizarNumeracionYRender();
+        }
+
+        function actualizarNumeracionYRender() {
+            let c = 1;
+            state.renom_files.forEach(arc => {
+                state.renom_orden[arc.name] = (state.renom_selecciones[arc.name] === "Guion") ? 0 : c++;
+            });
+            renderRenombradorList();
+        }
+
+        function removeRenomFile(fileName) {
+            state.renom_files = state.renom_files.filter(f => f.name !== fileName);
+            delete state.renom_orden[fileName];
+            delete state.renom_selecciones[fileName];
+            delete state.renom_manuales[fileName];
+            delete state.patron_texto_visual[fileName];
+            delete state.patrones_voluntarios[fileName];
+            actualizarNumeracionYRender();
+        }
+
+        function renderRenombradorList() {
+            const container = document.getElementById('renom-list');
+            container.innerHTML = '';
+            if (state.renom_files.length === 0) return;
+            const lista_inst_ordenada = state.df_base.map(r => r[state.logicMode]).filter(Boolean);
+            state.renom_files.forEach(arc => {
+                let v_sel = state.renom_selecciones[arc.name] || "Seleccionar...", p_vis = state.patron_texto_visual[arc.name] || "";
+                let rowHtml = `
+                <div class="bg-white p-3 rounded shadow-sm border border-gray-200 flex items-center gap-4 text-sm cursor-move" data-id="${arc.name}">
+                    <div class="w-8 text-gray-400 flex justify-center"><i class="fas fa-grip-vertical"></i></div>
+                    <div class="w-16"><input type="number" class="w-12 border rounded px-1 py-1 text-center font-bold" value="${state.renom_orden[arc.name] || 0}" onchange="updateOrderManual('${arc.name}', this.value)"></div>
+                    <div class="flex-1 overflow-hidden">
+                        <div class="flex items-center gap-2">
+                            <button onclick="openRenomPreview('${arc.name}')" class="text-blue-500 hover:text-blue-700 transition" title="Previsualizar PDF">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <span class="font-bold truncate">${arc.name}</span>
+                            <button onclick="copyToClipboard('${arc.name}')" class="text-gray-400 hover:text-blue-500 transition" title="Copiar nombre sin extensión">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="text-[10px] text-gray-400 italic mt-1">
+                            ${p_vis ? `<i class="fas fa-thumbtack mr-1"></i> Patrón detectado: <span class="text-blue-600 font-bold">${p_vis}</span>` : ''}
+                        </div>
+                        <div class="mt-2 flex items-center gap-2">
+                            <select class="w-1/2 border rounded px-2 py-1 font-medium bg-gray-50" onchange="state.renom_selecciones['${arc.name}'] = this.value; reordenarPorListaBase()">
+                                <option value="Seleccionar...">Seleccionar...</option>
+                                <option value="Guion" ${v_sel === 'Guion' ? 'selected' : ''}>Guion</option>
+                                <option value="OTRO / EDITAR..." ${v_sel === 'OTRO / EDITAR...' ? 'selected' : ''}>OTRO / EDITAR...</option>
+                                <option disabled>---</option>
+                                ${lista_inst_ordenada.map(i => `<option value="${i}" ${v_sel === i ? 'selected' : ''}>${i}</option>`).join('')}
+                            </select>
+                            <div class="flex-1 ${v_sel !== 'OTRO / EDITAR...' ? 'hidden' : 'flex gap-1'}">
+                                <input type="text" placeholder="Nombre manual" class="w-full border rounded px-2 py-1 text-xs" value="${state.renom_manuales[arc.name] || ''}" onchange="state.renom_manuales['${arc.name}'] = this.value">
+                                <button onclick="addToLBFromRenom('${arc.name}')" class="bg-blue-500 text-white px-2 rounded text-[10px]" title="Añadir a Lista Base"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="w-1/3 flex items-center gap-2">
+                        <input type="text" placeholder="Escribir patrón manual (ej: *Cl.1*)" class="flex-1 border rounded px-2 py-1 text-xs h-[34px]" value="${state.patrones_voluntarios[arc.name] || ''}" onchange="state.patrones_voluntarios['${arc.name}'] = this.value">
+                        <button onclick="removeRenomFile('${arc.name}')" class="text-red-500 hover:text-red-700 p-2 transition" title="Eliminar archivo">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>`;
+                container.insertAdjacentHTML('beforeend', rowHtml);
+            });
+            if (window.Sortable) {
+                new Sortable(container, { 
+                    animation: 150, 
+                    handle: '.cursor-move', 
+                    onEnd: () => {
+                        const newOrder = [];
+                        container.querySelectorAll('[data-id]').forEach(row => {
+                            const name = row.getAttribute('data-id');
+                            const file = state.renom_files.find(f => f.name === name);
+                            if(file) newOrder.push(file);
+                        });
+                        state.renom_files = newOrder;
+                        actualizarNumeracionYRender();
+                    }
+                });
+            }
+        }
+
+        async function addToLBFromRenom(fileName) {
+            const nombre = state.renom_manuales[fileName];
+            if(!nombre) return toast("Escribe un nombre primero", "error");
+            let optionsHtml = state.df_base.map((inst, idx) => `<option value="${idx + 1}">Después de: ${inst[state.logicMode]}</option>`).join('');
+            optionsHtml = `<option value="0">Al principio de todo</option>` + optionsHtml;
+            const { value: posIndex } = await Swal.fire({
+                title: 'Posicionar Instrumento',
+                html: `¿Dónde quieres añadir "<b>${nombre}</b>"?<br><br><select id="swal-pos-select" class="swal2-input w-full">${optionsHtml}</select>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                preConfirm: () => document.getElementById('swal-pos-select').value
+            });
+            if (posIndex !== undefined) {
+                showLoading("Actualizando Lista Base...");
+                let nuevaLista = [...state.df_base];
+                let nuevoObj = { ID: 0, Autor: state.user };
+                nuevoObj[state.logicMode] = nombre;
+                nuevaLista.splice(parseInt(posIndex), 0, nuevoObj);
+                let payload = nuevaLista.map((r, i) => { r.ID = i + 1; return r; });
+                const ok = await postSheet({ pestaña: state.pestana_lb, accion: "sobrescribir", datos: payload });
+                if(ok) {
+                    state.df_base = await fetchSheet(state.pestana_lb);
+                    state.renom_selecciones[fileName] = nombre;
+                    reordenarPorListaBase();
+                    toast("Instrumento añadido y seleccionado");
+                }
+                hideLoading();
+            }
+        }
+
+        function updateOrderManual(name, val) {
+            let nPos = parseInt(val); 
+            if (isNaN(nPos)) return;
+            let idx = state.renom_files.findIndex(f => f.name === name);
+            if (idx === -1) return;
+            let [file] = state.renom_files.splice(idx, 1);
+            let targetIdx = nPos === 0 ? 0 : Math.max(0, nPos - 1);
+            if (targetIdx >= state.renom_files.length) { state.renom_files.push(file); } else { state.renom_files.splice(targetIdx, 0, file); }
+            actualizarNumeracionYRender();
+        }
+
+        function clearRenombrador() {
+            state.renom_files = []; state.renom_orden = {}; state.renom_selecciones = {}; state.renom_manuales = {}; state.patrones_voluntarios = {};
+            document.getElementById('renom-files-input').value = ""; document.getElementById('renom-cod-obra').value = "";
+            document.getElementById('renom-actions').classList.add('hidden'); renderRenombradorList();
+        }
+
+        async function processRenombrador() {
+            const cod = document.getElementById('renom-cod-obra').value.trim();
+            if (state.user === "Adrian" && !cod) return Swal.fire("Aviso", "Falta código obra", "warning");
+            showLoading("Verificando y guardando nuevos patrones...");
+            let actualPats = await fetchSheet("Patrones");
+            let patronesExistentes = actualPats.map(p => normalizarParaComparar(p.Patron));
+            let nuevosPatronesParaSubir = [];
+            for (let fileName in state.patrones_voluntarios) {
+                let patRaw = state.patrones_voluntarios[fileName];
+                if (patRaw && patRaw.trim() !== "") {
+                    let patNormalizado = patRaw.startsWith('*') ? patRaw : `*${patRaw}*`;
+                    if (!patronesExistentes.includes(normalizarParaComparar(patNormalizado))) {
+                        let sel = state.renom_selecciones[fileName];
+                        let finalName = (sel === "OTRO / EDITAR...") ? state.renom_manuales[fileName] : sel;
+                        if (finalName && finalName !== "Seleccionar...") {
+                            nuevosPatronesParaSubir.push({ Patron: patNormalizado, Renombrado: finalName, Autor: state.user });
+                            patronesExistentes.push(normalizarParaComparar(patNormalizado));
+                        }
+                    }
+                }
+            }
+            if (nuevosPatronesParaSubir.length > 0) {
+                let finalPats = [...nuevosPatronesParaSubir, ...actualPats];
+                await postSheet({ pestaña: "Patrones", accion: "sobrescribir", datos: finalPats });
+                state.df_patrones = await fetchSheet("Patrones");
+            }
+            showLoading("Generando ZIP...");
+            try {
+                const zip = new JSZip();
+                for (let arc of state.renom_files) {
+                    let sel = state.renom_selecciones[arc.name]; if(!sel || sel === "Seleccionar...") continue;
+                    let final = (sel === "OTRO / EDITAR...") ? state.renom_manuales[arc.name] : sel;
+                    let num = state.renom_orden[arc.name] || 0;
+                    let pref = (final === "Guion" || num === 0) ? "00" : String(num).padStart(2, '0');
+                    let name = (state.user === "Adrian") ? `${cod}-${pref} ${final}` : `${pref} ${final}`;
+                    zip.file(`${name}.pdf`, await arc.arrayBuffer());
+                }
+                const content = await zip.generateAsync({type:"blob"});
+                const a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = "renombrados.zip"; a.click();
+                toast("Completado y Base de Datos actualizada");
+            } catch (e) { console.error(e); } hideLoading();
+        }
+
+        // --- EXTRACTOR (BETA 4) ---
+        function handleExtractorDrop(e) {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (file && file.type === "application/pdf") processExtractorFile(file);
+        }
+
+        function handleExtractorFile(e) {
+            const file = e.target.files[0];
+            if (file) processExtractorFile(file);
+        }
+
+        async function processExtractorFile(file) {
+            showLoading("Abriendo visor de extracción...");
+            state.ext_pdf_bytes = await file.arrayBuffer();
+            state.ext_pdf_doc = await pdfjsLib.getDocument({data: state.ext_pdf_bytes}).promise;
+            state.ext_filename = file.name;
+            document.getElementById('ext-filename-display').innerText = file.name;
+            state.ext_pages_pool = Array.from({length: state.ext_pdf_doc.numPages}, (_, i) => i + 1);
+            state.ext_current_idx = 0;
+            state.ext_queue = [];
+            state.ext_history = [];
+            state.ext_redo_stack = [];
+            state.ext_batch_mode = false;
+            document.getElementById('extractor-workspace').style.display = 'flex';
+            updateExtViewer();
+            renderExtQueue();
+            hideLoading();
+        }
+
+        async function updateExtViewer() {
+            if (state.ext_pages_pool.length === 0) {
+                document.getElementById('ext-canvas-container').innerHTML = '<div class="text-white text-xl font-bold">¡Documento procesado por completo!</div>';
+                document.getElementById('ext-current-page').innerText = "0";
+                document.getElementById('ext-total-pages').innerText = "0";
+                return;
+            }
+            const pNum = state.ext_pages_pool[state.ext_current_idx];
+            const page = await state.ext_pdf_doc.getPage(pNum);
+            const viewport = page.getViewport({scale: 1.5});
+            const canvas = document.getElementById('extractor-canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            await page.render({canvasContext: context, viewport}).promise;
+            document.getElementById('ext-current-page').innerText = state.ext_current_idx + 1;
+            document.getElementById('ext-total-pages').innerText = state.ext_pages_pool.length;
+            
+            if (state.ext_batch_mode) {
+                state.ext_range_ini = state.ext_pages_pool[0];
+                const endIdx = state.ext_batch_size - 1;
+                if (endIdx < state.ext_pages_pool.length) {
+                    state.ext_range_fin = state.ext_pages_pool[endIdx];
+                }
+            }
+
+            document.getElementById('check-p-ini').checked = (state.ext_range_ini === pNum);
+            document.getElementById('check-p-fin').checked = (state.ext_range_fin === pNum);
+            updateRangeDisplay();
+        }
+
+        function changeExtPage(delta) {
+            const newIdx = state.ext_current_idx + delta;
+            if (newIdx >= 0 && newIdx < state.ext_pages_pool.length) {
+                state.ext_current_idx = newIdx;
+                updateExtViewer();
+            }
+        }
+
+        function markRange(type) {
+            const pNum = state.ext_pages_pool[state.ext_current_idx];
+            if (type === 'ini') {
+                state.ext_range_ini = document.getElementById('check-p-ini').checked ? pNum : null;
+            } else {
+                state.ext_range_fin = document.getElementById('check-p-fin').checked ? pNum : null;
+            }
+            updateRangeDisplay();
+        }
+
+        function updateRangeDisplay() {
+            const display = document.getElementById('range-display');
+            if (state.ext_range_ini && state.ext_range_fin) {
+                display.innerText = `${state.ext_range_ini} al ${state.ext_range_fin}`;
+            } else if (state.ext_range_ini) {
+                display.innerText = `Desde ${state.ext_range_ini}...`;
+            } else if (state.ext_range_fin) {
+                display.innerText = `...hasta ${state.ext_range_fin}`;
+            } else {
+                display.innerText = "Ninguno";
+            }
+        }
+
+        function applyStdRange(isBatch) {
+            const val = parseInt(document.getElementById('ext-std-range').value);
+            if (isNaN(val) || val < 1) return;
+            
+            if (!isBatch) {
+                state.ext_batch_mode = false;
+                const start = state.ext_pages_pool[state.ext_current_idx];
+                const endIdx = state.ext_current_idx + val - 1;
+                if (endIdx < state.ext_pages_pool.length) {
+                    state.ext_range_ini = start;
+                    state.ext_range_fin = state.ext_pages_pool[endIdx];
+                    updateExtViewer();
+                    toast(`Rango de ${val} páginas fijado`);
+                }
+            } else {
+                state.ext_batch_mode = true;
+                state.ext_batch_size = val;
+                updateExtViewer();
+                toast(`Modo Lote activado: ${val} páginas`);
+            }
+        }
+
+        function showExtSearchResults() {
+            const resultsDiv = document.getElementById('ext-inst-results');
+            resultsDiv.style.display = 'block';
+            filterExtSearchResults(document.getElementById('ext-inst-search').value);
+        }
+
+        function filterExtSearchResults(query) {
+            const resultsDiv = document.getElementById('ext-inst-results');
+            const q = query.toLowerCase();
+            const yaEnCola = state.ext_queue.map(item => item.nombre);
+            
+            let html = `<div class="search-item font-bold text-blue-600" onclick="selectExtInst('GUION')">GUION</div>`;
+            html += `<div class="search-item font-bold text-orange-600" onclick="addNewInstrumentToLB()">+ AÑADIR NUEVO INSTRUMENTO...</div>`;
+            html += `<hr class="my-1">`;
+
+            const filtrados = state.df_base
+                .map(r => r[state.logicMode])
+                .filter(inst => inst && !yaEnCola.includes(inst) && inst.toLowerCase().includes(q));
+
+            filtrados.forEach(inst => {
+                html += `<div class="search-item" onclick="selectExtInst('${inst}')">${inst}</div>`;
+            });
+            resultsDiv.innerHTML = html;
+        }
+
+        async function addNewInstrumentToLB() {
+            const { value: nombre } = await Swal.fire({
+                title: 'Nuevo Instrumento',
+                input: 'text',
+                inputLabel: 'Nombre del instrumento',
+                inputPlaceholder: 'Ej: Gaita',
+                showCancelButton: true
+            });
+
+            if (nombre) {
+                let optionsHtml = state.df_base.map((inst, idx) => `<option value="${idx + 1}">Después de: ${inst[state.logicMode]}</option>`).join('');
+                optionsHtml = `<option value="0">Al principio de todo</option>` + optionsHtml;
+                
+                const { value: posIndex } = await Swal.fire({
+                    title: 'Posicionar Instrumento',
+                    html: `¿Dónde quieres añadir "<b>${nombre}</b>"?<br><br><select id="swal-pos-select" class="swal2-input w-full">${optionsHtml}</select>`,
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    preConfirm: () => document.getElementById('swal-pos-select').value
+                });
+
+                if (posIndex !== undefined) {
+                    showLoading("Actualizando Lista Base...");
+                    let nuevaLista = [...state.df_base];
+                    let nuevoObj = { ID: 0, Autor: state.user };
+                    nuevoObj[state.logicMode] = nombre;
+                    nuevaLista.splice(parseInt(posIndex), 0, nuevoObj);
+                    let payload = nuevaLista.map((r, i) => { r.ID = i + 1; return r; });
+                    
+                    const ok = await postSheet({ pestaña: state.pestana_lb, accion: "sobrescribir", datos: payload });
+                    if(ok) {
+                        state.df_base = await fetchSheet(state.pestana_lb);
+                        selectExtInst(nombre);
+                        toast("Instrumento añadido y seleccionado");
+                    }
+                    hideLoading();
+                }
+            }
+        }
+
+        function selectExtInst(name) {
+            state.ext_selected_inst = name;
+            document.getElementById('ext-inst-search').value = name;
+            document.getElementById('ext-inst-results').style.display = 'none';
+        }
+
+        function saveState() {
+            state.ext_history.push(JSON.stringify({
+                pool: state.ext_pages_pool,
+                queue: state.ext_queue,
+                idx: state.ext_current_idx
+            }));
+            state.ext_redo_stack = [];
+        }
+
+        function undoExt() {
+            if (state.ext_history.length === 0) return;
+            state.ext_redo_stack.push(JSON.stringify({
+                pool: state.ext_pages_pool,
+                queue: state.ext_queue,
+                idx: state.ext_current_idx
+            }));
+            const last = JSON.parse(state.ext_history.pop());
+            state.ext_pages_pool = last.pool;
+            state.ext_queue = last.queue;
+            state.ext_current_idx = last.idx;
+            updateExtViewer();
+            renderExtQueue();
+        }
+
+        function redoExt() {
+            if (state.ext_redo_stack.length === 0) return;
+            state.ext_history.push(JSON.stringify({
+                pool: state.ext_pages_pool,
+                queue: state.ext_queue,
+                idx: state.ext_current_idx
+            }));
+            const next = JSON.parse(state.ext_redo_stack.pop());
+            state.ext_pages_pool = next.pool;
+            state.ext_queue = next.queue;
+            state.ext_current_idx = next.idx;
+            updateExtViewer();
+            renderExtQueue();
+        }
+
+        function addToQueue() {
+            if (!state.ext_range_ini || !state.ext_range_fin || !state.ext_selected_inst) {
+                return Swal.fire("Error", "Debes definir Rango Inicial, Final e Instrumento", "error");
+            }
+            saveState();
+            const start = Math.min(state.ext_range_ini, state.ext_range_fin);
+            const end = Math.max(state.ext_range_ini, state.ext_range_fin);
+            const pagsAExtraer = state.ext_pages_pool.filter(p => p >= start && p <= end);
+            state.ext_queue.push({ nombre: state.ext_selected_inst, pags: pagsAExtraer });
+            state.ext_pages_pool = state.ext_pages_pool.filter(p => !pagsAExtraer.includes(p));
+            
+            state.ext_range_ini = null;
+            state.ext_range_fin = null;
+            state.ext_selected_inst = null;
+            document.getElementById('ext-inst-search').value = "";
+            state.ext_current_idx = 0;
+            
+            updateExtViewer();
+            renderExtQueue();
+            toast("Añadido a la cola");
+        }
+
+        function deleteCurrentPage() {
+            if (state.ext_pages_pool.length === 0) return;
+            saveState();
+            state.ext_pages_pool.splice(state.ext_current_idx, 1);
+            if (state.ext_current_idx >= state.ext_pages_pool.length) state.ext_current_idx = Math.max(0, state.ext_pages_pool.length - 1);
+            updateExtViewer();
+            toast("Página eliminada de la vista");
+        }
+
+        function renderExtQueue() {
+            const container = document.getElementById('ext-queue-list');
+            container.innerHTML = '';
+            const ordenBase = state.df_base.map(r => r[state.logicMode]);
+            const sortedQueue = [...state.ext_queue].sort((a, b) => {
+                const normA = (a.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const normB = (b.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const isA = normA.includes("GUION");
+                const isB = normB.includes("GUION");
+                if (isA && !isB) return -1;
+                if (!isA && isB) return 1;
+                return ordenBase.indexOf(a.nombre) - ordenBase.indexOf(b.nombre);
+            });
+            sortedQueue.forEach((item, i) => {
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="queue-item flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-blue-800">${item.nombre}</div>
+                            <div class="text-[10px] text-gray-500">Págs: ${item.pags.join(', ')}</div>
+                        </div>
+                        <button onclick="removeFromQueue(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+                    </div>
+                `);
+            });
+        }
+
+        function removeFromQueue(idx) {
+            saveState();
+            const item = state.ext_queue.splice(idx, 1)[0];
+            state.ext_pages_pool = [...state.ext_pages_pool, ...item.pags].sort((a,b) => a-b);
+            updateExtViewer();
+            renderExtQueue();
+        }
+
+        async function prepareExport() {
+            if (state.ext_queue.length === 0) return toast("La cola está vacía", "error");
+            const { value: codObra } = await Swal.fire({
+                title: 'Finalizar Extracción',
+                html: `
+                    <div class="text-left p-2 bg-blue-50 rounded border border-blue-100 mb-4">
+                        <label class="block text-[10px] font-black text-blue-600 uppercase mb-1">Nº REGISTRO OBRA (OBLIGATORIO)</label>
+                        <input type="text" id="swal-cod-obra" class="swal2-input w-full m-0" placeholder="">
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Generar ZIP',
+                preConfirm: () => {
+                    const val = document.getElementById('swal-cod-obra').value.trim();
+                    if (!val) { Swal.showValidationMessage('El número de registro es obligatorio'); return false; }
+                    return val;
+                }
+            });
+            if (codObra) executeExport(codObra);
+        }
+
+        async function executeExport(cod) {
+            showLoading("Generando archivos PDF individuales...");
+            try {
+                const pdfDoc = await PDFLib.PDFDocument.load(state.ext_pdf_bytes);
+                const zip = new JSZip();
+                const ordenBase = state.df_base.map(r => r[state.logicMode]);
+                
+                // Ordenar la cola: GUION siempre primero, luego el resto según Lista Base
+                state.ext_queue.sort((a, b) => {
+                    const normA = (a.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const normB = (b.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const isA = normA.includes("GUION");
+                    const isB = normB.includes("GUION");
+                    if (isA && !isB) return -1;
+                    if (!isA && isB) return 1;
+                    return ordenBase.indexOf(a.nombre) - ordenBase.indexOf(b.nombre);
+                });
+
+                let counter = 1;
+
+                for (const item of state.ext_queue) {
+                    const newPdf = await PDFLib.PDFDocument.create();
+                    const copiedPages = await newPdf.copyPages(pdfDoc, item.pags.map(p => p - 1));
+                    copiedPages.forEach(p => newPdf.addPage(p));
+                    
+                    let prefijo;
+                    const normNombre = (item.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (normNombre.includes("GUION")) {
+                        prefijo = "00";
+                    } else {
+                        prefijo = String(counter).padStart(2, '0');
+                        counter++;
+                    }
+
+                    const fileName = `${cod}-${prefijo} ${item.nombre}.pdf`;
+                    const pdfBytes = await newPdf.save();
+                    zip.file(fileName, pdfBytes);
+                }
+
+                const content = await zip.generateAsync({type: "blob"});
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(content);
+                a.download = `${cod}_Extraccion.zip`;
+                a.click();
+                toast("¡ZIP generado con éxito!");
+                closeExtractorWorkspace();
+            } catch (e) {
+                console.error(e);
+                Swal.fire("Error", "Hubo un problema al generar los PDFs", "error");
+            }
+            hideLoading();
+        }
+
+        function closeExtractorWorkspace() {
+            document.getElementById('extractor-workspace').style.display = 'none';
+            state.ext_pdf_bytes = null;
+            state.ext_pdf_doc = null;
+        }
+
+        // --- MODAL PREVIEW (BETA 2) ---
+        async function updateModalContent(pdfDoc) {
+            const canvas = document.getElementById('modal-canvas');
+            const page = await pdfDoc.getPage(state.currentModalPage);
+            const viewport = page.getViewport({scale: 1.5});
+            canvas.width = viewport.width; canvas.height = viewport.height;
+            await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+            const navControls = document.getElementById('modal-nav-controls');
+            navControls.innerHTML = `
+                <button onclick="changeModalPage(-1)" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-bold transition"><i class="fas fa-chevron-left mr-2"></i> Anterior</button>
+                <span class="font-bold text-gray-700">Página ${state.currentModalPage} de ${pdfDoc.numPages}</span>
+                <button onclick="changeModalPage(1)" class="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-bold transition">Siguiente <i class="fas fa-chevron-right ml-2"></i></button>
+            `;
+        }
+
+        function changeModalPage(delta) {
+            if (!state.currentModalPdfDoc) return;
+            const newPage = state.currentModalPage + delta;
+            if (newPage >= 1 && newPage <= state.currentModalPdfDoc.numPages) {
+                state.currentModalPage = newPage;
+                updateModalContent(state.currentModalPdfDoc);
+            }
+        }
+
+        function closePdfModal() { document.getElementById('pdf-modal').style.display = 'none'; state.currentModalPdfDoc = null; }
+
+        // --- EDITOR LISTA BASE ---
+        async function loadEditorLB() {
+            showLoading(); state.lb_data = await fetchSheet(state.pestana_lb);
+            state.lb_data.forEach((r, i) => r._id_ui = i + 1);
+            renderLBTable(); hideLoading();
+        }
+
+        function renderLBTable() {
+            const tbody = document.getElementById('lb-tbody'); tbody.innerHTML = '';
+            state.lb_data.forEach((r, i) => {
+                tbody.insertAdjacentHTML('beforeend', `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-3"><input type="number" value="${r._id_ui}" class="w-12 border rounded text-center" onchange="moveLBRow(${i}, this.value)"></td>
+                    <td class="p-3"><input type="text" id="lb-input-${i}" value="${r[state.logicMode] || ''}" class="w-full bg-transparent outline-none border-b border-transparent focus:border-blue-500" onchange="state.lb_data[${i}]['${state.logicMode}'] = this.value"></td>
+                    <td class="p-3 text-center space-x-2">
+                        <button onclick="document.getElementById('lb-input-${i}').focus()" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick="deleteLBRow(${i})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`);
+            });
+        }
+
+        function addLBRow() {
+            let newObj = { _id_ui: state.lb_data.length + 1 };
+            newObj[state.logicMode] = "Nuevo Instrumento";
+            state.lb_data.push(newObj); renderLBTable();
+        }
+
+        function deleteLBRow(idx) { state.lb_data.splice(idx, 1); state.lb_data.forEach((r, i) => r._id_ui = i + 1); renderLBTable(); }
+
+        function moveLBRow(oldIdx, nPos) {
+            let p = parseInt(nPos); if(isNaN(p)) return;
+            let [item] = state.lb_data.splice(oldIdx, 1);
+            state.lb_data.splice(p - 1, 0, item);
+            state.lb_data.forEach((r, i) => r._id_ui = i + 1);
+            renderLBTable();
+        }
+
+        async function saveLB() {
+            showLoading();
+            let payload = state.lb_data.map((r, i) => {
+                let o = { ID: i + 1, Autor: state.user };
+                o[state.logicMode] = r[state.logicMode]; return o;
+            });
+            await postSheet({ pestaña: state.pestana_lb, accion: "sobrescribir", datos: payload });
+            state.df_base = []; hideLoading(); toast("Guardado");
+        }
+
+        // --- EDITOR PATRONES ---
+        async function loadEditorPatrones() {
+            showLoading(); state.pat_data = await fetchSheet("Patrones");
+            renderPatronesTable(); hideLoading();
+        }
+
+        function renderPatronesTable() {
+            const tbody = document.getElementById('pat-tbody'); tbody.innerHTML = '';
+            let sP = document.getElementById('pat-search-p').value.toLowerCase();
+            let sI = document.getElementById('pat-search-i').value.toLowerCase();
+            state.pat_data.forEach((r, i) => {
+                if(sP && !String(r.Patron).toLowerCase().includes(sP)) return;
+                if(sI && !String(r.Renombrado).toLowerCase().includes(sI)) return;
+                tbody.insertAdjacentHTML('beforeend', `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-3 text-xs text-gray-400">Activo</td>
+                    <td class="p-3"><input type="text" id="pat-p-${i}" value="${r.Patron}" class="w-full bg-transparent outline-none border-b border-transparent focus:border-blue-500" onchange="state.pat_data[${i}].Patron = this.value"></td>
+                    <td class="p-3"><input type="text" id="pat-r-${i}" value="${r.Renombrado}" class="w-full bg-transparent outline-none border-b border-transparent focus:border-blue-500" onchange="state.pat_data[${i}].Renombrado = this.value"></td>
+                    <td class="p-3 text-center space-x-2">
+                        <button onclick="document.getElementById('pat-p-${i}').focus()" class="text-blue-500 hover:text-blue-700"><i class="fas fa-pencil-alt"></i></button>
+                        <button onclick="deletePatronRow(${i})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`);
+            });
+        }
+
+        function addPatronRow() {
+            let p = document.getElementById('new-pat-pattern').value.trim();
+            let r = document.getElementById('new-pat-real').value.trim();
+            if(!p || !r) return toast("Rellena ambos campos", "error");
+            state.pat_data.unshift({ Patron: p.startsWith('*')?p:`*${p}*`, Renombrado: r, Autor: state.user });
+            document.getElementById('new-pat-pattern').value = '';
+            document.getElementById('new-pat-real').value = '';
+            renderPatronesTable(); toast("Añadido");
+        }
+
+        function deletePatronRow(idx) { state.pat_data.splice(idx, 1); renderPatronesTable(); }
+
+        async function savePatrones() {
+            showLoading();
+            let payload = state.pat_data.map(r => ({ Patron: r.Patron, Renombrado: r.Renombrado, Autor: r.Autor || state.user }));
+            await postSheet({ pestaña: "Patrones", accion: "sobrescribir", datos: payload });
+            state.df_patrones = []; hideLoading(); toast("Patrones guardados");
+        }
+
+        function logout() { location.reload(); }
+    </script>
+</body>
+</html>
