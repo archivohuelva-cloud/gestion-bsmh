@@ -42,7 +42,6 @@
 </head>
 <body class="text-gray-800 antialiased font-sans flex h-screen overflow-hidden">
 
-    <!-- SIDEBAR -->
     <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-col flex z-20">
         <div class="p-6">
             <h2 class="text-xl font-bold text-gray-800" id="sb-user">👤 Usuario</h2>
@@ -64,10 +63,8 @@
         </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="flex-1 h-full overflow-y-auto relative">
         
-        <!-- VISTA: MENU PRINCIPAL -->
         <div id="view-menu" class="p-8 max-w-5xl mx-auto mt-10">
             <div class="text-center mb-12">
                 <h1 class="text-4xl font-bold text-gray-800">Selecciona una herramienta <span class="text-sm text-gray-500 align-middle">v.3.0.4</span></h1>
@@ -84,7 +81,6 @@
             </div>
         </div>
 
-        <!-- VISTA: RENOMBRADOR -->
         <div id="view-renombrador" class="hidden p-8 max-w-6xl mx-auto">
             <div class="text-center mb-8">
                 <h1 class="text-5xl font-black text-gray-800">Renombrador</h1>
@@ -117,7 +113,6 @@
             </div>
         </div>
 
-        <!-- VISTA: EXTRACTOR -->
         <div id="view-extractor" class="hidden p-8 max-w-6xl mx-auto">
             <div class="text-center mb-8">
                 <h1 class="text-5xl font-black text-gray-800">Extractor Inteligente</h1>
@@ -136,7 +131,6 @@
             </div>
         </div>
 
-        <!-- WORKSPACE DEL EXTRACTOR -->
         <div id="extractor-workspace">
             <div id="extractor-viewer">
                 <div class="bg-gray-800 text-white p-3 flex justify-between items-center">
@@ -194,7 +188,8 @@
                         <div class="search-dropdown" id="ext-inst-dropdown-container">
                             <input type="text" id="ext-inst-search" placeholder="Escribir para buscar..." 
                                 class="w-full border-2 border-gray-200 rounded-lg p-2 text-sm font-bold focus:border-blue-500 outline-none"
-                                onfocus="showExtSearchResults()" oninput="filterExtSearchResults(this.value)">
+                                onfocus="showExtSearchResults()" oninput="filterExtSearchResults(this.value)"
+                                onkeydown="if(event.key === 'Enter') { event.preventDefault(); addToQueue(); }">
                             <div id="ext-inst-results" class="search-results"></div>
                         </div>
                     </div>
@@ -222,7 +217,6 @@
             </aside>
         </div>
 
-        <!-- EDITOR LISTA BASE -->
         <div id="view-editorLB" class="hidden p-8 max-w-4xl mx-auto">
             <div class="flex justify-between items-center mb-8">
                 <h1 class="text-4xl font-black text-gray-800">⚙️ Gestión de Lista Base</h1>
@@ -233,13 +227,6 @@
             <div class="bg-white rounded-lg shadow border border-gray-200 overflow-hidden mb-6">
                 <div class="max-h-[600px] overflow-y-auto">
                     <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 sticky top-0 shadow-sm z-10">
-                            <tr>
-                                <th class="p-3 w-24 text-sm font-semibold text-gray-600">ID</th>
-                                <th class="p-3 text-sm font-semibold text-gray-600">Nombre Instrumento</th>
-                                <th class="p-3 w-24 text-center text-sm font-semibold text-gray-600">Acciones</th>
-                            </tr>
-                        </thead>
                         <tbody id="lb-tbody" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
@@ -247,7 +234,6 @@
             <button onclick="saveLB()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-md"><i class="fas fa-save mr-2"></i> GUARDAR CAMBIOS EN LA NUBE</button>
         </div>
 
-        <!-- EDITOR PATRONES -->
         <div id="view-editorPatrones" class="hidden p-8 max-w-5xl mx-auto">
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-black text-gray-800">🧩 Editor de Patrones</h1>
@@ -357,6 +343,20 @@
                     if (e.key === 'ArrowLeft') changeExtPage(-1);
                     if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoExt(); }
                     if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redoExt(); }
+                    
+                    if (e.key === 'Enter') {
+                        if (state.ext_selected_inst) {
+                            e.preventDefault();
+                            addToQueue();
+                        }
+                    }
+                    
+                    if (e.key === 'Delete') {
+                        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                            e.preventDefault();
+                            deleteCurrentPage();
+                        }
+                    }
                 }
             });
         }
@@ -475,7 +475,6 @@
             document.getElementById('ext-current-page').innerText = state.ext_current_idx + 1;
             document.getElementById('ext-total-pages').innerText = state.ext_pages_pool.length;
             
-            // Si estamos en modo lote, marcar checks automáticamente al cambiar de página
             if (state.ext_batch_mode) {
                 state.ext_range_ini = state.ext_pages_pool[0];
                 const endIdx = state.ext_batch_size - 1;
@@ -688,8 +687,12 @@
             container.innerHTML = '';
             const ordenBase = state.df_base.map(r => r[state.logicMode]);
             const sortedQueue = [...state.ext_queue].sort((a, b) => {
-                if (a.nombre === 'GUION') return -1;
-                if (b.nombre === 'GUION') return 1;
+                const normA = (a.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const normB = (b.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const isA = normA.includes("GUION");
+                const isB = normB.includes("GUION");
+                if (isA && !isB) return -1;
+                if (!isA && isB) return 1;
                 return ordenBase.indexOf(a.nombre) - ordenBase.indexOf(b.nombre);
             });
             sortedQueue.forEach((item, i) => {
@@ -741,21 +744,42 @@
                 const pdfDoc = await PDFLib.PDFDocument.load(state.ext_pdf_bytes);
                 const zip = new JSZip();
                 const ordenBase = state.df_base.map(r => r[state.logicMode]);
+                
+                // Ordenar la cola: GUION siempre primero, luego el resto según Lista Base
                 state.ext_queue.sort((a, b) => {
-                    if (a.nombre === 'GUION') return -1;
-                    if (b.nombre === 'GUION') return 1;
+                    const normA = (a.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const normB = (b.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const isA = normA.includes("GUION");
+                    const isB = normB.includes("GUION");
+                    if (isA && !isB) return -1;
+                    if (!isA && isB) return 1;
                     return ordenBase.indexOf(a.nombre) - ordenBase.indexOf(b.nombre);
                 });
+
+                // Lógica de numeración:
+                // Si hay guion, el guion es 00 y el siguiente instrumento es 01.
+                // Si NO hay guion, el primer instrumento es 01.
                 let counter = 1;
+
                 for (const item of state.ext_queue) {
                     const newPdf = await PDFLib.PDFDocument.create();
                     const copiedPages = await newPdf.copyPages(pdfDoc, item.pags.map(p => p - 1));
                     copiedPages.forEach(p => newPdf.addPage(p));
-                    const prefijo = (item.nombre === 'GUION') ? "00" : String(counter++).padStart(2, '0');
+                    
+                    let prefijo;
+                    const normNombre = (item.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (normNombre.includes("GUION")) {
+                        prefijo = "00";
+                    } else {
+                        prefijo = String(counter).padStart(2, '0');
+                        counter++;
+                    }
+
                     const fileName = `${cod}-${prefijo} ${item.nombre}.pdf`;
                     const pdfBytes = await newPdf.save();
                     zip.file(fileName, pdfBytes);
                 }
+
                 const content = await zip.generateAsync({type: "blob"});
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(content);
