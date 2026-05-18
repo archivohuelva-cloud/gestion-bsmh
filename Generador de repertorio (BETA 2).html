@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Creador de Repertorios - BSMH</title>
+    <!-- Tailwind CSS para los estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF para generar los PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- PapaParse para leer el Google Sheets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Iconos Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SortableJS para Drag & Drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Estilos para el drag and drop */
+        .sortable-ghost { opacity: 0.4; background: #dbeafe; border: 2px dashed #3b82f6; }
+        .drag-handle { cursor: grab; touch-action: none; }
+        .drag-handle:active { cursor: grabbing; }
+
+        /* Ajuste para móviles: evitar que el body se bloquee si el contenido es largo */
+        @media (max-width: 1024px) {
+            body { overflow-y: auto; height: auto; }
+            .main-container { height: auto; overflow: visible; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 lg:h-screen flex flex-col lg:overflow-hidden">
+
+    <!-- Cabecera -->
+    <header class="bg-[#1e3a8a] text-white p-3 md:p-4 shadow-md flex flex-col md:flex-row items-center justify-between z-10 shrink-0 gap-3">
+        <div class="flex items-center justify-between w-full md:w-auto gap-4">
+            <div class="flex items-center gap-2 md:gap-4">
+                <button onclick="window.history.back()" class="flex items-center gap-2 hover:bg-white/20 transition-colors px-2 py-1.5 rounded-md text-xs md:text-sm font-semibold">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> <span class="hidden sm:inline">Volver</span>
+                </button>
+                <div class="border-l border-white/30 h-6"></div>
+                <h1 class="text-sm md:text-xl font-bold tracking-wide flex items-center gap-2">
+                    <i data-lucide="music" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    BSMH <span class="font-light hidden lg:inline">| Generador de Repertorios</span>
+                </h1>
+            </div>
+            <!-- Botones móviles (solo iconos o texto corto) -->
+            <div class="flex md:hidden gap-1">
+                <button onclick="exportarJSON()" class="p-2 bg-amber-500 rounded-md"><i data-lucide="download" class="w-4 h-4"></i></button>
+                <button onclick="document.getElementById('inputFile').click()" class="p-2 bg-slate-600 rounded-md"><i data-lucide="upload" class="w-4 h-4"></i></button>
+            </div>
+        </div>
+
+        <!-- Botones de Guardado/Carga (Escritorio) -->
+        <div class="hidden md:flex gap-2">
+            <button onclick="exportarJSON()" class="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition-colors">
+                <i data-lucide="download" class="w-4 h-4"></i> Guardar Repertorio
+            </button>
+            <button onclick="document.getElementById('inputFile').click()" class="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition-colors">
+                <i data-lucide="upload" class="w-4 h-4"></i> Abrir Repertorio
+            </button>
+            <input type="file" id="inputFile" accept=".json" class="hidden" onchange="importarJSON(event)">
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden main-container">
+        
+        <!-- Panel Izquierdo: Formulario y Buscador -->
+        <section class="w-full lg:w-1/2 p-4 md:p-6 flex flex-col bg-white border-r border-slate-200 overflow-y-auto custom-scrollbar panel-scroll">
+            
+            <!-- Bloque 1: Datos del Concierto -->
+            <div class="mb-6 bg-slate-50 p-4 md:p-5 rounded-lg border border-slate-200 shrink-0">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-md md:text-lg font-bold text-[#1e3a8a] flex items-center gap-2">
+                        <i data-lucide="calendar-days" class="w-5 h-5"></i> Datos del Concierto
+                    </h2>
+                    <button onclick="limpiarTodo()" class="text-[10px] md:text-xs flex items-center gap-1.5 bg-slate-200 hover:bg-red-100 hover:text-red-700 text-slate-600 px-2 py-1 rounded transition-colors font-semibold border border-slate-300">
+                        <i data-lucide="refresh-ccw" class="w-3 h-3"></i> Limpiar
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 gap-3 md:gap-4">
+                    <div class="col-span-2">
+                        <label class="block text-xs md:text-sm font-semibold text-slate-600 mb-1">Título del Concierto</label>
+                        <input type="text" id="conciertoTitulo" oninput="this.value = this.value.toUpperCase()" placeholder="" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase text-sm">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs md:text-sm font-semibold text-slate-600 mb-1">Ubicación / Lugar</label>
+                        <input type="text" id="conciertoLugar" placeholder="" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs md:text-sm font-semibold text-slate-600 mb-1">Fecha</label>
+                        <input type="date" id="conciertoFecha" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs md:text-sm font-semibold text-slate-600 mb-1">Hora</label>
+                        <input type="time" id="conciertoHora" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloque 2: Buscador de Obras -->
+            <div class="flex flex-col mb-6 shrink-0">
+                <h2 class="text-md md:text-lg font-bold mb-3 text-[#1e3a8a] flex items-center gap-2 shrink-0">
+                    <i data-lucide="search" class="w-5 h-5"></i> Buscador de obras en Biblio 
+                </h2>
+                
+                <div class="relative mb-4 shrink-0">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+                    </div>
+                    <input type="text" id="buscadorInput" placeholder="Buscar..." class="w-full pl-10 p-2.5 border border-slate-300 rounded shadow-sm focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                </div>
+
+                <div id="loadingStatus" class="text-[11px] text-blue-600 mb-2 italic shrink-0 flex items-center gap-2">
+                    <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Cargando base de datos...
+                </div>
+
+                <!-- Lista de Resultados de Búsqueda (Altura fija para evitar solapamientos) -->
+                <div id="listaResultados" class="h-[350px] md:h-[450px] overflow-y-auto custom-scrollbar border border-slate-200 rounded-lg divide-y divide-slate-100">
+                    <!-- Los resultados se inyectarán aquí -->
+                </div>
+            </div>
+
+            <!-- Bloque 3: Añadir Obra Manual -->
+            <div class="bg-slate-50 p-4 md:p-5 rounded-lg border border-slate-200 shrink-0">
+                <h2 class="text-md md:text-lg font-bold text-[#1e3a8a] flex items-center gap-2 mb-3">
+                    <i data-lucide="pen-tool" class="w-5 h-5"></i> Añadir obra manualmente
+                </h2>
+                <div class="flex flex-col gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" id="obraManualInput" oninput="this.value = this.value.toUpperCase()" placeholder="Título de la obra..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase text-sm" onkeypress="if(event.key === 'Enter') añadirObraManual()">
+                        <input type="text" id="compositorManualInput" oninput="this.value = this.value.toUpperCase()" placeholder="Compositor..." class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none uppercase text-sm" onkeypress="if(event.key === 'Enter') añadirObraManual()">
+                    </div>
+                    <button onclick="añadirObraManual()" class="w-full bg-slate-600 hover:bg-slate-700 text-white px-4 py-2.5 rounded text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Añadir obra sin registro
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel Derecho: Repertorio Seleccionado -->
+        <section class="w-full lg:w-1/2 p-4 md:p-6 flex flex-col bg-slate-50 overflow-y-auto custom-scrollbar panel-scroll">
+            <div class="flex items-center justify-between mb-4 shrink-0">
+                <h2 class="text-lg md:text-xl font-bold text-[#1e3a8a] flex items-center gap-2">
+                    <i data-lucide="list-music" class="w-6 h-6"></i> Repertorio seleccionado:
+                </h2>
+                <span id="contadorObras" class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200">
+                    0 obras
+                </span>
+            </div>
+
+            <!-- Lista del Borrador -->
+            <div id="listaBorrador" class="flex-1 overflow-y-auto custom-scrollbar bg-white border border-slate-300 rounded-lg shadow-sm mb-6 p-1 md:p-2 min-h-[300px]">
+                <div class="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6 empty-state">
+                    <i data-lucide="file-audio" class="w-10 h-10 mb-3 opacity-50"></i>
+                    <p class="text-sm">No hay obras seleccionadas.</p>
+                </div>
+            </div>
+
+            <!-- Botones de Acción (Generar PDF) -->
+            <div class="shrink-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button onclick="generarPDF('archivo')" class="flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors w-full disabled:opacity-50 text-sm" id="btnPdfArchivo" disabled>
+                    <i data-lucide="file-text" class="w-4 h-4"></i> PDF Archivo
+                </button>
+                <button onclick="generarPDF('banda')" class="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors w-full disabled:opacity-50 text-sm" id="btnPdfBanda" disabled>
+                    <i data-lucide="users" class="w-4 h-4"></i> PDF Banda
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Inicializar iconos
+        lucide.createIcons();
+
+        const sheetId = '1WQN-Zjz40FfzvohgrNRdxypS-1sl4YRoO7PwaodVARY';
+        const sheetName = 'BIBLIO BD';
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+
+        let catalogoObras = [];
+        let resultadosBusqueda = [];
+        let repertorioSeleccionado = [];
+
+        const buscadorInput = document.getElementById('buscadorInput');
+        const listaResultados = document.getElementById('listaResultados');
+        const listaBorrador = document.getElementById('listaBorrador');
+        const loadingStatus = document.getElementById('loadingStatus');
+        const btnPdfArchivo = document.getElementById('btnPdfArchivo');
+        const btnPdfBanda = document.getElementById('btnPdfBanda');
+        const contadorObras = document.getElementById('contadorObras');
+
+        // Inicializar Sortable para Drag & Drop
+        new Sortable(listaBorrador, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+                const oldIndex = evt.oldIndex;
+                const newIndex = evt.newIndex;
+                const obra = repertorioSeleccionado.splice(oldIndex, 1)[0];
+                repertorioSeleccionado.splice(newIndex, 0, obra);
+                actualizarBorrador();
+            },
+        });
+
+        const normalizarTexto = (texto) => {
+            if (!texto) return '';
+            return texto.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        };
+
+        const procesarFila = (fila, columnas) => {
+            const buscarClave = (palabrasClave) => {
+                return columnas.find(col => {
+                    const colNorm = normalizarTexto(col);
+                    return palabrasClave.some(kw => colNorm.includes(kw));
+                });
+            };
+
+            const keyObra = buscarClave(['obra', 'titulo', 'pieza', 'título']) || columnas[0];
+            const keyComp = buscarClave(['compositor', 'autor', 'arreglo']) || columnas[1];
+            const keyReg = buscarClave(['reg', 'num', 'nº']) || columnas[2];
+            const keySig = buscarClave(['sig', 'archivo']) || columnas[3];
+
+            const todosLosDatos = Object.values(fila).join(' ');
+
+            return {
+                id: crypto.randomUUID(),
+                obra: fila[keyObra] ? fila[keyObra].toUpperCase() : '-',
+                compositor: fila[keyComp] ? fila[keyComp].toUpperCase() : '-',
+                registro: fila[keyReg] || '',
+                signatura: fila[keySig] || '',
+                textoBusqueda: normalizarTexto(todosLosDatos)
+            };
+        };
+
+        Papa.parse(csvUrl, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const columnas = results.meta.fields;
+                catalogoObras = results.data.map(fila => procesarFila(fila, columnas));
+                loadingStatus.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i> <span class="text-emerald-700">Conectado. ${catalogoObras.length} obras.</span>`;
+                lucide.createIcons();
+                resultadosBusqueda = [...catalogoObras];
+                renderizarResultados();
+            },
+            error: function(err) {
+                loadingStatus.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i> <span class="text-red-600">Error de conexión.</span>`;
+                lucide.createIcons();
+            }
+        });
+
+        buscadorInput.addEventListener('input', (e) => {
+            const termino = normalizarTexto(e.target.value);
+            if (termino === '') {
+                resultadosBusqueda = catalogoObras.slice(0, 100); 
+            } else {
+                resultadosBusqueda = catalogoObras.filter(obra => obra.textoBusqueda.includes(termino)).slice(0, 100);
+            }
+            renderizarResultados();
+        });
+
+        function renderizarResultados() {
+            listaResultados.innerHTML = '';
+            if (resultadosBusqueda.length === 0) {
+                listaResultados.innerHTML = '<div class="p-4 text-slate-500 text-center text-sm">No hay resultados.</div>';
+                return;
+            }
+            resultadosBusqueda.forEach((obra, index) => {
+                const div = document.createElement('div');
+                div.className = 'p-3 hover:bg-blue-50 flex items-center justify-between transition-colors group';
+                div.innerHTML = `
+                    <div class="pr-4 overflow-hidden">
+                        <p class="font-bold text-slate-800 text-xs md:text-sm leading-tight mb-1 truncate">${obra.obra}</p>
+                        <p class="text-[10px] md:text-xs text-slate-500 flex gap-2 truncate">
+                            <span>${obra.compositor}</span>
+                            ${obra.registro ? `<span class="text-blue-400">#${obra.registro}</span>` : ''}
+                        </p>
+                    </div>
+                    <button onclick="añadirAlRepertorio('${obra.id}')" class="shrink-0 bg-blue-100 hover:bg-[#1e3a8a] hover:text-white text-blue-700 p-2 rounded-full transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                `;
+                listaResultados.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        window.añadirAlRepertorio = function(id) {
+            const obraOriginal = catalogoObras.find(o => o.id === id);
+            repertorioSeleccionado.push({...obraOriginal, id: crypto.randomUUID()}); 
+            repertorioSeleccionado.sort((a, b) => a.obra.localeCompare(b.obra));
+            actualizarBorrador();
+        };
+
+        // Nueva función para añadir obras manualmente
+        window.añadirObraManual = function() {
+            const inputObra = document.getElementById('obraManualInput');
+            const inputCompositor = document.getElementById('compositorManualInput');
+            
+            const titulo = inputObra.value.trim().toUpperCase();
+            const compositor = inputCompositor.value.trim().toUpperCase() || '-';
+            
+            if (!titulo) return;
+
+            const nuevaObra = {
+                id: crypto.randomUUID(),
+                obra: titulo,
+                compositor: compositor,
+                registro: 'S/N',
+                signatura: 'S/N',
+                textoBusqueda: normalizarTexto(titulo + ' ' + compositor)
+            };
+
+            repertorioSeleccionado.push(nuevaObra);
+            // Ordenar alfabéticamente tras añadir la obra manual
+            repertorioSeleccionado.sort((a, b) => a.obra.localeCompare(b.obra));
+            actualizarBorrador();
+            
+            // Limpiar los inputs después de añadir
+            inputObra.value = '';
+            inputCompositor.value = '';
+            inputObra.focus();
+        };
+
+        window.eliminarDelRepertorio = function(index) {
+            repertorioSeleccionado.splice(index, 1);
+            actualizarBorrador();
+        };
+
+        window.moverObra = function(index, direccion) {
+            if (direccion === -1 && index > 0) {
+                const temp = repertorioSeleccionado[index];
+                repertorioSeleccionado[index] = repertorioSeleccionado[index - 1];
+                repertorioSeleccionado[index - 1] = temp;
+            } else if (direccion === 1 && index < repertorioSeleccionado.length - 1) {
+                const temp = repertorioSeleccionado[index];
+                repertorioSeleccionado[index] = repertorioSeleccionado[index + 1];
+                repertorioSeleccionado[index + 1] = temp;
+            }
+            actualizarBorrador();
+        };
+
+        window.cambiarOrdenManual = function(index, nuevoValor) {
+            let n = parseInt(nuevoValor);
+            if (isNaN(n) || n < 1) {
+                actualizarBorrador();
+                return;
+            }
+            const item = repertorioSeleccionado.splice(index, 1)[0];
+            const destino = Math.min(n - 1, repertorioSeleccionado.length);
+            repertorioSeleccionado.splice(destino, 0, item);
+            actualizarBorrador();
+        };
+
+        window.limpiarTodo = function() {
+            if(!confirm("¿Deseas limpiar todo el repertorio actual?")) return;
+            document.getElementById('conciertoTitulo').value = '';
+            document.getElementById('conciertoLugar').value = '';
+            document.getElementById('conciertoFecha').value = '';
+            document.getElementById('conciertoHora').value = '';
+            document.getElementById('buscadorInput').value = '';
+            document.getElementById('obraManualInput').value = '';
+            document.getElementById('compositorManualInput').value = '';
+            repertorioSeleccionado = [];
+            resultadosBusqueda = [...catalogoObras];
+            renderizarResultados();
+            actualizarBorrador();
+        };
+
+        window.exportarJSON = function() {
+            const titulo = document.getElementById('conciertoTitulo').value.trim() || 'CONCIERTO SIN TITULO';
+            const fecha = document.getElementById('conciertoFecha').value;
+            let fechaFormateada = "";
+            if (fecha) {
+                const [y, m, d] = fecha.split('-');
+                fechaFormateada = ` - ${d}-${m}-${y}`;
+            }
+            const datos = {
+                titulo: document.getElementById('conciertoTitulo').value,
+                lugar: document.getElementById('conciertoLugar').value,
+                fecha: document.getElementById('conciertoFecha').value,
+                hora: document.getElementById('conciertoHora').value,
+                repertorio: repertorioSeleccionado
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datos, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `Repertorio ${titulo}${fechaFormateada}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        };
+
+        window.importarJSON = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const datos = JSON.parse(e.target.result);
+                    document.getElementById('conciertoTitulo').value = datos.titulo || '';
+                    document.getElementById('conciertoLugar').value = datos.lugar || '';
+                    document.getElementById('conciertoFecha').value = datos.fecha || '';
+                    document.getElementById('conciertoHora').value = datos.hora || '';
+                    repertorioSeleccionado = datos.repertorio || [];
+                    actualizarBorrador();
+                    event.target.value = '';
+                } catch (err) {
+                    alert("Error al leer el archivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        function actualizarBorrador() {
+            contadorObras.textContent = `${repertorioSeleccionado.length} obras`;
+            const hayObras = repertorioSeleccionado.length > 0;
+            btnPdfArchivo.disabled = !hayObras;
+            btnPdfBanda.disabled = !hayObras;
+
+            if (!hayObras) {
+                listaBorrador.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6 empty-state"><i data-lucide="file-audio" class="w-10 h-10 mb-3 opacity-50"></i><p class="text-sm">No hay obras selected.</p></div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            listaBorrador.innerHTML = '';
+            repertorioSeleccionado.forEach((obra, index) => {
+                const numOrden = String(index + 1).padStart(2, '0');
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-2 md:p-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 group';
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 md:gap-3 w-full overflow-hidden">
+                        <div class="flex flex-col items-center shrink-0">
+                            <div class="drag-handle text-slate-300 hover:text-blue-500 p-1">
+                                <i data-lucide="grip-horizontal" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        
+                        <input type="text" value="${numOrden}" 
+                            class="w-8 md:w-10 text-center bg-blue-100 text-blue-800 font-mono text-[10px] md:text-xs px-1 py-1 rounded shrink-0 border-none focus:ring-2 focus:ring-blue-500"
+                            onchange="cambiarOrdenManual(${index}, this.value)">
+
+                        <div class="flex-1 min-w-0 pr-2">
+                            <p class="font-bold text-xs md:text-sm text-slate-800 truncate">${obra.obra}</p>
+                            <p class="text-[10px] md:text-xs text-slate-500 truncate">${obra.compositor}</p>
+                        </div>
+                        <button onclick="eliminarDelRepertorio(${index})" class="shrink-0 text-slate-400 hover:text-red-600 p-2">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                listaBorrador.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        window.generarPDF = function(tipo) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const tituloBruto = document.getElementById('conciertoTitulo').value.trim() || 'CONCIERTO';
+            const tituloVal = tituloBruto.toUpperCase();
+            const lugarVal = document.getElementById('conciertoLugar').value.trim() || '-';
+            const fechaVal = document.getElementById('conciertoFecha').value;
+            const horaVal = document.getElementById('conciertoHora').value || '-';
+
+            let diaSemanaStr = '-';
+            let fechaStr = '-';
+            if (fechaVal) {
+                const [yyyy, mm, dd] = fechaVal.split('-');
+                const d = new Date(yyyy, mm - 1, dd);
+                let diaSemana = d.toLocaleDateString('es-ES', { weekday: 'long' });
+                diaSemanaStr = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+                fechaStr = `${dd}/${mm}/${yyyy}`;
+            }
+
+            doc.setFont("helvetica");
+            doc.setFontSize(10);
+            doc.setTextColor(50, 50, 50);
+            doc.text("Banda Sinfónica Municipal de Huelva", 14, 20);
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(0, 0, 0);
+            const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+            const textWidth = doc.getTextWidth(tituloVal);
+            doc.text(tituloVal, (pageWidth - textWidth) / 2, 35);
+
+            doc.autoTable({
+                startY: 50,
+                head: [['DIA', 'FECHA', 'HORA', 'LUGAR']],
+                body: [[diaSemanaStr, fechaStr, horaVal, lugarVal]],
+                theme: 'plain',
+                styles: { fontSize: 9, cellPadding: 2, textColor: [0, 0, 0] },
+                headStyles: { fontStyle: 'bold', fillColor: [240, 240, 240] },
+                margin: { top: 10 }
+            });
+
+            const finalYInfo = doc.lastAutoTable.finalY || 65;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Obras Totales: ${repertorioSeleccionado.length}`, 14, finalYInfo + 10);
+
+            let colHeaders = [];
+            let rows = [];
+            if (tipo === 'archivo') {
+                colHeaders = ['ORDEN', 'OBRAS', 'COMPOSITOR', 'N° REG', 'SIG.'];
+                rows = repertorioSeleccionado.map((obra, i) => [String(i + 1).padStart(2, '0'), obra.obra, obra.compositor, obra.registro, obra.signatura]);
+            } else {
+                colHeaders = ['ORDEN', 'OBRAS', 'COMPOSITOR'];
+                rows = repertorioSeleccionado.map((obra, i) => [String(i + 1).padStart(2, '0'), obra.obra, obra.compositor]);
+            }
+
+            doc.autoTable({
+                startY: finalYInfo + 15,
+                head: [colHeaders],
+                body: rows,
+                theme: 'striped',
+                styles: { fontSize: 9, textColor: [0, 0, 0] },
+                headStyles: { fillColor: [240, 240, 240], textColor: [0,0,0], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [250, 250, 250] },
+                columnStyles: { 0: { halign: 'center', cellWidth: 20 } }
+            });
+
+            const labelTipo = tipo === 'archivo' ? 'Archivo' : 'Banda';
+            doc.save(`${tituloBruto} - ${labelTipo}.pdf`);
+        };
+    </script>
+</body>
+</html>
