@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Generador BSMH v3.9</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --dark: #0f172a;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #334155;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header { text-align: center; margin-bottom: 30px; width: 100%; }
+        .header h1 { margin: 0; font-size: 28px; color: var(--dark); font-weight: 700; }
+        .header h1 span { color: var(--primary); }
+        .header p { margin: 5px 0; color: #64748b; font-size: 14px; }
+        .date-badge { 
+            display: inline-block; background: white; padding: 6px 15px; 
+            border-radius: 20px; font-size: 12px; font-weight: 600; 
+            color: #94a3b8; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-top: 10px; text-transform: uppercase;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .btn-nav {
+            background: white; border: 1px solid var(--border); padding: 8px 20px;
+            border-radius: 20px; cursor: pointer; font-size: 14px;
+            transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 5px;
+            color: var(--text); text-decoration: none;
+        }
+
+        .btn-nav:hover { background: #f1f5f9; }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 25px;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .input-panel {
+            background: var(--card);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
+
+        .section-title { font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .toggle-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .toggle-btn {
+            padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+            background: white; cursor: pointer; font-size: 13px; font-weight: 600;
+            color: #64748b; transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background: white; border: 2px solid var(--primary); color: var(--primary);
+        }
+
+        textarea {
+            width: 100%; height: 200px; border: 1px solid var(--border);
+            border-radius: 12px; padding: 15px; font-family: inherit;
+            font-size: 14px; resize: none; background: #fcfcfd; margin-bottom: 20px;
+        }
+
+        .btn-generate {
+            width: 100%; padding: 16px; background: var(--dark); color: white;
+            border: none; border-radius: 12px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: transform 0.1s;
+        }
+
+        .output-panel {
+            background: transparent;
+            border: 2px dashed #cbd5e1;
+            border-radius: 25px;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px;
+        }
+
+        .empty-state { margin: auto; text-align: center; color: #94a3b8; }
+
+        .result-card {
+            background: white; padding: 20px; border-radius: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); position: relative;
+            border: 1px solid var(--border);
+        }
+
+        .result-card h3 { margin: 0 0 12px 0; font-size: 13px; color: var(--primary); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+        .result-card p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--dark); white-space: pre-wrap; }
+        
+        .copy-badge {
+            position: absolute; top: 15px; right: 15px;
+            background: #f1f5f9; color: #475569; padding: 5px 10px;
+            border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;
+        }
+
+        @media (max-width: 850px) {
+            .main-container { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+        }
+
+        .loading-spinner {
+            display: none; margin: 20px auto; width: 30px; height: 30px;
+            border: 3px solid #f3f3f3; border-top: 3px solid var(--primary);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Generador <span>BSMH</span> v3.9</h1>
+        <p>Gestión de Comunicación - Banda Sinfónica Municipal de Huelva.</p>
+        <div class="date-badge" id="currentDate"></div>
+        
+        <div class="header-buttons">
+            <button class="btn-nav" onclick="history.back()">← Volver</button>
+            <button class="btn-nav" onclick="location.reload()">Limpiar todo</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="input-panel">
+            <div class="section-title">1. Tipo de Publicación</div>
+            <div class="toggle-group">
+                <button class="toggle-btn active" onclick="setMode('presente', this)">PRÓXIMO EVENTO</button>
+                <button class="toggle-btn" onclick="setMode('pasado', this)">ÉXITO / CRÓNICA</button>
+            </div>
+
+            <div class="section-title">2. Información del Concierto</div>
+            <textarea id="inputText" placeholder="Introduce aquí: Título, obras, director, solistas, fecha, lugar..."></textarea>
+
+            <button class="btn-generate" onclick="generarTextos()">Generar Textos</button>
+            <div id="spinner" class="loading-spinner"></div>
+        </div>
+
+        <div class="output-panel" id="outputPanel">
+            <div class="empty-state" id="emptyState">
+                <p><strong>Sin contenido generado</strong><br>Escribe los datos y pulsa el botón negro.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = "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"; 
+        let modo = 'presente';
+
+        const d = new Date();
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = d.toLocaleDateString('es-ES', opciones);
+
+        function setMode(val, btn) {
+            modo = val;
+            document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        async function generarTextos() {
+            const text = document.getElementById('inputText').value;
+            const outputPanel = document.getElementById('outputPanel');
+            const spinner = document.getElementById('spinner');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!text) { alert("Por favor, introduce información."); return; }
+
+            spinner.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            const prompt = `Actúa como la voz oficial de la Banda Sinfónica Municipal de Huelva (BSMH). 
+            Información: "${text}". 
+            TIEMPO: ${modo === 'presente' ? 'Anuncio de próximo evento' : 'Crónica de éxito y agradecimiento'}.
+            
+            INSTRUCCIONES DE ESTILO:
+            - TONO: Institucional, neutro y profesional, pero cercano.
+            - PERSONA: Habla SIEMPRE en primera persona del plural (Nuestra Banda, Nosotros, Nuestra formación, etc.).
+            - EMOJIS: Usa emoticonos de forma muy controlada y elegante (máximo 1 o 2 por párrafo).
+            - NO incluyas nombres de redes sociales entre asteriscos.
+
+            REQUISITOS POR RED:
+            1. FACEBOOK: Texto extenso y detallado. Usa saltos de párrafo dobles. Incluye hashtags institucionales al final.
+            2. INSTAGRAM: Extensión similar a Facebook (un poco más breve), con saltos de párrafo claros. Hashtags al final.
+            3. X (TWITTER): Maximiza el texto hasta rozar los 280 caracteres. NO incluyas hashtags ni menciones, solo el cuerpo del mensaje.
+            4. WHATSAPP: Texto limpio, amigable y fácil de leer. Sin exceso de negritas ni asteriscos.
+
+            Separa las 4 respuestas SOLO con el símbolo [SEP]`;
+
+            try {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "llama-3.3-70b-versatile",
+                        messages: [{role: "user", content: prompt}],
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                const resultados = data.choices[0].message.content.split('[SEP]');
+                const redes = ['Facebook', 'Instagram', 'X (Twitter)', 'WhatsApp'];
+
+                outputPanel.innerHTML = '';
+                
+                resultados.forEach((content, i) => {
+                    if (i < 4) {
+                        let cleanContent = content.trim().replace(/^\*\*.*?\*\*\n?/, ""); 
+                        const card = document.createElement('div');
+                        card.className = 'result-card';
+                        card.innerHTML = `
+                            <div class="copy-badge" onclick="copyText(this)">COPIAR</div>
+                            <h3>${redes[i]}</h3>
+                            <p>${cleanContent}</p>
+                        `;
+                        outputPanel.appendChild(card);
+                    }
+                });
+
+                if(window.innerWidth < 850) outputPanel.scrollIntoView({ behavior: 'smooth' });
+
+            } catch (e) {
+                alert("Error en la API.");
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+
+        function copyText(btn) {
+            const text = btn.nextElementSibling.nextElementSibling.innerText;
+            navigator.clipboard.writeText(text);
+            btn.innerText = "¡COPIADO!";
+            btn.style.background = "#dcfce7";
+            setTimeout(() => {
+                btn.innerText = "COPIAR";
+                btn.style.background = "#f1f5f9";
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
