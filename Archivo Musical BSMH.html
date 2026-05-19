@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivo Musical BSMH | Catálogo Técnico</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #fff; color: #000; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; 
+            border: 2px solid #000;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #f3f4f6;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Anchos de columna optimizados */
+        .w-reg { width: 70px; text-align: center; font-weight: bold; }
+        .w-sig { width: 85px; text-align: center; }
+        .w-tit { width: 25%; }
+        .w-comp { width: 18%; }
+        .w-arr { width: 15%; }
+        .w-edit { width: 12%; }
+        .w-gen { width: 10%; }
+
+        tr:nth-child(even) { background-color: #f9fafb; }
+        tr:hover { background-color: #f0f7ff; }
+
+        .btn-nav { border: 1px solid #000; padding: 2px 10px; font-size: 11px; font-weight: bold; background: #fff; }
+        .btn-nav.active { background: #000; color: #fff; }
+        
+        input.filter-select {
+            border: 1px solid #000;
+            font-size: 10px;
+            padding: 2px;
+            width: 100%;
+            background: #fff;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        /* Estilos para el Toggle tipo iOS */
+        .toggle-checkbox:checked ~ .toggle-bg {
+            background-color: #34D399; /* Verde iOS */
+        }
+        .toggle-checkbox:checked ~ .toggle-dot {
+            transform: translateX(100%);
+        }
+
+        /* Estilos para el menú desplegable personalizado */
+        .visible-overflow {
+            overflow: visible !important;
+        }
+        .custom-dropdown {
+            position: absolute;
+            left: 0;
+            top: 100%;
+            margin-top: 2px;
+            width: 100%;
+            min-width: 150px;
+            background-color: #fff;
+            border: 2px solid #000;
+            max-height: 240px;
+            overflow-y: auto;
+            z-index: 50;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.1);
+        }
+        .custom-dropdown li {
+            padding: 4px 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .custom-dropdown li:hover {
+            background-color: #f0f7ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="flex justify-between items-end mb-4 border-b-4 border-black pb-2">
+        <div>
+            <button onclick="window.history.back()" class="flex items-center gap-1 text-xs font-bold uppercase mb-2 hover:underline cursor-pointer">
+                <span class="text-lg leading-none">&larr;</span> VOLVER
+            </button>
+            <h1 class="text-2xl font-black uppercase">Archivo Musical BSMHuelva</h1>
+            <p class="text-xs font-bold">CATÁLOGO MUSICAL COMPLETO - VISTA DE REGISTRO</p>
+            <!-- Info de paginación en la cabecera -->
+            <div id="tableInfoTop" class="text-[10px] font-black uppercase mt-2 text-blue-700"></div>
+        </div>
+        <div class="flex gap-2 items-center">
+            <input type="text" id="tableSearch" onkeyup="handleSearch()" placeholder="Buscar..." 
+                   class="border-2 border-black px-3 py-1 text-sm w-64 outline-none focus:bg-yellow-50 font-bold">
+            <button onclick="clearFilters()" class="bg-gray-200 text-black border-2 border-black px-4 py-1 text-xs font-bold uppercase hover:bg-gray-300">Limpiar</button>
+            <button onclick="openExportModal()" class="bg-black text-white px-4 py-1 text-xs font-bold uppercase hover:bg-gray-800">Exportar PDF</button>
+        </div>
+    </div>
+
+    <!-- Tabla con Filtros en Encabezado -->
+    <div class="overflow-x-auto min-h-[350px]"> <!-- Altura mínima para que los menús no se corten sin dejar hueco gigante -->
+        <table id="mainTable">
+            <thead>
+                <tr>
+                    <th class="w-reg" onclick="sortTable('registro')">Nº REGISTRO</th>
+                    <th class="w-sig" onclick="sortTable('signatura')">SIGNATURA</th>
+                    <th class="w-tit" onclick="sortTable('titulo')">TÍTULO DE LA OBRA</th>
+                    <th class="w-comp">COMPOSITOR</th>
+                    <th class="w-arr">ARREGLOS</th>
+                    <th class="w-edit">EDITORIAL</th>
+                    <th class="w-gen">GÉNERO</th>
+                </tr>
+                <tr class="bg-gray-50">
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th class="relative visible-overflow">
+                        <input type="text" id="f-comp" class="filter-select" placeholder="BUSCAR/TODOS..." oninput="filterDD(event, 'comp')" onclick="toggleDD(event, 'comp')" autocomplete="off">
+                        <ul id="dd-comp" class="custom-dropdown hidden"></ul>
+                    </th>
+                    <th class="relative visible-overflow">
+                        <input type="text" id="f-arr" class="filter-select" placeholder="BUSCAR/TODOS..." oninput="filterDD(event, 'arr')" onclick="toggleDD(event, 'arr')" autocomplete="off">
+                        <ul id="dd-arr" class="custom-dropdown hidden"></ul>
+                    </th>
+                    <th class="relative visible-overflow">
+                        <input type="text" id="f-edit" class="filter-select" placeholder="BUSCAR/TODOS..." oninput="filterDD(event, 'edit')" onclick="toggleDD(event, 'edit')" autocomplete="off">
+                        <ul id="dd-edit" class="custom-dropdown hidden"></ul>
+                    </th>
+                    <th class="relative visible-overflow">
+                        <input type="text" id="f-gen" class="filter-select" placeholder="BUSCAR/TODOS..." oninput="filterDD(event, 'gen')" onclick="toggleDD(event, 'gen')" autocomplete="off">
+                        <ul id="dd-gen" class="custom-dropdown hidden"></ul>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="7" class="text-center py-10">Cargando datos...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mt-4 flex justify-between items-center">
+        <div id="tableInfo" class="text-[10px] font-black uppercase"></div>
+        <div id="paginationControls" class="flex gap-1"></div>
+    </div>
+
+    <!-- Modal de Exportación -->
+    <div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center z-50">
+        <div class="bg-white p-6 border-4 border-black w-96 shadow-2xl">
+            <h2 class="text-lg font-black uppercase mb-4 border-b-2 border-black pb-1">Configuración de Exportación</h2>
+            
+            <div class="mb-4">
+                <label class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="expAllToggle" class="sr-only toggle-checkbox" checked onchange="toggleRangeInputs()">
+                        <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full transition"></div>
+                        <div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform"></div>
+                    </div>
+                    <div class="ml-3 text-xs font-bold uppercase">Exportar todos los registros</div>
+                </label>
+            </div>
+
+            <div id="rangeInputs" class="mb-4 hidden flex gap-2">
+                <div class="w-1/2">
+                    <label class="text-[10px] font-bold uppercase">Desde (Nº Reg):</label>
+                    <input type="number" id="expStart" class="border border-black w-full px-2 py-1 text-xs">
+                </div>
+                <div class="w-1/2">
+                    <label class="text-[10px] font-bold uppercase">Hasta (Nº Reg):</label>
+                    <input type="number" id="expEnd" class="border border-black w-full px-2 py-1 text-xs">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="text-[10px] font-bold uppercase block mb-1">Ordenar por:</label>
+                <select id="expSortBy" class="border border-black w-full px-2 py-1 text-xs uppercase">
+                    <option value="registro">Nº Registro</option>
+                    <option value="titulo">Título</option>
+                    <option value="compositor">Compositor</option>
+                    <option value="genero">Género Musical</option>
+                    <option value="editorial">Editorial</option>
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="expAscToggle" class="sr-only toggle-checkbox" checked>
+                        <div class="toggle-bg block bg-gray-300 w-10 h-6 rounded-full transition"></div>
+                        <div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform"></div>
+                    </div>
+                    <div class="ml-3 text-xs font-bold uppercase">Orden Ascendente (A-Z / 0-9)</div>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="closeExportModal()" class="border border-black px-4 py-1 text-xs font-bold uppercase hover:bg-gray-100">Cancelar</button>
+                <button onclick="executeExport()" class="bg-black text-white px-4 py-1 text-xs font-bold uppercase hover:bg-gray-800">Exportar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHZpo8kPjU3vEUKsVveX0IDUXaSPokz9Sppv48OJdJEhqVb7QdN7LDUvPJ-bGwP-J_ttdcAXjwK0D0/pub?gid=1708441945&single=true&output=csv";
+        
+        let fullData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const rowsPerPage = 50;
+        let currentSort = { key: 'registro', dir: 'desc' };
+        
+        let colMap = { titulo: 0, registro: 1, signatura: 2, compositor: 3, arreglos: 4, editorial: 7, genero: 10 };
+        let filterOptions = { comp: [], arr: [], edit: [], gen: [] };
+
+        window.onload = () => loadData();
+
+        function normalize(text) {
+            if (text === null || text === undefined) return "";
+            return text.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        }
+
+        async function loadData() {
+            Papa.parse(CSV_URL, {
+                download: true,
+                header: false,
+                complete: function(results) {
+                    const rawRows = results.data;
+                    if (rawRows.length < 2) return;
+
+                    const header = rawRows[0].map(h => h.toLowerCase());
+                    
+                    header.forEach((name, index) => {
+                        if (name.includes('título') || name.includes('titulo')) colMap.titulo = index;
+                        if (name === 'nº registro' || name === 'registro' || (name === 'nº' && index < 3)) colMap.registro = index;
+                        if (name.includes('signatura')) colMap.signatura = index;
+                        if (name.includes('compositor')) colMap.compositor = index;
+                        if (name.includes('arreglos')) colMap.arreglos = index;
+                        if (name.includes('editorial')) colMap.editorial = index;
+                        if (name.includes('genero')) colMap.genero = index;
+                    });
+
+                    fullData = rawRows.slice(1)
+                        .filter(row => row[colMap.registro] && !isNaN(row[colMap.registro].replace(/\D/g,'')))
+                        .map(row => row.map(cell => cell ? cell.trim() : ""));
+
+                    populateFilters();
+                    applySort();
+                }
+            });
+        }
+
+        // --- LÓGICA DE MENÚS DESPLEGABLES PERSONALIZADOS ---
+
+        function populateFilters() {
+            filterOptions.comp = [...new Set(fullData.map(r => r[colMap.compositor]))].filter(v => v && v !== '-').sort();
+            filterOptions.arr = [...new Set(fullData.map(r => r[colMap.arreglos]))].filter(v => v && v !== '-').sort();
+            filterOptions.edit = [...new Set(fullData.map(r => r[colMap.editorial]))].filter(v => v && v !== '-').sort();
+            filterOptions.gen = [...new Set(fullData.map(r => r[colMap.genero]))].filter(v => v && v !== '-').sort();
+            
+            renderDD('comp'); renderDD('arr'); renderDD('edit'); renderDD('gen');
+        }
+
+        function renderDD(id) {
+            const ul = document.getElementById('dd-' + id);
+            const inputVal = document.getElementById('f-' + id).value.toLowerCase();
+            const filtered = filterOptions[id].filter(v => v.toLowerCase().includes(inputVal));
+            
+            let html = `<li onclick="selectDD('${id}', '')" class="font-black bg-gray-100">TODOS</li>`;
+            // Escapar comillas simples y dobles para evitar romper el HTML
+            html += filtered.map(v => {
+                const safeVal = v.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `<li onclick="selectDD('${id}', '${safeVal}')">${v}</li>`;
+            }).join('');
+            ul.innerHTML = html;
+        }
+
+        function filterDD(e, id) {
+            e.stopPropagation();
+            document.getElementById('dd-' + id).classList.remove('hidden');
+            renderDD(id);
+            handleSearch();
+        }
+
+        function toggleDD(e, id) {
+            e.stopPropagation(); // Evita que el clic cierre el menú inmediatamente
+            ['comp', 'arr', 'edit', 'gen'].forEach(x => { 
+                if(x !== id) {
+                    const el = document.getElementById('dd-' + x);
+                    if(el) el.classList.add('hidden'); 
+                }
+            });
+            const ul = document.getElementById('dd-' + id);
+            ul.classList.toggle('hidden');
+            renderDD(id);
+        }
+
+        function selectDD(id, val) {
+            document.getElementById('f-' + id).value = val;
+            document.getElementById('dd-' + id).classList.add('hidden');
+            handleSearch();
+        }
+
+        // Cerrar menús al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            ['comp', 'arr', 'edit', 'gen'].forEach(x => {
+                const el = document.getElementById('dd-' + x);
+                // Si el clic no es dentro del menú ni en el input correspondiente, lo cerramos
+                if(el && !e.target.closest('#dd-' + x) && e.target.id !== 'f-' + x) {
+                    el.classList.add('hidden');
+                }
+            });
+        });
+
+        // --- FIN LÓGICA MENÚS ---
+
+        function clearFilters() {
+            document.getElementById('tableSearch').value = '';
+            document.getElementById('f-comp').value = '';
+            document.getElementById('f-arr').value = '';
+            document.getElementById('f-edit').value = '';
+            document.getElementById('f-gen').value = '';
+            handleSearch();
+        }
+
+        function applySort() {
+            const idx = colMap[currentSort.key];
+            const dir = currentSort.dir === 'asc' ? 1 : -1;
+
+            fullData.sort((a, b) => {
+                let valA = a[idx] || "";
+                let valB = b[idx] || "";
+                if (currentSort.key === 'registro') {
+                    return (parseInt(valA) - parseInt(valB)) * dir;
+                }
+                return valA.localeCompare(valB, 'es', {sensitivity: 'base'}) * dir;
+            });
+            handleSearch();
+        }
+
+        function sortTable(key) {
+            if (currentSort.key === key) {
+                currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.key = key;
+                currentSort.dir = 'asc';
+            }
+            applySort();
+        }
+
+        function handleSearch() {
+            const query = normalize(document.getElementById('tableSearch').value);
+            const fComp = normalize(document.getElementById('f-comp').value);
+            const fArr = normalize(document.getElementById('f-arr').value);
+            const fEdit = normalize(document.getElementById('f-edit').value);
+            const fGen = normalize(document.getElementById('f-gen').value);
+
+            filteredData = fullData.filter(row => {
+                // Búsqueda global en TODAS las columnas de la fila
+                const matchSearch = query === "" || row.some(cell => normalize(cell).includes(query));
+                
+                // Filtrado en tiempo real por coincidencias parciales (includes)
+                const matchComp = fComp === "" || normalize(row[colMap.compositor]).includes(fComp);
+                const matchArr = fArr === "" || normalize(row[colMap.arreglos]).includes(fArr);
+                const matchEdit = fEdit === "" || normalize(row[colMap.editorial]).includes(fEdit);
+                const matchGen = fGen === "" || normalize(row[colMap.genero]).includes(fGen);
+
+                return matchSearch && matchComp && matchArr && matchEdit && matchGen;
+            });
+
+            currentPage = 1;
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4">No hay coincidencias</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pageData.map(row => `
+                <tr>
+                    <td class="w-reg">${row[colMap.registro]}</td>
+                    <td class="w-sig">${row[colMap.signatura]}</td>
+                    <td class="w-tit" title="${row[colMap.titulo]}">${row[colMap.titulo]}</td>
+                    <td class="w-comp" title="${row[colMap.compositor]}">${row[colMap.compositor]}</td>
+                    <td class="w-arr" title="${row[colMap.arreglos]}">${row[colMap.arreglos]}</td>
+                    <td class="w-edit">${row[colMap.editorial]}</td>
+                    <td class="w-gen">${row[colMap.genero]}</td>
+                </tr>
+            `).join('');
+
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            const container = document.getElementById('paginationControls');
+            const infoText = `TOTAL: ${filteredData.length} OBRAS | PÁGINA ${currentPage} DE ${totalPages}`;
+            
+            document.getElementById('tableInfo').innerText = infoText;
+            document.getElementById('tableInfoTop').innerText = infoText; 
+            
+            let html = `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="btn-nav">ANT</button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button onclick="changePage(${i})" class="btn-nav ${i === currentPage ? 'active' : ''}">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="px-1 text-[10px]">...</span>`;
+                }
+            }
+            html += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="btn-nav">SIG</button>`;
+            container.innerHTML = html;
+        }
+
+        function changePage(p) {
+            currentPage = p;
+            renderTable();
+            window.scrollTo(0, 0);
+        }
+
+        // --- LÓGICA DE EXPORTACIÓN ---
+
+        function openExportModal() {
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+
+        function toggleRangeInputs() {
+            const isAll = document.getElementById('expAllToggle').checked;
+            document.getElementById('rangeInputs').style.display = isAll ? 'none' : 'flex';
+        }
+
+        function executeExport() {
+            const isAll = document.getElementById('expAllToggle').checked;
+            const startReg = parseInt(document.getElementById('expStart').value);
+            const endReg = parseInt(document.getElementById('expEnd').value);
+            const sortBy = document.getElementById('expSortBy').value;
+            const isAsc = document.getElementById('expAscToggle').checked;
+
+            let dataToExport = [...fullData];
+
+            if (!isAll && !isNaN(startReg) && !isNaN(endReg)) {
+                dataToExport = dataToExport.filter(row => {
+                    const reg = parseInt(row[colMap.registro]);
+                    return reg >= startReg && reg <= endReg;
+                });
+            }
+
+            const idx = colMap[sortBy];
+            const titleIdx = colMap['titulo'];
+            const dir = isAsc ? 1 : -1;
+            
+            dataToExport.sort((a, b) => {
+                let valA = a[idx] || "";
+                let valB = b[idx] || "";
+                
+                let cmp = 0;
+                if (sortBy === 'registro') {
+                    cmp = (parseInt(valA) - parseInt(valB));
+                } else {
+                    cmp = valA.localeCompare(valB, 'es', {sensitivity: 'base'});
+                }
+                
+                cmp = cmp * dir;
+                
+                // Si son iguales (mismo grupo) o no estamos agrupando por título, ordenar por Título Ascendente
+                if (cmp === 0 && sortBy !== 'titulo') {
+                    let titleA = a[titleIdx] || "";
+                    let titleB = b[titleIdx] || "";
+                    return titleA.localeCompare(titleB, 'es', {sensitivity: 'base'});
+                }
+                
+                return cmp;
+            });
+
+            const selectElement = document.getElementById('expSortBy');
+            const sortName = selectElement.options[selectElement.selectedIndex].text;
+
+            generatePDF(dataToExport, sortName, sortBy);
+            closeExportModal();
+        }
+
+        function generatePDF(data, sortName, sortBy) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+
+            const dateOptions = { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' };
+            let currentDate = new Date().toLocaleDateString('es-ES', dateOptions);
+            currentDate = currentDate.charAt(0).toUpperCase() + currentDate.slice(1); 
+            const totalObras = data.length;
+
+            // Definir columnas base
+            let columns = [
+                { header: 'REGISTRO', dataKey: 'registro' },
+                { header: 'SIGNATURA', dataKey: 'signatura' },
+                { header: 'TÍTULO', dataKey: 'titulo' },
+                { header: 'COMPOSITOR', dataKey: 'compositor' },
+                { header: 'ARREGLOS', dataKey: 'arreglos' },
+                { header: 'EDITORIAL', dataKey: 'editorial' },
+                { header: 'GÉNERO', dataKey: 'genero' }
+            ];
+
+            const groupableColumns = ['compositor', 'genero', 'editorial'];
+            const isGrouped = groupableColumns.includes(sortBy);
+
+            let startY = 28;
+
+            if (isGrouped) {
+                // Omitir la columna por la que agrupamos
+                columns = columns.filter(c => c.dataKey !== sortBy);
+
+                // Agrupar datos
+                const groups = {};
+                data.forEach(row => {
+                    const val = row[colMap[sortBy]] || 'SIN ESPECIFICAR';
+                    if (!groups[val]) groups[val] = [];
+                    groups[val].push(row);
+                });
+
+                const uniqueKeys = [...new Set(data.map(r => r[colMap[sortBy]] || 'SIN ESPECIFICAR'))];
+
+                uniqueKeys.forEach((key, index) => {
+                    const groupData = groups[key].map(r => {
+                        let obj = {};
+                        columns.forEach(col => obj[col.dataKey] = r[colMap[col.dataKey]]);
+                        return obj;
+                    });
+
+                    // Si estamos muy cerca del final de la página, saltamos a la siguiente
+                    if (startY > doc.internal.pageSize.height - 40 && index > 0) {
+                        doc.addPage();
+                        startY = 28;
+                    }
+
+                    // Título del grupo
+                    doc.setFontSize(11);
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(0, 0, 0);
+                    doc.text(`${sortName.toUpperCase()}: ${key.toUpperCase()}`, 14, startY);
+                    startY += 4;
+
+                    doc.autoTable({
+                        columns: columns,
+                        body: groupData,
+                        startY: startY,
+                        margin: { top: 28, bottom: 20 },
+                        theme: 'grid',
+                        styles: { fontSize: 7, cellPadding: 1.5, lineColor: 0 },
+                        headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold' }
+                    });
+                    
+                    // Actualizar startY para el siguiente grupo (dejando un margen)
+                    startY = doc.lastAutoTable.finalY + 12; 
+                });
+
+            } else {
+                // Exportación normal sin agrupar (Registro o Título)
+                const tableData = data.map(r => {
+                    let obj = {};
+                    columns.forEach(col => obj[col.dataKey] = r[colMap[col.dataKey]]);
+                    return obj;
+                });
+
+                doc.autoTable({
+                    columns: columns,
+                    body: tableData,
+                    startY: startY,
+                    margin: { top: 28, bottom: 20 },
+                    theme: 'grid',
+                    styles: { fontSize: 7, cellPadding: 1.5, lineColor: 0 },
+                    headStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: 'bold' }
+                });
+            }
+
+            // Dibujar cabecera y pie de página en TODAS las páginas al final
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                
+                // Cabecera (Garantizada en todas las páginas)
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(0, 0, 0);
+                doc.text("ARCHIVO MUSICAL BSMH - CATÁLOGO", 14, 15);
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Total de obras exportadas: ${totalObras} | Fecha: ${currentDate}`, 14, 22);
+
+                // Pie de página
+                doc.setFillColor(255, 255, 255);
+                doc.rect(doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 16, 25, 10, 'F');
+                doc.setFontSize(8);
+                doc.text(
+                    `${i}-${pageCount}`, 
+                    doc.internal.pageSize.width - 14, 
+                    doc.internal.pageSize.height - 12, 
+                    { align: 'right' }
+                );
+            }
+
+            doc.save(`Archivo BSMH - ${sortName}.pdf`);
+        }
+    </script>
+</body>
+</html>
