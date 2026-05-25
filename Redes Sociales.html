@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Generador BSMH v3.9</title>
+    <title>Generador BSMH v4.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -55,12 +55,69 @@
 
         .btn-nav:hover { background: #f1f5f9; }
 
+        /* Estilos del contenedor de la API Key */
+        .key-container {
+            margin: 20px auto 0 auto;
+            max-width: 400px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            text-align: left;
+        }
+
+        .key-container label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-left: 5px;
+        }
+
+        .key-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .key-input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .key-input:focus {
+            border-color: var(--primary);
+        }
+
+        .toggle-visibility {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #94a3b8;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .main-container {
             display: grid;
             grid-template-columns: 1fr 1.5fr;
             gap: 25px;
             max-width: 1100px;
             width: 100%;
+            margin-top: 20px;
         }
 
         .input-panel {
@@ -146,13 +203,22 @@
 <body>
 
     <div class="header">
-        <h1>Generador <span>BSMH</span> v3.9</h1>
+        <h1>Generador <span>BSMH</span> v4.0</h1>
         <p>Gestión de Comunicación - Banda Sinfónica Municipal de Huelva.</p>
         <div class="date-badge" id="currentDate"></div>
         
         <div class="header-buttons">
             <button class="btn-nav" onclick="history.back()">← Volver</button>
             <button class="btn-nav" onclick="location.reload()">Limpiar todo</button>
+        </div>
+
+        <!-- Sección de configuración de API Key integrada y segura -->
+        <div class="key-container">
+            <label for="apiKeyInput">Clave API de Groq</label>
+            <div class="key-input-wrapper">
+                <input type="password" id="apiKeyInput" class="key-input" placeholder="gsk_...">
+                <button type="button" class="toggle-visibility" onclick="togglePasswordVisibility()" title="Mostrar/Ocultar clave">👁️</button>
+            </div>
         </div>
     </div>
 
@@ -179,12 +245,35 @@
     </div>
 
     <script>
-        const API_KEY = "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"; 
         let modo = 'presente';
 
+        // Cargar fecha actual
         const d = new Date();
         const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('currentDate').innerText = d.toLocaleDateString('es-ES', opciones);
+
+        // Al iniciar, cargamos la API Key guardada en el almacenamiento local del navegador, si existe
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('groq_api_key');
+            if (savedKey) {
+                document.getElementById('apiKeyInput').value = savedKey;
+            }
+        });
+
+        // Guardar automáticamente la API Key en localStorage al escribirla
+        document.getElementById('apiKeyInput').addEventListener('input', (e) => {
+            localStorage.setItem('groq_api_key', e.target.value.trim());
+        });
+
+        // Alternar visualización del campo de contraseña (clave oculta/visible)
+        function togglePasswordVisibility() {
+            const keyInput = document.getElementById('apiKeyInput');
+            if (keyInput.type === 'password') {
+                keyInput.type = 'text';
+            } else {
+                keyInput.type = 'password';
+            }
+        }
 
         function setMode(val, btn) {
             modo = val;
@@ -197,8 +286,18 @@
             const outputPanel = document.getElementById('outputPanel');
             const spinner = document.getElementById('spinner');
             const emptyState = document.getElementById('emptyState');
+            
+            // Leemos la clave desde el input en tiempo de ejecución
+            const API_KEY = document.getElementById('apiKeyInput').value.trim();
 
-            if (!text) { alert("Por favor, introduce información."); return; }
+            if (!API_KEY) { 
+                alert("Por favor, introduce tu Clave API de Groq en la parte superior."); 
+                return; 
+            }
+            if (!text) { 
+                alert("Por favor, introduce información."); 
+                return; 
+            }
 
             spinner.style.display = 'block';
             emptyState.style.display = 'none';
@@ -235,6 +334,10 @@
                     })
                 });
 
+                if (!response.ok) {
+                    throw new Error("Respuesta de API no válida.");
+                }
+
                 const data = await response.json();
                 const resultados = data.choices[0].message.content.split('[SEP]');
                 const redes = ['Facebook', 'Instagram', 'X (Twitter)', 'WhatsApp'];
@@ -258,7 +361,7 @@
                 if(window.innerWidth < 850) outputPanel.scrollIntoView({ behavior: 'smooth' });
 
             } catch (e) {
-                alert("Error en la API.");
+                alert("Error en la API. Por favor, revisa que tu Clave API sea correcta y esté activa.");
             } finally {
                 spinner.style.display = 'none';
             }
