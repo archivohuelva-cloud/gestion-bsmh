@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Generador BSMH v4.0</title>
+    <title>Generador BSMH v3.9</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -54,6 +54,17 @@
         }
 
         .btn-nav:hover { background: #f1f5f9; }
+
+        /* Estilo especial destacado para el botón de Contraseña */
+        .btn-password {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #b45309;
+        }
+        
+        .btn-password:hover {
+            background: #fef3c7;
+        }
 
         /* Estilos del contenedor de la API Key */
         .key-container {
@@ -203,16 +214,18 @@
 <body>
 
     <div class="header">
-        <h1>Generador <span>BSMH</span> v4.0</h1>
+        <h1>Generador <span>BSMH</span> v3.9</h1>
         <p>Gestión de Comunicación - Banda Sinfónica Municipal de Huelva.</p>
         <div class="date-badge" id="currentDate"></div>
         
         <div class="header-buttons">
             <button class="btn-nav" onclick="history.back()">← Volver</button>
             <button class="btn-nav" onclick="location.reload()">Limpiar todo</button>
+            <!-- NUEVO: Botón de descarga de archivo de contraseña seguro -->
+            <a href="clave.zip" download class="btn-nav btn-password">🔑 Contraseña</a>
         </div>
 
-        <!-- Sección de configuración de API Key integrada y segura -->
+        <!-- Campo de configuración de API Key integrada y segura -->
         <div class="key-container">
             <label for="apiKeyInput">Clave API de Groq</label>
             <div class="key-input-wrapper">
