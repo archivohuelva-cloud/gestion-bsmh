@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda Archivo - SUPER BIBLIO</title>
+    <style>
+        :root {
+            --ios-blue: #007aff;
+            --ios-green: #34c759;
+            --ios-red: #ff3b30;
+            --ios-gray-bg: #f2f2f7;
+            --ios-card-bg: #ffffff;
+            --ios-text: #000000;
+            --ios-secondary-text: #8e8e93;
+            --ios-border: #c6c6c8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--ios-gray-bg);
+            color: var(--ios-text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Estructura Principal */
+        .sidebar {
+            width: 350px;
+            background-color: var(--ios-card-bg);
+            border-right: 1px solid var(--ios-border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .main-content {
+            flex: 1;
+            background-color: var(--ios-gray-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            overflow-y: auto;
+        }
+        /* Cabecera Sidebar */
+        .sidebar-header {
+            padding: 20px 15px 10px 15px;
+        }
+        .sidebar-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .sidebar-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .add-btn {
+            background: none;
+            border: none;
+            color: var(--ios-blue);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+        .search-bar {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: none;
+            background-color: #e3e3e6;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        /* Lista de Contactos */
+        .contact-list {
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            border-top: 1px solid #e5e5ea;
+        }
+        .contact-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e5e5ea;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .contact-item:hover {
+            background-color: #f2f2f7;
+        }
+        .contact-item.active {
+            background-color: #e1f0ff;
+        }
+        .item-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+        .item-org {
+            font-size: 14px;
+            color: var(--ios-secondary-text);
+        }
+        
+        /* Contenedor Ficha de Contacto */
+        .contact-card {
+            background-color: var(--ios-card-bg);
+            border-radius: 12px;
+            padding: 35px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-sizing: border-box;
+            position: relative;
+        }
+        
+        /* Botón Flotante para Editar (Estilo Lápiz iOS) */
+        .edit-icon-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: none;
+            border: none;
+            color: var(--ios-blue);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .edit-icon-btn:hover {
+            opacity: 0.8;
+        }
+
+        /* Cabecera de la Ficha */
+        .card-header-visual {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .avatar-placeholder {
+            width: 90px;
+            height: 90px;
+            background-color: #acbbc7;
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .display-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 5px 0;
+        }
+        .display-org {
+            font-size: 16px;
+            color: var(--ios-blue);
+            font-weight: 500;
+            margin: 0;
+        }
+
+        /* MODO LECTURA: Estructura limpia y amigable */
+        .info-read-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .info-row {
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f2f2f7;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ios-secondary-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-size: 16px;
+            color: var(--ios-text);
+            word-break: break-word;
+        }
+        .info-value a {
+            color: var(--ios-blue);
+            text-decoration: none;
+        }
+        .info-value.notes-box {
+            background-color: var(--ios-gray-bg);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        /* MODO EDICIÓN: Formulario tradicional */
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+            flex: 1;
+            position: relative;
+        }
+        form label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--ios-secondary-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input[type="text"], input[type="email"], input[type="url"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--ios-border);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 15px;
+            background-color: #fafafa;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--ios-blue);
+            background-color: #ffffff;
+        }
+        
+        /* Desplegable de Organización */
+        .custom-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid var(--ios-border);
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: none;
+            margin-top: 2px;
+            padding: 0;
+            list-style: none;
+        }
+        .custom-dropdown li {
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid #f2f2f7;
+        }
+        .custom-dropdown li:hover {
+            background-color: var(--ios-gray-bg);
+            color: var(--ios-blue);
+        }
+        .custom-dropdown li.no-results {
+            color: var(--ios-secondary-text);
+            cursor: default;
+        }
+
+        /* Botonera */
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 10px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-primary { background-color: var(--ios-blue); color: white; }
+        .btn-secondary { background-color: #e5e5ea; color: #000000; }
+        .btn-danger { background-color: var(--ios-red); color: white; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        #noSelectionMessage {
+            color: var(--ios-secondary-text);
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title-row">
+                <h1 class="sidebar-title">Contactos</h1>
+                <button class="add-btn" onclick="prepareNewContact()" title="Añadir contacto">+</button>
+            </div>
+            <input type="text" id="searchField" class="search-bar" placeholder="Buscar en la agenda...">
+        </div>
+        <ul class="contact-list" id="contactListContainer"></ul>
+    </div>
+
+    <div class="main-content">
+        <div id="noSelectionMessage">Selecciona un contacto o pulsa "+" para añadir.</div>
+        
+        <div class="contact-card" id="contactCardContainer" style="display: none;">
+            
+            <button class="edit-icon-btn" id="editViewToggleBtn" onclick="enableEditMode()">
+                ✏️ Editar
+            </button>
+            
+            <div class="card-header-visual">
+                <div class="avatar-placeholder" id="avatarLetter">A</div>
+                <h3 class="display-name" id="headerName">Nombre</h3>
+                <p class="display-org" id="headerOrg">Organización</p>
+                <div style="font-size: 11px; color: var(--ios-secondary-text); margin-top: 5px;" id="idLabel">ID: -</div>
+            </div>
+            
+            <div id="readModeContainer" class="info-read-section">
+                <div class="info-row" id="readMailRow">
+                    <span class="info-label">Correo Electrónico</span>
+                    <span class="info-value" id="readMail">-</span>
+                </div>
+                <div class="info-row" id="readTel1Row">
+                    <span class="info-label">Teléfono Principal</span>
+                    <span class="info-value" id="readTel1">-</span>
+                </div>
+                <div class="info-row" id="readTel2Row">
+                    <span class="info-label">Teléfono Secundario</span>
+                    <span class="info-value" id="readTel2">-</span>
+                </div>
+                <div class="info-row" id="readWebRow">
+                    <span class="info-label">Página Web / Enlace</span>
+                    <span class="info-value" id="readWeb">-</span>
+                </div>
+                <div class="info-row" id="readNotasRow">
+                    <span class="info-label">Notas y Observaciones</span>
+                    <span class="info-value notes-box" id="readNotas">-</span>
+                </div>
+            </div>
+            
+            <form id="appleContactForm" style="display: none;">
+                <input type="hidden" id="actionField" name="action" value="create">
+                <input type="hidden" id="idField" name="idContacto" value="">
+                
+                <div class="form-group">
+                    <label for="nombre">Nombre Completo *</label>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Nombre y Apellidos">
+                </div>
+                
+                <div class="form-group" id="orgGroupContainer">
+                    <label for="organizacion">Organización / Instrumento *</label>
+                    <input type="text" id="organizacion" name="organizacion" required autocomplete="off" placeholder="Escribe para buscar o añadir nuevo...">
+                    <ul class="custom-dropdown" id="orgDropdown"></ul>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mail">Correo Electrónico</label>
+                    <input type="email" id="mail" name="mail" placeholder="ejemplo@correo.com">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="telefono1">Teléfono 1</label>
+                        <input type="text" id="telefono1" name="telefono1" placeholder="600000000">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefono2">Teléfono 2</label>
+                        <input type="text" id="telefono2" name="telefono2" placeholder="959000000">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="web">Página Web / Enlace</label>
+                    <input type="url" id="web" name="web" placeholder="https://ejemplo.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="notas">Notas u Observaciones Logísticas</label>
+                    <textarea id="notas" name="notas" rows="3" placeholder="Detalles operativos..."></textarea>
+                </div>
+                
+                <div class="action-row">
+                    <button type="button" class="btn btn-danger" id="deleteBtn" onclick="deleteContact()">Eliminar</button>
+                    <button type="button" class="btn btn-secondary" onclick="disableEditMode()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Guardar</button>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+
+<script>
+    const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyyNlYH1To2i1VFLpQEfUlTOxdU3Cx-bEwqMRCDyFMIDQZ-GGnqWr6lY9rwpIQf-LI4lw/exec';
+    let allContacts = [];
+    let allOrganizations = [];
+    let currentSelectedId = null;
+    let cachedContactData = null; // Almacén temporal del registro activo
+
+    const orgInput = document.getElementById('organizacion');
+    const orgDropdown = document.getElementById('orgDropdown');
+
+    window.addEventListener('DOMContentLoaded', loadDataFromSheet);
+    document.getElementById('searchField').addEventListener('input', filterContacts);
+
+    orgInput.addEventListener('focus', () => { filterDropdown(orgInput.value); });
+    orgInput.addEventListener('input', () => { filterDropdown(orgInput.value); });
+
+    document.addEventListener('click', (e) => {
+        if (!document.getElementById('orgGroupContainer').contains(e.target)) {
+            orgDropdown.style.display = 'none';
+        }
+    });
+
+    function cleanText(text) {
+        if (!text) return "";
+        return text.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function loadDataFromSheet() {
+        const container = document.getElementById('contactListContainer');
+        container.innerHTML = '<li style="padding: 20px; text-align:center; color:gray;">Sincronizando archivo...</li>';
+        
+        fetch(WEB_APP_URL)
+            .then(res => res.json())
+            .then(data => {
+                if(data.contacts) allContacts = data.contacts;
+                if(data.organizations) allOrganizations = data.organizations;
+                renderList(allContacts);
+                if(currentSelectedId) showContactDetails(currentSelectedId);
+            })
+            .catch(err => {
+                container.innerHTML = '<li style="padding: 20px; text-align:center; color:red;">Error de sincronización</li>';
+                console.error(err);
+            });
+    }
+
+    function renderList(contacts) {
+        const container = document.getElementById('contactListContainer');
+        container.innerHTML = '';
+        
+        if(contacts.length === 0) {
+            container.innerHTML = '<li style="padding: 20px; text-align:center; color:gray;">Sin contactos</li>';
+            return;
+        }
+
+        contacts.forEach(c => {
+            const li = document.createElement('li');
+            li.className = `contact-item ${currentSelectedId == c.idContacto ? 'active' : ''}`;
+            li.onclick = () => showContactDetails(c.idContacto);
+            li.innerHTML = `
+                <div class="item-name">${c.nombre}</div>
+                <div class="item-org">${c.organizacion}</div>
+            `;
+            container.appendChild(li);
+        });
+    }
+
+    function filterDropdown(query) {
+        const cleanedQuery = cleanText(query);
+        orgDropdown.innerHTML = '';
+        
+        const filtered = allOrganizations.filter(org => cleanText(org).includes(cleanedQuery));
+
+        if (filtered.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'no-results';
+            li.innerText = 'Guardar como nuevo';
+            orgDropdown.appendChild(li);
+        } else {
+            filtered.forEach(org => {
+                const li = document.createElement('li');
+                li.innerText = org;
+                li.onclick = () => {
+                    orgInput.value = org;
+                    orgDropdown.style.display = 'none';
+                };
+                orgDropdown.appendChild(li);
+            });
+        }
+        orgDropdown.style.display = 'block';
+    }
+
+    function filterContacts() {
+        const query = cleanText(document.getElementById('searchField').value);
+        const filtered = allContacts.filter(c => 
+            cleanText(c.nombre).includes(query) || 
+            cleanText(c.organizacion).includes(query) || 
+            cleanText(c.notas).includes(query)
+        );
+        renderList(filtered);
+    }
+
+    // MODO LECTURA: Rellena y muestra los datos sin inputs
+    function showContactDetails(id) {
+        currentSelectedId = id;
+        const contact = allContacts.find(c => c.idContacto == id);
+        if(!contact) return;
+        cachedContactData = contact;
+
+        document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
+        renderList(allContacts);
+
+        document.getElementById('noSelectionMessage').style.display = 'none';
+        document.getElementById('contactCardContainer').style.display = 'block';
+        
+        // Forzar regreso a vista amigable de lectura
+        document.getElementById('readModeContainer').style.display = 'flex';
+        document.getElementById('appleContactForm').style.display = 'none';
+        document.getElementById('editViewToggleBtn').style.display = 'flex';
+
+        // Setear Cabecera
+        document.getElementById('avatarLetter').innerText = contact.nombre.charAt(0).toUpperCase();
+        document.getElementById('headerName').innerText = contact.nombre;
+        document.getElementById('headerOrg').innerText = contact.organizacion;
+        document.getElementById('idLabel').innerText = 'ID REGISTRO: ' + contact.idContacto;
+
+        // Setear campos Modo Lectura (Ocultar si están vacíos para un diseño óptimo)
+        displayReadField('readMail', 'readMailRow', contact.mail, contact.mail ? `<a href="mailto:${contact.mail}">${contact.mail}</a>` : '');
+        displayReadField('readTel1', 'readTel1Row', contact.telefono1, contact.telefono1 ? `<a href="tel:${contact.telefono1}">${contact.telefono1}</a>` : '');
+        displayReadField('readTel2', 'readTel2Row', contact.telefono2, contact.telefono2 ? `<a href="tel:${contact.telefono2}">${contact.telefono2}</a>` : '');
+        displayReadField('readWeb', 'readWebRow', contact.web, contact.web ? `<a href="${contact.web}" target="_blank">${contact.web}</a>` : '');
+        displayReadField('readNotas', 'readNotasRow', contact.notas, contact.notas);
+    }
+
+    function displayReadField(elementId, rowId, value, customHtml) {
+        const row = document.getElementById(rowId);
+        const el = document.getElementById(elementId);
+        if(value && value.toString().trim() !== "") {
+            el.innerHTML = customHtml ? customHtml : value;
+            row.style.display = 'flex';
+        } else {
+            row.style.display = 'none';
+        }
+    }
+
+    // Transición a campos editables
+    function enableEditMode() {
+        if(!cachedContactData) return;
+        
+        document.getElementById('readModeContainer').style.display = 'none';
+        document.getElementById('editViewToggleBtn').style.display = 'none';
+        document.getElementById('appleContactForm').style.display = 'block';
+
+        // Cargar los inputs del formulario
+        document.getElementById('actionField').value = 'update';
+        document.getElementById('idField').value = cachedContactData.idContacto;
+        document.getElementById('nombre').value = cachedContactData.nombre;
+        orgInput.value = cachedContactData.organizacion;
+        document.getElementById('mail').value = cachedContactData.mail;
+        document.getElementById('telefono1').value = cachedContactData.telefono1;
+        document.getElementById('telefono2').value = cachedContactData.telefono2;
+        document.getElementById('web').value = cachedContactData.web;
+        document.getElementById('notas').value = cachedContactData.notas;
+        
+        document.getElementById('deleteBtn').style.display = 'block';
+    }
+
+    function disableEditMode() {
+        if(document.getElementById('actionField').value === 'create') {
+            cancelEditing();
+        } else {
+            showContactDetails(currentSelectedId);
+        }
+    }
+
+    function prepareNewContact() {
+        currentSelectedId = null;
+        cachedContactData = null;
+        document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
+        
+        document.getElementById('noSelectionMessage').style.display = 'none';
+        document.getElementById('contactCardContainer').style.display = 'block';
+        
+        // Forzar visualización de formulario directo
+        document.getElementById('readModeContainer').style.display = 'none';
+        document.getElementById('editViewToggleBtn').style.display = 'none';
+        document.getElementById('appleContactForm').style.display = 'block';
+        
+        document.getElementById('appleContactForm').reset();
+        orgDropdown.style.display = 'none';
+        
+        document.getElementById('actionField').value = 'create';
+        document.getElementById('idField').value = '';
+        document.getElementById('headerName').innerText = 'Nuevo Contacto';
+        document.getElementById('headerOrg').innerText = 'Base de datos';
+        document.getElementById('idLabel').innerText = 'ASIGNACIÓN AUTOMÁTICA';
+        document.getElementById('avatarLetter').innerText = '+';
+        document.getElementById('deleteBtn').style.display = 'none';
+    }
+
+    function cancelEditing() {
+        document.getElementById('contactCardContainer').style.display = 'none';
+        document.getElementById('noSelectionMessage').style.display = 'block';
+        orgDropdown.style.display = 'none';
+        currentSelectedId = null;
+        cachedContactData = null;
+        renderList(allContacts);
+    }
+
+    document.getElementById('appleContactForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.innerText = 'Guardando...';
+
+        const formData = new FormData(this);
+        const urlEncodedData = new URLSearchParams(formData).toString();
+
+        fetch(WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: urlEncodedData
+        })
+        .then(() => {
+            setTimeout(() => {
+                // Si es un alta nueva, limpiamos selección. Si es edición, recordamos el ID
+                const idToReload = document.getElementById('actionField').value === 'create' ? null : currentSelectedId;
+                loadDataFromSheet();
+                if(!idToReload) {
+                    cancelEditing();
+                } else {
+                    showContactDetails(idToReload);
+                }
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Guardar';
+            }, 1500);
+        })
+        .catch(err => {
+            alert('Error de red al guardar modificaciones.');
+            saveBtn.disabled = false;
+            saveBtn.innerText = 'Guardar';
+        });
+    });
+
+    function deleteContact() {
+        if(!confirm('¿Seguro que deseas eliminar este contacto?')) return;
+        
+        const id = document.getElementById('idField').value;
+        document.getElementById('deleteBtn').disabled = true;
+
+        const urlParams = new URLSearchParams();
+        urlParams.append('action', 'delete');
+        urlParams.append('idContacto', id);
+
+        fetch(WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: urlParams.toString()
+        })
+        .then(() => {
+            setTimeout(() => {
+                currentSelectedId = null;
+                cachedContactData = null;
+                loadDataFromSheet();
+                cancelEditing();
+                document.getElementById('deleteBtn').disabled = false;
+            }, 1500);
+        })
+        .catch(err => {
+            alert('Error al intentar eliminar.');
+            document.getElementById('deleteBtn').disabled = false;
+        });
+    }
+</script>
+</body>
+</html>
