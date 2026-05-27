@@ -33,6 +33,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
+            flex-shrink: 0;
         }
         .main-content {
             flex: 1;
@@ -42,6 +43,7 @@
             align-items: center;
             padding: 40px;
             overflow-y: auto;
+            position: relative;
         }
         /* Cabecera Sidebar */
         .sidebar-header {
@@ -78,12 +80,13 @@
         }
         /* Lista de Contactos */
         .contact-list {
+            position: relative;
             flex: 1;
             overflow-y: auto;
             list-style: none;
             margin: 0;
             padding: 0;
-            border-top: 1px solid #e5e5ea;
+            border-top: none !important;
         }
         .contact-item {
             padding: 12px 20px;
@@ -301,6 +304,149 @@
             color: var(--ios-secondary-text);
             font-size: 18px;
         }
+
+        /* --- ELEMENTOS DE DISEÑO DE ÍNDICE, AGRUPACIÓN Y SEPARADORES --- */
+        .list-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            border-top: 1px solid #e5e5ea;
+        }
+        .contact-divider {
+            background-color: var(--ios-gray-bg);
+            padding: 6px 20px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--ios-secondary-text);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid #e5e5ea;
+        }
+        .alphabet-index {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            width: 24px;
+            padding: 10px 0;
+            background-color: var(--ios-card-bg);
+            user-select: none;
+            border-left: 1px solid #e5e5ea;
+            box-sizing: border-box;
+        }
+        .alphabet-index span {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--ios-blue);
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            line-height: 1.1;
+        }
+        .alphabet-index span:hover {
+            color: var(--ios-red);
+        }
+        .group-selector {
+            display: flex;
+            background-color: #e3e3e6;
+            border-radius: 8px;
+            padding: 2px;
+            margin-top: 10px;
+        }
+        .group-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ios-text);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .group-btn.active {
+            background-color: var(--ios-card-bg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Botón de volver para vista móvil (oculto en escritorio) */
+        .back-btn-mobile {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: none;
+            border: none;
+            color: var(--ios-blue);
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            z-index: 1000;
+            padding: 5px 10px 5px 0;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* --- ADAPTACIÓN DE PANTALLA (RESPONSIVE) --- */
+        /* Ajustes para tabletas medianas */
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .sidebar {
+                width: 300px;
+            }
+            .main-content {
+                padding: 20px;
+            }
+        }
+
+        /* Ajustes para Smartphones e iPhones (Pantallas pequeñas) */
+        @media (max-width: 767px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100% !important;
+                height: 100% !important;
+                display: flex;
+            }
+            .main-content {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: var(--ios-gray-bg);
+                z-index: 100;
+                padding: 15px;
+                box-sizing: border-box;
+                display: none; /* Se oculta por defecto para ver la lista */
+            }
+            /* Clase que activa la pantalla de ficha de contacto en móvil */
+            body.show-detail-mobile .sidebar {
+                display: none !important;
+            }
+            body.show-detail-mobile .main-content {
+                display: flex !important;
+            }
+            .contact-card {
+                padding: 24px 15px;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 12px;
+                box-shadow: none;
+                margin-top: 40px; /* Margen para no chocar con el botón Volver */
+            }
+            .back-btn-mobile {
+                display: inline-flex;
+            }
+            .alphabet-index {
+                width: 20px;
+            }
+            .alphabet-index span {
+                font-size: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -312,11 +458,54 @@
                 <button class="add-btn" onclick="prepareNewContact()" title="Añadir contacto">+</button>
             </div>
             <input type="text" id="searchField" class="search-bar" placeholder="Buscar en la agenda...">
+            
+            <div class="group-selector">
+                <button id="groupByNameBtn" class="group-btn active" onclick="setGrouping('name')">Nombre</button>
+                <button id="groupByOrgBtn" class="group-btn" onclick="setGrouping('org')">Puesto / Org</button>
+            </div>
         </div>
-        <ul class="contact-list" id="contactListContainer"></ul>
+        
+        <div class="list-wrapper">
+            <ul class="contact-list" id="contactListContainer"></ul>
+            <div class="alphabet-index">
+                <span onclick="scrollToLetter('A')">A</span>
+                <span onclick="scrollToLetter('B')">B</span>
+                <span onclick="scrollToLetter('C')">C</span>
+                <span onclick="scrollToLetter('D')">D</span>
+                <span onclick="scrollToLetter('E')">E</span>
+                <span onclick="scrollToLetter('F')">F</span>
+                <span onclick="scrollToLetter('G')">G</span>
+                <span onclick="scrollToLetter('H')">H</span>
+                <span onclick="scrollToLetter('I')">I</span>
+                <span onclick="scrollToLetter('J')">J</span>
+                <span onclick="scrollToLetter('K')">K</span>
+                <span onclick="scrollToLetter('L')">L</span>
+                <span onclick="scrollToLetter('M')">M</span>
+                <span onclick="scrollToLetter('N')">N</span>
+                <span onclick="scrollToLetter('Ñ')">Ñ</span>
+                <span onclick="scrollToLetter('O')">O</span>
+                <span onclick="scrollToLetter('P')">P</span>
+                <span onclick="scrollToLetter('Q')">Q</span>
+                <span onclick="scrollToLetter('R')">R</span>
+                <span onclick="scrollToLetter('S')">S</span>
+                <span onclick="scrollToLetter('T')">T</span>
+                <span onclick="scrollToLetter('U')">U</span>
+                <span onclick="scrollToLetter('V')">V</span>
+                <span onclick="scrollToLetter('W')">W</span>
+                <span onclick="scrollToLetter('X')">X</span>
+                <span onclick="scrollToLetter('Y')">Y</span>
+                <span onclick="scrollToLetter('Z')">Z</span>
+                <span onclick="scrollToLetter('#')">#</span>
+            </div>
+        </div>
     </div>
 
     <div class="main-content">
+        <!-- Botón de retorno exclusivo para entornos móviles -->
+        <button class="back-btn-mobile" id="backBtnMobile" onclick="goBackToList()">
+            ‹ Contactos
+        </button>
+
         <div id="noSelectionMessage">Selecciona un contacto o pulsa "+" para añadir.</div>
         
         <div class="contact-card" id="contactCardContainer" style="display: none;">
@@ -360,40 +549,40 @@
                 <input type="hidden" id="idField" name="idContacto" value="">
                 
                 <div class="form-group">
-                    <label for="nombre">Nombre y apellidos *</label>
-                    <input type="text" id="nombre" name="nombre" required placeholder="">
+                    <label for="nombre">Nombre Completo *</label>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Nombre y Apellidos">
                 </div>
                 
                 <div class="form-group" id="orgGroupContainer">
                     <label for="organizacion">Organización / Instrumento *</label>
-                    <input type="text" id="organizacion" name="organizacion" required autocomplete="off" placeholder="">
+                    <input type="text" id="organizacion" name="organizacion" required autocomplete="off" placeholder="Escribe para buscar o añadir nuevo...">
                     <ul class="custom-dropdown" id="orgDropdown"></ul>
                 </div>
                 
                 <div class="form-group">
                     <label for="mail">Correo Electrónico</label>
-                    <input type="email" id="mail" name="mail" placeholder="">
+                    <input type="email" id="mail" name="mail" placeholder="ejemplo@correo.com">
                 </div>
                 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="telefono1">Teléfono 1</label>
-                        <input type="text" id="telefono1" name="telefono1" placeholder="">
+                        <input type="text" id="telefono1" name="telefono1" placeholder="600000000">
                     </div>
                     <div class="form-group">
                         <label for="telefono2">Teléfono 2</label>
-                        <input type="text" id="telefono2" name="telefono2" placeholder="">
+                        <input type="text" id="telefono2" name="telefono2" placeholder="959000000">
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="web">Página Web</label>
-                    <input type="url" id="web" name="web" placeholder="">
+                    <label for="web">Página Web / Enlace</label>
+                    <input type="url" id="web" name="web" placeholder="https://ejemplo.com">
                 </div>
                 
                 <div class="form-group">
-                    <label for="notas">Notas</label>
-                    <textarea id="notas" name="notas" rows="3" placeholder=""></textarea>
+                    <label for="notas">Notas u Observaciones Logísticas</label>
+                    <textarea id="notas" name="notas" rows="3" placeholder="Detalles operativos..."></textarea>
                 </div>
                 
                 <div class="action-row">
@@ -412,6 +601,7 @@
     let allOrganizations = [];
     let currentSelectedId = null;
     let cachedContactData = null; // Almacén temporal del registro activo
+    let currentGroupingMode = 'name'; // 'name' o 'org'
 
     const orgInput = document.getElementById('organizacion');
     const orgDropdown = document.getElementById('orgDropdown');
@@ -431,6 +621,50 @@
     function cleanText(text) {
         if (!text) return "";
         return text.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function getInitial(text) {
+        if (!text) return '#';
+        const cleaned = cleanText(text).trim();
+        if (cleaned.length === 0) return '#';
+        const firstChar = cleaned.charAt(0).toUpperCase();
+        if (firstChar >= 'A' && firstChar <= 'Z') return firstChar;
+        return '#';
+    }
+
+    function setGrouping(mode) {
+        currentGroupingMode = mode;
+        document.getElementById('groupByNameBtn').classList.toggle('active', mode === 'name');
+        document.getElementById('groupByOrgBtn').classList.toggle('active', mode === 'org');
+        filterContacts();
+    }
+
+    // Navegación precisa y robusta superando el comportamiento errático de "position: sticky"
+    function scrollToLetter(letter) {
+        const element = document.getElementById(`divider-${letter}`);
+        const container = document.getElementById('contactListContainer');
+        if (element && container) {
+            // Desactivamos temporalmente el comportamiento sticky para obtener la coordenada natural del flujo del documento
+            element.style.position = 'static';
+            const naturalOffset = element.offsetTop;
+            element.style.position = ''; // Restauramos la propiedad sticky definida en CSS
+            
+            container.scrollTo({
+                top: naturalOffset,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // Regresa a la vista del listado en pantallas móviles
+    function goBackToList() {
+        currentSelectedId = null;
+        cachedContactData = null;
+        document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
+        document.getElementById('contactCardContainer').style.display = 'none';
+        document.getElementById('noSelectionMessage').style.display = 'block';
+        document.body.classList.remove('show-detail-mobile');
+        renderList(allContacts);
     }
 
     function loadDataFromSheet() {
@@ -460,13 +694,53 @@
             return;
         }
 
-        contacts.forEach(c => {
+        let sorted = [...contacts];
+
+        if (currentGroupingMode === 'name') {
+            sorted.sort((a, b) => cleanText(a.nombre).localeCompare(cleanText(b.nombre)));
+        } else {
+            sorted.sort((a, b) => {
+                const orgA = cleanText(a.organizacion || 'Sin organizacion');
+                const orgB = cleanText(b.organizacion || 'Sin organizacion');
+                const comp = orgA.localeCompare(orgB);
+                if (comp !== 0) return comp;
+                return cleanText(a.nombre).localeCompare(cleanText(b.nombre));
+            });
+        }
+
+        let lastDivider = null;
+
+        sorted.forEach(c => {
+            let currentDividerValue = '';
+            if (currentGroupingMode === 'name') {
+                currentDividerValue = getInitial(c.nombre);
+            } else {
+                currentDividerValue = c.organizacion ? c.organizacion.trim() : 'Sin Organización';
+            }
+
+            if (currentDividerValue !== lastDivider) {
+                lastDivider = currentDividerValue;
+                const divLi = document.createElement('li');
+                divLi.className = 'contact-divider';
+                divLi.innerText = currentDividerValue;
+
+                if (currentGroupingMode === 'name') {
+                    divLi.id = `divider-${currentDividerValue}`;
+                } else {
+                    const initial = getInitial(currentDividerValue);
+                    if (!document.getElementById(`divider-${initial}`)) {
+                        divLi.id = `divider-${initial}`;
+                    }
+                }
+                container.appendChild(divLi);
+            }
+
             const li = document.createElement('li');
             li.className = `contact-item ${currentSelectedId == c.idContacto ? 'active' : ''}`;
             li.onclick = () => showContactDetails(c.idContacto);
             li.innerHTML = `
                 <div class="item-name">${c.nombre}</div>
-                <div class="item-org">${c.organizacion}</div>
+                <div class="item-org">${c.organizacion || ''}</div>
             `;
             container.appendChild(li);
         });
@@ -537,6 +811,9 @@
         displayReadField('readTel2', 'readTel2Row', contact.telefono2, contact.telefono2 ? `<a href="tel:${contact.telefono2}">${contact.telefono2}</a>` : '');
         displayReadField('readWeb', 'readWebRow', contact.web, contact.web ? `<a href="${contact.web}" target="_blank">${contact.web}</a>` : '');
         displayReadField('readNotas', 'readNotasRow', contact.notas, contact.notas);
+
+        // Activación de la pantalla móvil
+        document.body.classList.add('show-detail-mobile');
     }
 
     function displayReadField(elementId, rowId, value, customHtml) {
@@ -570,6 +847,7 @@
         document.getElementById('notas').value = cachedContactData.notas;
         
         document.getElementById('deleteBtn').style.display = 'block';
+        document.body.classList.add('show-detail-mobile');
     }
 
     function disableEditMode() {
@@ -603,6 +881,8 @@
         document.getElementById('idLabel').innerText = 'ASIGNACIÓN AUTOMÁTICA';
         document.getElementById('avatarLetter').innerText = '+';
         document.getElementById('deleteBtn').style.display = 'none';
+
+        document.body.classList.add('show-detail-mobile');
     }
 
     function cancelEditing() {
@@ -611,6 +891,7 @@
         orgDropdown.style.display = 'none';
         currentSelectedId = null;
         cachedContactData = null;
+        document.body.classList.remove('show-detail-mobile');
         renderList(allContacts);
     }
 
