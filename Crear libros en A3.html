@@ -1,5 +1,3 @@
-<!-- START OF FILE Impresión libros en A3.html -->
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -109,7 +107,7 @@
             onEnd: function() {
                 const newOrder = [];
                 fileListElement.querySelectorAll('[data-id]').forEach(el => {
-                    const id = el.getAttribute('data-id');
+                    const id = el.getAttribute('el-id') || el.getAttribute('data-id');
                     newOrder.push(filesToProcess.find(f => f.id === id));
                 });
                 filesToProcess = newOrder;
@@ -324,23 +322,50 @@
                 let targetMerged;
 
                 if (pageCount === 1) {
+                    // Para A4: Se crean las copias solicitadas
                     processedPdfBytes = await createMultiCopyPdf(sourcePdf, item.copies, false);
                     targetFolder = folderA4;
                     targetMerged = mergedA4;
                     hasA4 = true;
+                    
+                    // Guardar archivo individual limpio en el ZIP
+                    targetFolder.file(item.file.name, processedPdfBytes);
+                    
+                    // Añadir al unificado A4
+                    const tempPdf = await PDFLib.PDFDocument.load(processedPdfBytes);
+                    const pages = await targetMerged.copyPages(tempPdf, tempPdf.getPageIndices());
+                    pages.forEach(p => targetMerged.addPage(p));
                 } else {
-                    const a3Pdf = await convertToA3Vertical(sourcePdf);
-                    processedPdfBytes = await createMultiCopyPdf(a3Pdf, item.copies, true);
+                    // Para A3: Convertimos la partitura limpia a A3
+                    const a3PdfOriginal = await convertToA3Vertical(sourcePdf);
+                    
+                    // El archivo individual se guarda limpio con sus copias correspondientes, 
+                    // sin páginas en blanco añadidas al final
+                    processedPdfBytes = await createMultiCopyPdf(a3PdfOriginal, item.copies, true);
                     targetFolder = folderA3;
                     targetMerged = mergedA3;
                     hasA3 = true;
+                    
+                    targetFolder.file(item.file.name, processedPdfBytes);
+                    
+                    // Para el archivo UNIFICADO, unimos las copias una a una. 
+                    // Si el PDF de A3 tiene páginas impares (1 página A3), agregamos un separador blanco tras cada copia 
+                    // únicamente en este archivo unificado, previniendo que se mezclen instrumentos al imprimir a doble cara.
+                    const singleA3PageCount = a3PdfOriginal.getPageCount();
+                    const isImpar = (singleA3PageCount % 2 !== 0);
+                    
+                    for (let c = 0; c < item.copies; c++) {
+                        const tempPages = await targetMerged.copyPages(a3PdfOriginal, a3PdfOriginal.getPageIndices());
+                        tempPages.forEach(p => targetMerged.addPage(p));
+                        
+                        if (isImpar) {
+                            const lastPage = a3PdfOriginal.getPage(0);
+                            const width = lastPage.getWidth();
+                            const height = lastPage.getHeight();
+                            targetMerged.addPage([width, height]);
+                        }
+                    }
                 }
-
-                targetFolder.file(item.file.name, processedPdfBytes);
-                
-                const tempPdf = await PDFLib.PDFDocument.load(processedPdfBytes);
-                const pages = await targetMerged.copyPages(tempPdf, tempPdf.getPageIndices());
-                pages.forEach(p => targetMerged.addPage(p));
             }
 
             const nameA3 = detectedFolderName ? `${detectedFolderName} A3.pdf` : "Partichelas unificadas en A3.pdf";
