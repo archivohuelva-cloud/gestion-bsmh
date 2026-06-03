@@ -103,6 +103,10 @@
                         <label class="block text-xs md:text-sm font-semibold text-slate-600 mb-1">Hora</label>
                         <input type="time" id="conciertoHora" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm">
                     </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs md:text-sm font-semibold text-slate-600 mb-1">Notas / Observaciones (necesidades del concierto)</label>
+                        <textarea id="conciertoNotas" placeholder="Escriba aquí las necesidades o detalles del concierto..." rows="3" class="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-y"></textarea>
+                    </div>
                 </div>
             </div>
 
@@ -368,6 +372,7 @@
             document.getElementById('conciertoLugar').value = '';
             document.getElementById('conciertoFecha').value = '';
             document.getElementById('conciertoHora').value = '';
+            document.getElementById('conciertoNotas').value = '';
             document.getElementById('buscadorInput').value = '';
             document.getElementById('obraManualInput').value = '';
             document.getElementById('compositorManualInput').value = '';
@@ -390,6 +395,7 @@
                 lugar: document.getElementById('conciertoLugar').value,
                 fecha: document.getElementById('conciertoFecha').value,
                 hora: document.getElementById('conciertoHora').value,
+                notas: document.getElementById('conciertoNotas').value,
                 repertorio: repertorioSeleccionado
             };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(datos, null, 2));
@@ -412,6 +418,7 @@
                     document.getElementById('conciertoLugar').value = datos.lugar || '';
                     document.getElementById('conciertoFecha').value = datos.fecha || '';
                     document.getElementById('conciertoHora').value = datos.hora || '';
+                    document.getElementById('conciertoNotas').value = datos.notas || '';
                     repertorioSeleccionado = datos.repertorio || [];
                     actualizarBorrador();
                     event.target.value = '';
@@ -473,6 +480,7 @@
             const lugarVal = document.getElementById('conciertoLugar').value.trim() || '-';
             const fechaVal = document.getElementById('conciertoFecha').value;
             const horaVal = document.getElementById('conciertoHora').value || '-';
+            const notasVal = document.getElementById('conciertoNotas').value.trim();
 
             let diaSemanaStr = '-';
             let fechaStr = '-';
@@ -530,6 +538,19 @@
                 alternateRowStyles: { fillColor: [250, 250, 250] },
                 columnStyles: { 0: { halign: 'center', cellWidth: 20 } }
             });
+
+            const finalYTabla = doc.lastAutoTable.finalY || (finalYInfo + 40);
+
+            // Bloque para añadir la sección de Notas si contiene texto (justo debajo del listado de obras)
+            if (notasVal) {
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text("Notas / Observaciones:", 14, finalYTabla + 15);
+                
+                doc.setFont("helvetica", "normal");
+                const splitNotas = doc.splitTextToSize(notasVal, pageWidth - 28);
+                doc.text(splitNotas, 14, finalYTabla + 21);
+            }
 
             const labelTipo = tipo === 'archivo' ? 'Archivo' : 'Banda';
             doc.save(`${tituloBruto} - ${labelTipo}.pdf`);
