@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divisor de Partituras Profesional</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --primary: #1a73e8; --success: #27ae60; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #333; }
+        
+        /* Overlay de arrastre */
+        #drop-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26, 115, 232, 0.9); 
+            color: white; display: none; align-items: center; justify-content: center; z-index: 2000; border: 10px dashed white; pointer-events: none; }
+        #drop-overlay.active { display: flex; }
+
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        
+        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        
+        .main-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        .upload-zone { border: 2px dashed var(--primary); background: #f1f7ff; padding: 30px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 20px; }
+        
+        /* Lista de archivos */
+        .file-list { margin: 20px 0; max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        .file-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fff; }
+        .file-item:last-child { border-bottom: none; }
+        .file-info { flex-grow: 1; font-size: 14px; }
+        .file-actions { display: flex; gap: 15px; }
+        .btn-preview { color: var(--primary); cursor: pointer; font-size: 18px; }
+        .btn-remove { color: #e74c3c; cursor: pointer; }
+
+        .controls { display: flex; gap: 10px; margin-top: 20px; }
+        .btn-process { flex-grow: 1; background: var(--success); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; display: none; }
+        .btn-process:disabled { background: #ccc; }
+
+        /* Modal de Vista Previa */
+        #preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 3000; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        #preview-modal iframe { width: 100%; height: 90%; border: none; background: white; }
+        .close-preview { align-self: flex-end; color: white; font-size: 30px; cursor: pointer; margin-bottom: 10px; }
+
+        #status { margin-top: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="drop-overlay"><h1><i class="fas fa-file-import"></i> Suelta para añadir a la cola</h1></div>
+
+<div class="container">
+    <div class="header">
+        <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Volver</button>
+        <h2 style="margin:0; color: var(--primary);">Divisor A3 a A4</h2>
+    </div>
+
+    <div class="main-card">
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--primary)"></i>
+            <p>Arrastra archivos o carpetas aquí o haz clic para seleccionar</p>
+            <input type="file" id="fileInput" multiple accept="application/pdf" style="display:none">
+        </div>
+
+        <div id="file-list-container" style="display:none;">
+            <h4 id="queue-title">Archivos en cola:</h4>
+            <div class="file-list" id="fileList"></div>
+            
+            <div class="controls">
+                <button class="btn-process" id="processBtn">
+                    <i class="fas fa-cogs"></i> PROCESAR Y GENERAR ZIP
+                </button>
+                <button onclick="clearQueue()" style="border:none; background:none; color:red; cursor:pointer;">Limpiar</button>
+            </div>
+        </div>
+
+        <div id="status"></div>
+    </div>
+</div>
+
+<!-- Modal Vista Previa -->
+<div id="preview-modal">
+    <span class="close-preview" onclick="closePreview()">&times; Cerrar Vista Previa</span>
+    <iframe id="preview-frame"></iframe>
+</div>
+
+<script>
+    const { PDFDocument } = PDFLib;
+    let queue = [];
+    let zipNameBase = "Partituras";
+
+    const fileInput = document.getElementById('fileInput');
+    const fileListDiv = document.getElementById('fileList');
+    const processBtn = document.getElementById('processBtn');
+    const statusDiv = document.getElementById('status');
+    const overlay = document.getElementById('drop-overlay');
+
+    // --- Gestión de Arrastre ---
+    window.addEventListener('dragover', (e) => { e.preventDefault(); overlay.classList.add('active'); });
+    window.addEventListener('dragleave', (e) => { if (e.relatedTarget === null) overlay.classList.remove('active'); });
+    window.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        overlay.classList.remove('active');
+        const items = e.dataTransfer.items;
+        if (items) {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i].webkitGetAsEntry();
+                if (item) {
+                    if (item.isDirectory) zipNameBase = item.name; // Coger nombre de la carpeta
+                    await scanFiles(item);
+                }
+            }
+            renderQueue();
+        }
+    });
+
+    async function scanFiles(item) {
+        if (item.isFile) {
+            const file = await new Promise(resolve => item.file(resolve));
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                if (queue.length === 0 && zipNameBase === "Partituras") zipNameBase = file.name.replace(".pdf", "");
+                queue.push(file);
+            }
+        } else if (item.isDirectory) {
+            const reader = item.createReader();
+            const entries = await new Promise(resolve => reader.readEntries(resolve));
+            for (const entry of entries) await scanFiles(entry);
+        }
+    }
+
+    fileInput.onchange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            if (queue.length === 0) zipNameBase = files[0].name.replace(".pdf", "");
+            queue = queue.concat(files.filter(f => f.name.toLowerCase().endsWith('.pdf')));
+            renderQueue();
+        }
+    };
+
+    function renderQueue() {
+        fileListDiv.innerHTML = '';
+        if (queue.length > 0) {
+            document.getElementById('file-list-container').style.display = 'block';
+            processBtn.style.display = 'block';
+            queue.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <div class="file-info">
+                        <strong>${file.name}</strong><br>
+                        <small>${(file.size / 1024).toFixed(1)} KB</small>
+                    </div>
+                    <div class="file-actions">
+                        <i class="fas fa-eye btn-preview" title="Vista Previa" onclick="previewFile(${index})"></i>
+                        <i class="fas fa-trash btn-remove" title="Quitar" onclick="removeFromQueue(${index})"></i>
+                    </div>
+                `;
+                fileListDiv.appendChild(item);
+            });
+        } else {
+            document.getElementById('file-list-container').style.display = 'none';
+        }
+    }
+
+    function removeFromQueue(index) {
+        queue.splice(index, 1);
+        renderQueue();
+    }
+
+    function clearQueue() {
+        queue = [];
+        zipNameBase = "Partituras";
+        renderQueue();
+    }
+
+    // --- Vista Previa ---
+    function previewFile(index) {
+        const file = queue[index];
+        const url = URL.createObjectURL(file);
+        document.getElementById('preview-frame').src = url;
+        document.getElementById('preview-modal').style.display = 'flex';
+    }
+
+    function closePreview() {
+        document.getElementById('preview-modal').style.display = 'none';
+        document.getElementById('preview-frame').src = '';
+    }
+
+    // --- Procesamiento ---
+    processBtn.onclick = async () => {
+        processBtn.disabled = true;
+        statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando archivos...`;
+        
+        try {
+            const zip = new JSZip();
+            for (let i = 0; i < queue.length; i++) {
+                const file = queue[i];
+                const arrayBuffer = await file.arrayBuffer();
+                const originalPdf = await PDFDocument.load(arrayBuffer);
+                const newPdf = await PDFDocument.create();
+                const pages = originalPdf.getPages();
+
+                for (let j = 0; j < pages.length; j++) {
+                    const { width, height } = pages[j].getSize();
+                    if (width > height) {
+                        const [p1, p2] = await newPdf.copyPages(originalPdf, [j, j]);
+                        p1.setCropBox(0, 0, width / 2, height);
+                        newPdf.addPage(p1);
+                        p2.setCropBox(width / 2, 0, width / 2, height);
+                        newPdf.addPage(p2);
+                    } else {
+                        const [p] = await newPdf.copyPages(originalPdf, [j]);
+                        newPdf.addPage(p);
+                    }
+                }
+                const pdfBytes = await newPdf.save();
+                zip.file(file.name.replace(".pdf", " - A4.pdf"), pdfBytes);
+            }
+
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = `${zipNameBase} - Dividido en A4.zip`;
+            link.click();
+
+            statusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito!</span>`;
+        } catch (err) {
+            console.error(err);
+            statusDiv.innerHTML = `<span style="color:red">Error al procesar.</span>`;
+        } finally {
+            processBtn.disabled = false;
+        }
+    };
+</script>
+
+</body>
+</html>
