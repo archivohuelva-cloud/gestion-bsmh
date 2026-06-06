@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Divisor de Partituras Profesional</title>
+    <title>Divisor de Partituras A3 a A4</title>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -53,13 +53,13 @@
 <div class="container">
     <div class="header">
         <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Volver</button>
-        <h2 style="margin:0; color: var(--primary);">Divisor A3 a A4</h2>
+        <h2 style="margin:0; color: var(--primary);">Divisor de partituras A3 a A4</h2>
     </div>
 
     <div class="main-card">
         <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
             <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--primary)"></i>
-            <p>Arrastra archivos o carpetas aquí o haz clic para seleccionar</p>
+            <p>Arrastra carpetas aquí o archivos pdf o haz clic para seleccionar</p>
             <input type="file" id="fileInput" multiple accept="application/pdf" style="display:none">
         </div>
 
@@ -81,7 +81,7 @@
 
 <!-- Modal Vista Previa -->
 <div id="preview-modal">
-    <span class="close-preview" onclick="closePreview()">&times; Cerrar Vista Previa</span>
+    <span class="close-preview" onclick="closePreview()">&times; Cerrar</span>
     <iframe id="preview-frame"></iframe>
 </div>
 
@@ -224,7 +224,7 @@
             link.download = `${zipNameBase} - Dividido en A4.zip`;
             link.click();
 
-            statusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito!</span>`;
+            statusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito!. Has dividido 1 partitura A3 en 2 partituras en A4.</span>`;
         } catch (err) {
             console.error(err);
             statusDiv.innerHTML = `<span style="color:red">Error al procesar.</span>`;
