@@ -215,7 +215,7 @@
                     }
                 }
                 const pdfBytes = await newPdf.save();
-                zip.file(file.name.replace(".pdf", ".pdf), pdfBytes);
+                zip.file(file.name.replace(".pdf", ".pdf"), pdfBytes);
             }
 
             const zipBlob = await zip.generateAsync({ type: "blob" });
