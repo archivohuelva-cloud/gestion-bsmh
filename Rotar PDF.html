@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Editor Pro - Historial y Selección</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --dark: #343a40; --warning: #ffc107; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+        .container { max-width: 1300px; margin: auto; }
+        
+        #drop-zone { 
+            border: 3px dashed var(--primary); background: white; padding: 30px; 
+            border-radius: 15px; text-align: center; cursor: pointer; margin-bottom: 20px;
+        }
+
+        #progress-container {
+            width: 100%; background-color: #ddd; border-radius: 10px; margin: 10px 0; display: none;
+        }
+        #progress-bar {
+            width: 0%; height: 20px; background-color: var(--success); border-radius: 10px;
+            text-align: center; line-height: 20px; color: white; font-size: 12px; transition: width 0.2s;
+        }
+
+        .toolbar { 
+            position: sticky; top: 10px; background: white; padding: 15px; 
+            border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 15px; z-index: 100; margin-bottom: 20px;
+        }
+
+        .toolbar-row { display: flex; align-items: center; gap: 10px; width: 100%; flex-wrap: wrap; }
+
+        .grid { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 20px; padding-bottom: 100px;
+        }
+
+        .page-card { 
+            background: white; border: 2px solid transparent; border-radius: 8px; 
+            padding: 10px; text-align: center; transition: 0.2s; position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; user-select: none;
+        }
+        .page-card.selected { border-color: var(--primary); background: #e7f3ff; }
+        
+        .canvas-container { 
+            width: 100%; aspect-ratio: 1/1.4; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; background: #eee; border-radius: 4px; pointer-events: none;
+        }
+        canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s ease; }
+
+        .page-info { font-size: 11px; margin-top: 8px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .individual-controls { margin-top: 8px; display: flex; justify-content: center; gap: 3px; }
+        
+        button { 
+            padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; 
+            font-size: 12px; font-weight: 600; transition: 0.2s;
+        }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-green { background: var(--success); color: white; }
+        .btn-red { background: #6c757d; color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-dark { background: var(--dark); color: white; }
+        .btn-warning { background: var(--warning); color: #212529; }
+        .btn-outline { background: transparent; border: 1px solid #ccc; }
+        button:hover { opacity: 0.8; }
+        button:disabled { background: #e9ecef; color: #adb5bd; cursor: not-allowed; }
+
+        .loader { display: none; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #selection-counter { font-weight: bold; color: var(--primary); text-align: center; width: 100%; display: block; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Editor PDF: Rotación y Selección Avanzada</h1>
+    
+    <div id="drop-zone">Arrastra archivos o carpetas aquí <br><small>(Shift+Click: Rango | Ctrl+Z: Deshacer | Ctrl+Y: Rehacer)</small></div>
+
+    <div id="progress-container">
+        <div id="progress-bar">0%</div>
+    </div>
+
+    <div class="toolbar" id="toolbar" style="display: none;">
+        <div class="toolbar-row">
+            <strong>Acciones:</strong>
+            <button class="btn-blue" onclick="rotateSelected(-90)">↺ Izquierda</button>
+            <button class="btn-blue" onclick="rotateSelected(90)">↻ Derecha</button>
+            <button class="btn-red" onclick="resetSelected()">Original (0°)</button>
+            <button class="btn-danger" onclick="deleteSelected()">Eliminar</button>
+            
+            <div style="width: 2px; height: 25px; background: #ddd; margin: 0 5px;"></div>
+            
+            <button class="btn-warning" id="undo-btn" onclick="undo()" title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+            <button class="btn-warning" id="redo-btn" onclick="redo()" title="Rehacer (Ctrl+Y)">↷ Rehacer</button>
+            
+            <div style="flex-grow: 1;"></div>
+            
+            <button class="btn-outline" onclick="selectAll(true)">Todo</button>
+            <button class="btn-outline" onclick="selectAll(false)">Nada</button>
+            <button class="btn-dark" onclick="clearAll()">Limpiar Todo</button>
+            <button class="btn-green" id="download-btn" onclick="processAndDownload()">Descargar ZIP</button>
+            <div class="loader" id="loader"></div>
+        </div>
+        
+        <div id="selection-counter">0/0 páginas seleccionadas</div>
+    </div>
+
+    <div class="grid" id="pages-grid"></div>
+</div>
+
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const pagesGrid = document.getElementById('pages-grid');
+    const toolbar = document.getElementById('toolbar');
+    const loader = document.getElementById('loader');
+    const progressBar = document.getElementById('progress-bar');
+    const progressContainer = document.getElementById('progress-container');
+    const selectionCounter = document.getElementById('selection-counter');
+    
+    let allPagesData = []; 
+    let pdfFiles = []; 
+    let lastSelectedIndex = null;
+
+    // --- SISTEMA DE HISTORIAL ---
+    let history = [];
+    let historyStep = -1;
+
+    function saveHistory() {
+        // Eliminar pasos futuros si estamos en medio del historial y hacemos una acción nueva
+        if (historyStep < history.length - 1) {
+            history = history.slice(0, historyStep + 1);
+        }
+        
+        // Guardar copia profunda del estado relevante
+        const state = allPagesData.map(p => ({
+            rotation: p.rotation,
+            deleted: p.deleted,
+            selected: p.card.classList.contains('selected')
+        }));
+        
+        history.push(state);
+        historyStep++;
+        updateHistoryButtons();
+    }
+
+    function undo() {
+        if (historyStep > 0) {
+            historyStep--;
+            applyHistoryState(history[historyStep]);
+        }
+    }
+
+    function redo() {
+        if (historyStep < history.length - 1) {
+            historyStep++;
+            applyHistoryState(history[historyStep]);
+        }
+    }
+
+    function applyHistoryState(state) {
+        state.forEach((s, i) => {
+            const p = allPagesData[i];
+            p.rotation = s.rotation;
+            p.deleted = s.deleted;
+            p.canvas.style.transform = `rotate(${p.rotation}deg)`;
+            p.card.style.display = p.deleted ? 'none' : 'block';
+            p.card.classList.toggle('selected', s.selected);
+        });
+        updateCounter();
+        updateHistoryButtons();
+    }
+
+    function updateHistoryButtons() {
+        document.getElementById('undo-btn').disabled = historyStep <= 0;
+        document.getElementById('redo-btn').disabled = historyStep >= history.length - 1;
+    }
+
+    // Atajos de teclado
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+        if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    });
+
+    // --- DRAG & DROP ---
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(n => {
+        document.addEventListener(n, e => { e.preventDefault(); e.stopPropagation(); });
+    });
+
+    document.getElementById('drop-zone').addEventListener('drop', async (e) => {
+        const items = e.dataTransfer.items;
+        if (!items) return;
+        allPagesData = []; pdfFiles = []; pagesGrid.innerHTML = '';
+        history = []; historyStep = -1;
+        toolbar.style.display = 'none';
+        progressContainer.style.display = 'block';
+        updateProgressBar(0);
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i].webkitGetAsEntry();
+            if (item) await traverse(item);
+        }
+        await loadAllPages();
+        
+        toolbar.style.display = 'flex';
+        progressContainer.style.display = 'none';
+        saveHistory(); // Estado inicial
+        updateCounter();
+    });
+
+    async function traverse(item, path = "") {
+        if (item.isFile) {
+            const file = await new Promise(r => item.file(r));
+            if (file.name.toLowerCase().endsWith('.pdf')) pdfFiles.push({ file, path: path + file.name });
+        } else if (item.isDirectory) {
+            const reader = item.createReader();
+            const entries = await new Promise(r => reader.readEntries(r));
+            for (const e of entries) await traverse(e, path + item.name + "/");
+        }
+    }
+
+    async function loadAllPages() {
+        let totalPagesToLoad = 0;
+        const loadedFiles = [];
+        for (const fileData of pdfFiles) {
+            const arrayBuffer = await fileData.file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+            totalPagesToLoad += pdf.numPages;
+            loadedFiles.push({pdf, fileData});
+        }
+        let pagesProcessed = 0;
+        for (let fIdx = 0; fIdx < loadedFiles.length; fIdx++) {
+            const {pdf, fileData} = loadedFiles[fIdx];
+            for (let pNum = 1; pNum <= pdf.numPages; pNum++) {
+                const page = await pdf.getPage(pNum);
+                const viewport = page.getViewport({scale: 0.3});
+                const card = document.createElement('div');
+                card.className = 'page-card';
+                const currentIndex = allPagesData.length;
+                card.dataset.index = currentIndex;
+                card.addEventListener('click', (e) => {
+                    handleSelection(currentIndex, e);
+                    updateCounter();
+                    saveHistory();
+                });
+                const canvasContainer = document.createElement('div');
+                canvasContainer.className = 'canvas-container';
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width; canvas.height = viewport.height;
+                await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+                canvasContainer.appendChild(canvas);
+                card.innerHTML = `
+                    <div class="page-info">${fileData.file.name} - P${pNum}</div>
+                    <div class="individual-controls">
+                        <button class="btn-outline" onclick="rotateSingle(${currentIndex}, -90); saveHistory();">↺</button>
+                        <button class="btn-outline" onclick="rotateSingle(${currentIndex}, 90); saveHistory();">↻</button>
+                        <button class="btn-outline" title="Resetear" onclick="resetSingle(${currentIndex}); saveHistory();">⟲</button>
+                    </div>
+                `;
+                card.prepend(canvasContainer);
+                pagesGrid.appendChild(card);
+                allPagesData.push({ fileIndex: fIdx, pageNum: pNum, rotation: 0, canvas: canvas, card: card, deleted: false });
+                pagesProcessed++;
+                updateProgressBar(Math.round((pagesProcessed / totalPagesToLoad) * 100));
+            }
+        }
+    }
+
+    function updateProgressBar(percent) {
+        progressBar.style.width = percent + '%';
+        progressBar.innerText = percent + '%';
+    }
+
+    function updateCounter() {
+        const selected = allPagesData.filter(p => !p.deleted && p.card.classList.contains('selected')).length;
+        const total = allPagesData.filter(p => !p.deleted).length;
+        selectionCounter.innerText = `${selected}/${total} páginas seleccionadas`;
+    }
+
+    function clearAll() {
+        if(confirm("¿Estás seguro de que quieres limpiar todo?")) {
+            allPagesData = []; pdfFiles = []; lastSelectedIndex = null;
+            history = []; historyStep = -1;
+            pagesGrid.innerHTML = ''; toolbar.style.display = 'none';
+            progressContainer.style.display = 'none'; updateProgressBar(0);
+        }
+    }
+
+    function deleteSelected() {
+        const selectedItems = allPagesData.filter(p => !p.deleted && p.card.classList.contains('selected'));
+        if (selectedItems.length === 0) return;
+        selectedItems.forEach(item => {
+            item.deleted = true;
+            item.card.style.display = 'none';
+            item.card.classList.remove('selected');
+        });
+        updateCounter();
+        saveHistory();
+        lastSelectedIndex = null;
+    }
+
+    function handleSelection(index, event) {
+        if (allPagesData[index].deleted) return;
+        if (event.shiftKey && lastSelectedIndex !== null) {
+            const start = Math.min(index, lastSelectedIndex);
+            const end = Math.max(index, lastSelectedIndex);
+            for (let i = start; i <= end; i++) {
+                if (!allPagesData[i].deleted) allPagesData[i].card.classList.add('selected');
+            }
+        } else {
+            allPagesData[index].card.classList.toggle('selected');
+            lastSelectedIndex = index;
+        }
+    }
+
+    function rotateSingle(index, angle) {
+        const item = allPagesData[index];
+        item.rotation += angle;
+        item.canvas.style.transform = `rotate(${item.rotation}deg)`;
+    }
+
+    function resetSingle(index) {
+        const item = allPagesData[index];
+        item.rotation = 0;
+        item.canvas.style.transform = `rotate(0deg)`;
+    }
+
+    function rotateSelected(angle) {
+        allPagesData.forEach((item, i) => {
+            if (!item.deleted && item.card.classList.contains('selected')) rotateSingle(i, angle);
+        });
+        saveHistory();
+    }
+
+    function resetSelected() {
+        allPagesData.forEach((item, i) => {
+            if (!item.deleted && item.card.classList.contains('selected')) resetSingle(i);
+        });
+        saveHistory();
+    }
+
+    function selectAll(val) {
+        allPagesData.forEach(item => {
+            if (!item.deleted) item.card.classList.toggle('selected', val);
+        });
+        updateCounter();
+        saveHistory();
+    }
+
+    async function processAndDownload() {
+        loader.style.display = 'block';
+        const zip = new JSZip();
+        for (let fIdx = 0; fIdx < pdfFiles.length; fIdx++) {
+            const fileData = pdfFiles[fIdx];
+            const arrayBuffer = await fileData.file.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            const activePagesData = allPagesData.filter(p => p.fileIndex === fIdx && !p.deleted);
+            if (activePagesData.length === 0) continue;
+            const newPdfDoc = await PDFLib.PDFDocument.create();
+            for (const pData of activePagesData) {
+                const [copiedPage] = await newPdfDoc.copyPages(pdfDoc, [pData.pageNum - 1]);
+                const currentRot = copiedPage.getRotation().angle;
+                copiedPage.setRotation(PDFLib.degrees(currentRot + pData.rotation));
+                newPdfDoc.addPage(copiedPage);
+            }
+            const pdfBytes = await newPdfDoc.save();
+            zip.file(fileData.path, pdfBytes);
+        }
+        const content = await zip.generateAsync({type: "blob"});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = "pdf_procesados.zip";
+        link.click();
+        loader.style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
