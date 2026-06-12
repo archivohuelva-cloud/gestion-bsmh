@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imagen a PDF - Conversor por Lotes</title>
+    <!-- Bibliotecas externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
+    
+    <style>
+        :root { --primary: #4a90e2; --bg: #f5f7fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 40px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 600px; text-align: center; }
+        #drop-zone { border: 3px dashed #cbd5e0; border-radius: 10px; padding: 60px 20px; transition: all 0.3s; cursor: pointer; background: #fff; margin-bottom: 20px; }
+        #drop-zone.hover { border-color: var(--primary); background: #ebf4ff; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn:disabled { background: #cbd5e0; cursor: not-allowed; }
+        #file-list { margin-top: 20px; text-align: left; max-height: 200px; overflow-y: auto; font-size: 14px; color: #4a5568; }
+        .status { margin-top: 10px; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Convertir archivos de imagen a partituras PDF</h1>
+    <p>Arrastra imágenes o <b>carpetas completas</b> aquí</p>
+    
+    <div id="drop-zone">
+        <p>Suelta tus archivos aquí o haz clic para seleccionar</p>
+        <input type="file" id="file-input" multiple accept="image/*,.tiff,.tif" style="display: none;">
+    </div>
+
+    <div id="status" class="status"></div>
+    <div id="file-list"></div>
+    
+    <button id="convert-btn" class="btn" disabled>Convertir y Descargar ZIP</button>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const convertBtn = document.getElementById('convert-btn');
+    const statusDiv = document.getElementById('status');
+    const fileListDiv = document.getElementById('file-list');
+
+    let filesToProcess = [];
+
+    // --- Manejo de Eventos ---
+    dropZone.onclick = () => fileInput.click();
+
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('hover'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('hover');
+    
+    dropZone.ondrop = async (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('hover');
+        const items = e.dataTransfer.items;
+        for (let item of items) {
+            const entry = item.webkitGetAsEntry();
+            if (entry) await traverseFileTree(entry);
+        }
+        updateUI();
+    };
+
+    fileInput.onchange = (e) => {
+        filesToProcess = [...filesToProcess, ...Array.from(e.target.files)];
+        updateUI();
+    };
+
+    // --- Navegación de Carpetas (Recursiva) ---
+    async function traverseFileTree(entry) {
+        if (entry.isFile) {
+            const file = await new Promise(resolve => entry.file(resolve));
+            if (file.type.startsWith('image/') || file.name.match(/\.(tiff?)$/i)) {
+                filesToProcess.push(file);
+            }
+        } else if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const entries = await new Promise(resolve => reader.readEntries(resolve));
+            for (let childEntry of entries) {
+                await traverseFileTree(childEntry);
+            }
+        }
+    }
+
+    function updateUI() {
+        convertBtn.disabled = filesToProcess.length === 0;
+        fileListDiv.innerHTML = filesToProcess.map(f => `<div>📄 ${f.name}</div>`).join('');
+        statusDiv.innerText = `${filesToProcess.length} archivos listos.`;
+    }
+
+    // --- Conversión y Generación de ZIP ---
+    convertBtn.onclick = async () => {
+        convertBtn.disabled = true;
+        const zip = new JSZip();
+        statusDiv.innerText = "Procesando...";
+
+        for (let i = 0; i < filesToProcess.length; i++) {
+            const file = filesToProcess[i];
+            statusDiv.innerText = `Convirtiendo (${i + 1}/${filesToProcess.length}): ${file.name}`;
+            
+            try {
+                const pdfBlob = await imageToPdfBlob(file);
+                const pdfName = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+                zip.file(pdfName, pdfBlob);
+            } catch (err) {
+                console.error("Error con el archivo:", file.name, err);
+            }
+        }
+
+        statusDiv.innerText = "Generando archivo ZIP...";
+        const zipContent = await zip.generateAsync({ type: "blob" });
+        
+        // Descargar el ZIP
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(zipContent);
+        link.download = "imagenes_convertidas.zip";
+        link.click();
+
+        statusDiv.innerText = "¡Completado!";
+        filesToProcess = [];
+        updateUI();
+    };
+
+    // --- Función Principal: Imagen -> PDF Blob ---
+    async function imageToPdfBlob(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const buffer = e.target.result;
+                let imgData, width, height;
+
+                // Soporte especial para TIFF usando UTIF.js
+                if (file.name.match(/\.(tiff?)$/i)) {
+                    const ifds = UTIF.decode(buffer);
+                    UTIF.decodeImage(buffer, ifds[0]);
+                    const rgba = UTIF.toRGBA8(ifds[0]);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = ifds[0].width;
+                    canvas.height = ifds[0].height;
+                    const ctx = canvas.getContext('2d');
+                    const imgDataObj = ctx.createImageData(canvas.width, canvas.height);
+                    imgDataObj.data.set(rgba);
+                    ctx.putImageData(imgDataObj, 0, 0);
+                    imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    width = canvas.width;
+                    height = canvas.height;
+                } else {
+                    // Formatos estándar (JPG, PNG, WEBP)
+                    const img = new Image();
+                    const url = URL.createObjectURL(new Blob([buffer]));
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        imgData = canvas.toDataURL('image/jpeg', 0.95);
+                        width = img.width;
+                        height = img.height;
+                        URL.revokeObjectURL(url);
+                        createPDF();
+                    };
+                    img.src = url;
+                    function createPDF() {
+                        const doc = new jsPDF({ orientation: width > height ? 'l' : 'p', unit: 'px', format: [width, height] });
+                        doc.addImage(imgData, 'JPEG', 0, 0, width, height);
+                        resolve(doc.output('blob'));
+                    }
+                    return;
+                }
+
+                // Generar PDF para TIFF o procesos síncronos
+                const doc = new jsPDF({ orientation: width > height ? 'l' : 'p', unit: 'px', format: [width, height] });
+                doc.addImage(imgData, 'JPEG', 0, 0, width, height);
+                resolve(doc.output('blob'));
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    }
+</script>
+
+</body>
+</html>
