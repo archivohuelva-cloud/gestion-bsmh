@@ -93,9 +93,32 @@
         .sig-box { width: 55px; height: 45px; text-align: center; font-family: monospace; font-weight: bold; font-size: 20px; border: 2px solid var(--border-ui); border-radius: 4px; background: white; text-transform: uppercase; }
         .sig-box:focus { border-color: var(--bsmh-blue); outline: none; box-shadow: 0 0 0 3px rgba(0,0,189,0.1); }
         .sig-sep { font-weight: bold; color: #64748b; font-size: 18px; }
-        .btn-qr { width: 100%; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: 10px; }
+        
+        /* Estilo unificado para botones con soporte de iconos */
+        .btn-qr { 
+            width: 100%; 
+            padding: 14px; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            margin-top: 10px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        
+        .btn-qr svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
         .btn-add-qr { background-color: #16a34a; color: white; }
         .btn-pdf-qr { background-color: #003366; color: white; margin-top: 15px; }
+        .btn-print-qr { background-color: #0284c7; color: white; margin-top: 10px; }
         .btn-clear-all { background-color: #94a3b8; color: white; margin-top: 8px; font-size: 12px; padding: 10px; }
         .btn-clear-all:hover { background-color: #ef4444; }
         
@@ -178,9 +201,23 @@
                     <input type="text" id="url" class="qr-input">
                 </div>
                 
-                <button class="btn-qr btn-add-qr" onclick="agregarObra()">Añadir a la lista</button>
-                <button class="btn-qr btn-pdf-qr" onclick="generarPDF()">Descargar PDF Etiquetas</button>
-                <button class="btn-qr btn-clear-all" onclick="limpiarTodo()">Limpiar Todo</button>
+                <!-- Botones modificados con SVG integrados -->
+                <button class="btn-qr btn-add-qr" onclick="agregarObra()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Añadir a la cola de impresión
+                </button>
+                <button class="btn-qr btn-print-qr" onclick="imprimirEtiquetas()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Imprimir Etiquetas
+                </button>
+                <button class="btn-qr btn-pdf-qr" onclick="generarPDF()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Descargar Etiquetas en PDF
+                </button>
+                <button class="btn-qr btn-clear-all" onclick="limpiarTodo()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    Limpiar
+                </button>
 
                 <div class="last-data-info" id="last-data-display">
                     Última Signatura: <strong id="last-sig-val">-</strong><br>
@@ -272,6 +309,16 @@
                 document.getElementById('registro').focus();
             }
         }
+
+        // Detectar Enter en los campos del formulario para agregar la obra automáticamente
+        ['titulo', 'sig1', 'sig2', 'sig3', 'sig4', 'registro', 'url'].forEach(id => {
+            document.getElementById(id).addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    agregarObra();
+                }
+            });
+        });
 
         // --- GESTIÓN DE LA LISTA ---
         let obrasList = [];
@@ -370,59 +417,138 @@
             }
         }
 
-        // --- GENERACIÓN PDF ---
-        async function generarPDF() {
-            if (obrasList.length === 0) return;
+        // --- CONFIGURACIÓN Y CONSTRUCCIÓN DE DOCUMENTO PDF (8 ETIQUETAS POR HOJA A4) ---
+        async function construirDocumentoEtiquetas() {
+            if (obrasList.length === 0) return null;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
-            const labelW = 100; 
-            const labelH = 60; 
-            const startX = (210 - labelW) / 2; 
-            let currentY = 20; 
+
+            // Parámetros de cuadrícula para 8 etiquetas (2 columnas x 4 filas)
+            const labelW = 95;  // Ancho de etiqueta
+            const labelH = 60;  // Alto de etiqueta
+            const startX = 7;   // Margen izquierdo
+            const startY = 12;  // Margen superior
+            const gapX = 6;     // Espacio horizontal entre etiquetas
+            const gapY = 8;     // Espacio vertical entre etiquetas
+
             let counter = 0;
 
             for (let obra of obrasList) {
-                if (counter > 0 && counter % 4 === 0) { 
+                if (counter > 0 && counter % 8 === 0) { 
                     doc.addPage(); 
-                    currentY = 20; 
                 }
 
+                // Cálculo de columna (0 o 1) y fila (0 a 3) en la página actual
+                const indexOnPage = counter % 8;
+                const col = indexOnPage % 2;
+                const row = Math.floor(indexOnPage / 2);
+
+                const currentX = startX + col * (labelW + gapX);
+                const currentY = startY + row * (labelH + gapY);
+
+                // Dibujar contorno de la etiqueta
                 doc.setDrawColor(150, 150, 150); 
                 doc.setLineDashPattern([2, 1], 0); 
-                doc.rect(startX, currentY, labelW, labelH); 
+                doc.rect(currentX, currentY, labelW, labelH); 
                 doc.setLineDashPattern([], 0); 
 
+                // Título de la Obra con tamaño de fuente fijo a 14 y salto de línea automático
                 doc.setTextColor(0); 
                 doc.setFont("helvetica", "bold"); 
-                let fontSize = 14; 
+                const fontSize = 14; 
                 doc.setFontSize(fontSize);
-                while(doc.getTextWidth(obra.titulo) > (labelW - 15) && fontSize > 9) { 
-                    fontSize -= 0.5; 
-                    doc.setFontSize(fontSize); 
+                
+                // Dividir el texto según el ancho disponible en la etiqueta (dejando márgenes cómodos a los lados)
+                const maxTextWidth = labelW - 14;
+                const splitTitulo = doc.splitTextToSize(obra.titulo, maxTextWidth);
+                
+                const textCenterX = currentX + (labelW / 2);
+                
+                // Determinar posición vertical inicial del título según cuántas líneas ocupe
+                // para que visualmente quede bien compensado y no pise los textos inferiores.
+                let startTitleY = currentY + 14;
+                if (splitTitulo.length > 1) {
+                    startTitleY = currentY + 10;
                 }
-                doc.text(obra.titulo, 105, currentY + 15, { align: "center" });
+                
+                doc.text(splitTitulo, textCenterX, startTitleY, { align: "center" });
 
+                // Calcular la altura que ha ocupado el título para ajustar la signatura dinámicamente si es necesario
+                const titleHeightOffset = (splitTitulo.length - 1) * 5.5;
+
+                // Signatura (se desplaza levemente hacia abajo si el título requirió 2 o más líneas)
+                const signaturaY = Math.min(currentY + 30 + titleHeightOffset, currentY + 33);
                 doc.setFont("helvetica", "normal"); 
                 doc.setFontSize(11); 
-                doc.text("Signatura: ", 105 - (doc.getTextWidth(`${obra.signatura}`) / 2) - 3, currentY + 30, { align: "right" });
+                doc.text("Signatura: ", textCenterX - (doc.getTextWidth(`${obra.signatura}`) / 2) - 3, signaturaY, { align: "right" });
                 doc.setFont("helvetica", "bold"); 
                 doc.setFontSize(14); 
-                doc.text(obra.signatura, 105, currentY + 30, { align: "center" });
+                doc.text(obra.signatura, textCenterX, signaturaY, { align: "center" });
 
+                // Nº Registro
+                const registroY = Math.min(currentY + 40 + titleHeightOffset, currentY + 43);
                 doc.setFont("helvetica", "normal"); 
                 doc.setFontSize(11); 
-                doc.text(`Registro: ${obra.registro}`, 105, currentY + 40, { align: "center" });
+                doc.text(`Registro: ${obra.registro}`, textCenterX, registroY, { align: "center" });
 
+                // Código QR (si existe) colocado abajo a la derecha de la etiqueta
                 if (obra.url) { 
                     const qrImg = await getQrImage(obra.url); 
-                    if(qrImg) doc.addImage(qrImg, 'PNG', startX + labelW - 25, currentY + 32, 20, 20); 
+                    if(qrImg) {
+                        doc.addImage(qrImg, 'PNG', currentX + labelW - 25, currentY + 35, 20, 20); 
+                    }
                 }
 
-                currentY += labelH + 8; 
                 counter++;
             }
-            doc.save("Etiquetas para carpetas.pdf");
+            return doc;
         }
+
+        // --- ACCIÓN DESCARGAR PDF ---
+        async function generarPDF() {
+            const doc = await construirDocumentoEtiquetas();
+            if (doc) {
+                doc.save("Etiquetas para carpetas.pdf");
+            }
+        }
+
+        // --- ACCIÓN IMPRIMIR DIRECTAMENTE ---
+        async function imprimirEtiquetas() {
+            const doc = await construirDocumentoEtiquetas();
+            if (!doc) return;
+            
+            // Forzar al archivo PDF a autoejecutar la función de impresión al abrirse
+            doc.autoPrint();
+
+            // Convertir el documento a un Blob nativo del navegador
+            const pdfBlobStr = doc.output('bloburl');
+
+            // Abrir el visor en una ventana temporal limpia del navegador.
+            // Al procesar la URL del blob con el autoprint incrustado, el motor del navegador
+            // levantará automáticamente el menú de selección de impresora sin descargar el archivo.
+            const printWindow = window.open(pdfBlobStr, '_blank');
+            if (printWindow) {
+                printWindow.focus();
+            } else {
+                alert("Por favor, permite las ventanas emergentes en este sitio para abrir el diálogo de impresión directa.");
+            }
+        }
+
+        // --- INTERCEPTOR EXCLUSIVO PARA CTRL + P ---
+        // Se capturan y detienen por completo todos los disparadores nativos para evitar que el navegador imprima la interfaz web
+        window.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                if (obrasList.length > 0) {
+                    imprimirEtiquetas();
+                } else {
+                    alert("No hay etiquetas en la cola de impresión.");
+                }
+            }
+        }, true); // Se usa 'true' (fase de captura) para procesar el evento antes que los atajos por defecto del navegador
 
         function getQrImage(text) { 
             return new Promise(res => { 
