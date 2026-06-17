@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <style>
+    /* --- DISEÑO ESTILO iOS --- */
+    :root {
+      --ios-bg: #f2f2f7;
+      --ios-blue: #007aff;
+      --ios-orange: #ff9500;
+      --ios-red: #ff3b30;
+      --ios-gray: #8e8e93;
+      --ios-border: #e5e5ea;
+    }
+
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 15px;
+      background-color: var(--ios-bg); 
+      margin: 0;
+      color: #1c1c1e;
+    }
+
+    h2 {
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    /* Contenedor del Calendario */
+    #calendar { 
+      background: white; 
+      padding: 15px; 
+      border-radius: 18px; 
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04); 
+      border: 1px solid var(--ios-border);
+    }
+
+    /* Botones iOS */
+    .btn-ios-primary {
+      background-color: var(--ios-blue);
+      color: white;
+      border-radius: 10px;
+      font-weight: 600;
+      border: none;
+    }
+    .btn-ios-primary:hover { background-color: #0062cc; color: white; }
+    
+    .btn-ios-secondary {
+      background-color: #e5e5ea;
+      color: var(--ios-blue);
+      border-radius: 10px;
+      font-weight: 600;
+      border: none;
+    }
+    .btn-ios-secondary:hover { background-color: #d1d1d6; color: var(--ios-blue); }
+
+    /* Estilos internos de FullCalendar para emular iOS */
+    .fc .fc-toolbar-title { font-weight: 700; font-size: 1.4rem; }
+    .fc .fc-button-primary {
+      background-color: transparent;
+      color: var(--ios-blue);
+      border: none;
+      font-weight: 500;
+      text-transform: capitalize;
+      box-shadow: none !important;
+    }
+    .fc .fc-button-primary:hover { background-color: rgba(0, 122, 255, 0.1); color: var(--ios-blue); }
+    .fc .fc-button-primary:not(:disabled).fc-button-active {
+      background-color: var(--ios-blue);
+      color: white;
+      border-radius: 8px;
+    }
+    .fc-theme-standard td, .fc-theme-standard th { border-color: var(--ios-border); }
+    .fc-col-header-cell-cushion { color: var(--ios-gray); font-weight: 500; font-size: 0.9rem; }
+    
+    /* Día actual en rojo (Estilo Apple Calendar) */
+    .fc .fc-daygrid-day.fc-day-today { background-color: transparent !important; }
+    .fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number {
+      background-color: var(--ios-red);
+      color: white;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 4px;
+      font-weight: 600;
+    }
+
+    /* Eventos */
+    .fc-event { 
+      cursor: pointer; 
+      padding: 3px 5px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.85em;
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Modal iOS */
+    .modal-content { border-radius: 18px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.15); }
+    .modal-header { border-bottom: 1px solid var(--ios-border); }
+    .modal-title { font-weight: 700; }
+    .form-control, .form-select { border-radius: 10px; border: 1px solid var(--ios-border); background-color: #f2f2f7; }
+    .form-control:focus, .form-select:focus { background-color: white; border-color: var(--ios-blue); box-shadow: 0 0 0 3px rgba(0,122,255,0.2); }
+    .nav-tabs .nav-link { color: var(--ios-gray); font-weight: 600; border: none; }
+    .nav-tabs .nav-link.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); background: transparent; }
+
+    #loading { 
+      display:none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+      z-index: 9999; background: rgba(255,255,255,0.95); padding: 20px 30px; 
+      border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      font-weight: 600; color: var(--ios-blue); backdrop-filter: blur(10px);
+    }
+    
+    @media print { 
+      @page { size: A4 landscape; margin: 10mm; }
+      body { background-color: white !important; padding: 0 !important; }
+      .no-print { display: none !important; } 
+      #calendar { border: none !important; box-shadow: none !important; padding: 0 !important; }
+      .fc-scroller, .fc-view-harness { height: auto !important; overflow: visible !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">Actualizando...</div>
+
+<div class="container-fluid h-100">
+  <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+    <div>
+      <h2 class="mb-0">Calendario</h2>
+      <div id="lastUpdate" class="text-muted small" style="font-weight: 500;"></div>
+    </div>
+    <div>
+      <button class="btn btn-ios-primary me-2" onclick="abrirModalNuevo()">+ Nuevo</button>
+      <button class="btn btn-ios-secondary" onclick="imprimirPDF()">PDF</button>
+    </div>
+  </div>
+
+  <div id="calendar"></div>
+</div>
+
+<div class="modal fade" id="eventModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitulo">Nuevo Registro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="nav nav-tabs mb-3">
+          <li class="nav-item"><button class="nav-link active" id="tabSala" data-bs-toggle="tab" onclick="setTipo('SALA DE ENSAYO')">SALA DE ENSAYO</button></li>
+          <li class="nav-item"><button class="nav-link" id="tabTrans" data-bs-toggle="tab" onclick="setTipo('TRANSPORTE')">TRANSPORTE</button></li>
+        </ul>
+
+        <form id="formEvento">
+          <input type="hidden" id="tipoEvento" value="SALA DE ENSAYO">
+          <input type="hidden" id="eventoId">
+  
+          <div id="divSala" class="mb-3">
+            <label class="form-label text-muted small fw-bold">SALA / UBICACIÓN</label>
+            <select class="form-select" id="salaNombre">
+              <option value="SALA B">SALA B</option>
+              <option value="AUDITORIO CASA COLÓN">AUDITORIO CASA COLÓN</option>
+              <option value="GRAN TEATRO">GRAN TEATRO</option>
+              <option value="LAZARETO">LAZARETO</option>
+              <option value="ESPACIO SANTA FÉ">ESPACIO SANTA FÉ</option>
+            </select>
+          </div>
+
+          <div id="divTrans" class="mb-3 d-none">
+            <label class="form-label text-muted small fw-bold">ORIGEN</label>
+            <input type="text" class="form-control mb-3" id="origen">
+            <label class="form-label text-muted small fw-bold">DESTINO</label>
+            <input type="text" class="form-control" id="destino">
+          </div>
+
+          <div class="row mb-3">
+            <div class="col">
+              <label class="form-label text-muted small fw-bold">INICIO</label>
+              <input type="date" class="form-control" id="fechaInicio" required>
+            </div>
+            <div class="col">
+              <label class="form-label text-muted small fw-bold">FIN</label>
+              <input type="date" class="form-control" id="fechaFin" required>
+            </div>
+          </div>
+         
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-bold">HORA</label>
+            <input type="time" class="form-control" id="hora">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small fw-bold">NOTAS</label>
+            <textarea class="form-control" id="notas" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-danger me-auto" id="btnEliminar" style="display:none; border-radius: 10px;" onclick="eliminar()">Eliminar</button>
+        <button type="button" class="btn btn-ios-primary px-4" id="btnGuardar" onclick="guardar()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  let calendar;
+  let modal;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    modal = new bootstrap.Modal(document.getElementById('eventModal'));
+    const calendarEl = document.getElementById('calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      locale: 'es',
+      firstDay: 1,
+      height: 'calc(100vh - 90px)', 
+      expandRows: true, 
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+      },
+      // Traducción de los botones
+      buttonText: {
+        today: 'Hoy',
+        month: 'Mes',
+        week: 'Semana',
+        day: 'Día',
+        list: 'Lista'
+      },
+      events: function(info, successCallback, failureCallback) {
+        try {
+          google.script.run
+            .withSuccessHandler(function(data) {
+              let eventosFormateados = data.map(ev => {
+                let tipo = ev.tipo || (ev.extendedProps && ev.extendedProps.tipo) || '';
+                
+                if (tipo === 'TRANSPORTE') {
+                  ev.backgroundColor = '#ff9500'; 
+                  ev.borderColor = '#ff9500';
+                } else {
+                  ev.backgroundColor = '#007aff'; 
+                  ev.borderColor = '#007aff';
+                }
+                return ev;
+              });
+              successCallback(eventosFormateados);
+            })
+            .withFailureHandler(err => alert("Error al cargar: " + err))
+            .obtenerEventos();
+        } catch (e) {
+          successCallback([]); 
+        }
+      },
+      eventClick: function(info) {
+        abrirEdicion(info.event);
+      }
+    });
+    calendar.render();
+  });
+
+  function imprimirPDF() {
+    calendar.changeView('dayGridMonth'); 
+    calendar.setOption('height', 'auto'); 
+    
+    setTimeout(() => {
+      window.print();
+      calendar.setOption('height', 'calc(100vh - 90px)'); 
+    }, 500);
+  }
+
+  function setTipo(tipo) {
+    document.getElementById('tipoEvento').value = tipo;
+    document.getElementById('divSala').classList.toggle('d-none', tipo !== 'SALA DE ENSAYO');
+    document.getElementById('divTrans').classList.toggle('d-none', tipo !== 'TRANSPORTE');
+  }
+
+  function abrirModalNuevo() {
+    document.getElementById('formEvento').reset();
+    document.getElementById('eventoId').value = '';
+    document.getElementById('btnEliminar').style.display = 'none';
+    
+    document.getElementById('tabSala').click();
+    setTipo('SALA DE ENSAYO');
+    modal.show();
+  }
+
+  function abrirEdicion(event) {
+    const ext = event.extendedProps;
+    document.getElementById('eventoId').value = event.id;
+    
+    document.getElementById('fechaInicio').value = event.startStr.split('T')[0];
+    
+    if (event.endStr) {
+      document.getElementById('fechaFin').value = event.endStr.split('T')[0];
+    } else {
+      document.getElementById('fechaFin').value = event.startStr.split('T')[0];
+    }
+
+    document.getElementById('hora').value = ext.hora || '';
+    document.getElementById('notas').value = ext.notas || '';
+    document.getElementById('btnEliminar').style.display = 'block';
+    
+    let tipo = ext.tipo || 'SALA DE ENSAYO';
+    if (tipo === 'SALA DE ENSAYO' || tipo === 'SALA') {
+      document.getElementById('tabSala').click();
+      setTipo('SALA DE ENSAYO');
+      document.getElementById('salaNombre').value = event.title;
+    } else {
+      document.getElementById('tabTrans').click();
+      setTipo('TRANSPORTE');
+      document.getElementById('origen').value = ext.origen || '';
+      document.getElementById('destino').value = ext.destino || '';
+    }
+    modal.show();
+  }
+
+  function actualizarTextoUltimaModificacion() {
+    const fecha = new Date();
+    const opciones = { weekday: 'long', day: 'numeric', month: 'long' };
+    let fechaStr = fecha.toLocaleDateString('es-ES', opciones);
+    
+    // Capitalizar la primera letra del día
+    fechaStr = fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1);
+    
+    const horas = String(fecha.getHours()).padStart(2, '0');
+    const minutos = String(fecha.getMinutes()).padStart(2, '0');
+    
+    document.getElementById('lastUpdate').innerText = `Última actualización: ${fechaStr} a las ${horas}:${minutos}h`;
+  }
+
+  function guardar() {
+    const loader = document.getElementById('loading');
+    loader.style.display = 'block';
+
+    const tipo = document.getElementById('tipoEvento').value;
+    const datos = {
+      id: document.getElementById('eventoId').value,
+      tipo: tipo,
+      titulo: tipo === 'SALA DE ENSAYO' ? document.getElementById('salaNombre').value : 'TRANSPORTE',
+      fechaInicio: document.getElementById('fechaInicio').value,
+      fechaFin: document.getElementById('fechaFin').value,
+      hora: document.getElementById('hora').value,
+      notas: document.getElementById('notas').value,
+      origen: document.getElementById('origen').value,
+      destino: document.getElementById('destino').value
+    };
+
+    try {
+      google.script.run
+        .withSuccessHandler((res) => {
+          loader.style.display = 'none';
+          modal.hide();
+          
+          // Actualizar el texto de última modificación
+          actualizarTextoUltimaModificacion();
+          
+          if (!datos.id) {
+            calendar.addEvent({
+              id: res || 'temp-' + Date.now(),
+              title: datos.titulo,
+              start: datos.fechaInicio + (datos.hora ? 'T' + datos.hora : ''),
+              end: datos.fechaFin,
+              backgroundColor: tipo === 'TRANSPORTE' ? '#ff9500' : '#007aff',
+              borderColor: tipo === 'TRANSPORTE' ? '#ff9500' : '#007aff',
+              extendedProps: datos
+            });
+          }
+          
+          setTimeout(() => {
+            calendar.refetchEvents();
+          }, 1500);
+        })
+        .withFailureHandler(err => {
+          loader.style.display = 'none';
+          alert("Error del servidor: " + err);
+        })
+        .guardarEvento(datos);
+    } catch (e) {
+      loader.style.display = 'none';
+      alert("Error crítico de Google Apps Script.");
+    }
+  }
+
+  function eliminar() {
+    if(!confirm('¿Eliminar registro?')) return;
+    const id = document.getElementById('eventoId').value;
+    const loader = document.getElementById('loading');
+    loader.style.display = 'block';
+    
+    try {
+      google.script.run.withSuccessHandler(() => {
+        loader.style.display = 'none';
+        modal.hide();
+        
+        // Actualizar el texto de última modificación también al eliminar
+        actualizarTextoUltimaModificacion();
+        
+        let eventObj = calendar.getEventById(id);
+        if (eventObj) eventObj.remove();
+        
+        setTimeout(() => calendar.refetchEvents(), 1500);
+      }).eliminarEvento(id);
+    } catch (e) {
+      loader.style.display = 'none';
+      alert("Error crítico.");
+    }
+  }
+</script>
+</body>
+</html>
