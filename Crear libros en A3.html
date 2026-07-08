@@ -36,7 +36,7 @@
             <i data-lucide="music" class="w-8 h-8 text-band-gold"></i>
             <div>
                 <h1 class="text-2xl font-bold">Generador de Cuadernillos Musicales para impresiones en A3</h1>
-                <p class="text-blue-200 text-sm">Conversor de partituras individuales en A4 a formato A3 (Vertical) para crear libros</p>
+                <p class="text-blue-200 text-sm">Generador de partituras individuales en A4 (Vertical) a formato A3 (Horizontal) para crear libretos o libros </p>
             </div>
         </div>
     </div>
@@ -62,9 +62,20 @@
 
         <!-- Lista de Archivos -->
         <div id="file-list-container" class="hidden bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-8">
-            <div class="bg-gray-100 px-6 py-3 border-b flex justify-between items-center">
-                <h3 class="font-bold text-gray-700 uppercase text-xs tracking-wider">Partituras en cola</h3>
-                <span id="file-count" class="bg-band-blue text-white text-xs px-2 py-1 rounded-full">0 archivos</span>
+            <div class="bg-gray-100 px-6 py-3 border-b flex justify-between items-center flex-wrap gap-2">
+                <div class="flex items-center gap-3">
+                    <h3 class="font-bold text-gray-700 uppercase text-xs tracking-wider">Partituras en cola</h3>
+                    <span id="file-count" class="bg-band-blue text-white text-xs px-2 py-1 rounded-full">0 archivos</span>
+                </div>
+                <!-- Botones de selección masiva en la parte superior de la lista -->
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleAllCheckboxes(true)" class="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded font-medium transition flex items-center gap-1">
+                        <i data-lucide="check-square" class="w-3.5 h-3.5"></i> Seleccionar Todo
+                    </button>
+                    <button onclick="toggleAllCheckboxes(false)" class="bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded font-medium transition flex items-center gap-1">
+                        <i data-lucide="square" class="w-3.5 h-3.5"></i> Deseleccionar
+                    </button>
+                </div>
             </div>
             <div id="file-list" class="divide-y divide-gray-100">
                 <!-- Los archivos se insertan aquí -->
@@ -140,20 +151,36 @@
                 }
 
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between p-4 hover:bg-blue-50 transition-colors";
+                row.className = "flex items-center justify-between p-4 hover:bg-blue-50 transition-colors gap-4";
                 row.setAttribute('data-id', fileObj.id);
                 row.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="flex items-center gap-3 overflow-hidden flex-grow">
                         <div class="drag-handle text-gray-400 hover:text-gray-600 px-1">
                             <i data-lucide="menu" class="w-5 h-5"></i>
                         </div>
                         <i data-lucide="file-text" class="w-5 h-5 text-gray-400 flex-shrink-0"></i>
                         <div class="flex flex-col overflow-hidden">
-                            <span class="truncate font-medium text-gray-700" title="${fileObj.file.name}">${fileObj.file.name}</span>
-                            <span class="text-xs text-band-blue font-semibold">${fileObj.pages} ${fileObj.pages === 1 ? 'página' : 'páginas'} • ${formatInfo}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="truncate font-medium text-gray-700" title="${fileObj.file.name}">${fileObj.file.name}</span>
+                                <button onclick="previewFile('${fileObj.id}')" title="Ver vista previa" class="text-blue-600 hover:text-blue-800 p-1 flex items-center justify-center transition">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                            <span class="text-xs text-band-blue font-semibold mb-1">${fileObj.pages} ${fileObj.pages === 1 ? 'página' : 'páginas'} • ${formatInfo}</span>
+                            
+                            <!-- Opción para empezar en la página 1 en el lado izquierdo (solo visible si tiene más de 1 página) -->
+                            ${fileObj.pages > 1 ? `
+                            <label class="inline-flex items-center gap-2 mt-1 cursor-pointer text-xs text-gray-600 hover:text-gray-900 select-none">
+                                <input type="checkbox" 
+                                       ${fileObj.startOnLeft ? 'checked' : ''} 
+                                       onchange="toggleStartOnLeft('${fileObj.id}', this.checked)"
+                                       class="rounded border-gray-300 text-band-blue focus:ring-band-blue w-3.5 h-3.5">
+                                <span>Empezar desde la página 1 en el lado izquierdo (ideal para una lectura fluida sin vueltas de 2 páginas o más)</span>
+                            </label>
+                            ` : ''}
                         </div>
                     </div>
-                    <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-6 flex-shrink-0">
                         <div class="flex items-center bg-gray-100 rounded-lg p-1">
                             <button onclick="updateCopies('${fileObj.id}', -1)" class="w-8 h-8 flex items-center justify-center hover:bg-white rounded-md transition shadow-sm text-gray-600">-</button>
                             <input type="number" 
@@ -172,6 +199,30 @@
                 fileListElement.appendChild(row);
             });
             lucide.createIcons();
+        }
+
+        function toggleStartOnLeft(id, checked) {
+            const file = filesToProcess.find(f => f.id === id);
+            if (file) {
+                file.startOnLeft = checked;
+            }
+        }
+
+        function toggleAllCheckboxes(checked) {
+            filesToProcess.forEach(file => {
+                if (file.pages > 1) {
+                    file.startOnLeft = checked;
+                }
+            });
+            updateUI();
+        }
+
+        function previewFile(id) {
+            const fileObj = filesToProcess.find(f => f.id === id);
+            if (fileObj && fileObj.file) {
+                const fileURL = URL.createObjectURL(fileObj.file);
+                window.open(fileURL, '_blank');
+            }
         }
 
         function updateCopies(id, delta) {
@@ -284,7 +335,8 @@
                 id: Math.random().toString(36).substr(2, 9),
                 file: f, 
                 copies: 1, 
-                pages: pdfDoc.getPageCount() 
+                pages: pdfDoc.getPageCount(),
+                startOnLeft: false // Opción por defecto desactivada
             });
         }
 
@@ -336,8 +388,8 @@
                     const pages = await targetMerged.copyPages(tempPdf, tempPdf.getPageIndices());
                     pages.forEach(p => targetMerged.addPage(p));
                 } else {
-                    // Para A3: Convertimos la partitura limpia a A3
-                    const a3PdfOriginal = await convertToA3Vertical(sourcePdf);
+                    // Para A3: Convertimos la partitura limpia a A3 usando la configuración seleccionada
+                    const a3PdfOriginal = await convertToA3Vertical(sourcePdf, item.startOnLeft);
                     
                     // El archivo individual se guarda limpio con sus copias correspondientes, 
                     // sin páginas en blanco añadidas al final
@@ -393,7 +445,7 @@
             return await newPdf.save();
         }
 
-        async function convertToA3Vertical(originalPdf) {
+        async function convertToA3Vertical(originalPdf, startOnLeft = false) {
             const { degrees } = PDFLib;
             const pageCount = originalPdf.getPageCount();
             const newPdf = await PDFLib.PDFDocument.create();
@@ -404,21 +456,43 @@
             const a3W = h;
             const a3H = w * 2;
 
-            if (pageCount === 2) {
-                const page = newPdf.addPage([a3W, a3H]);
-                const [p1, p2] = await newPdf.embedPdf(originalPdf, [0, 1]);
-                page.drawPage(p1, { x: 0, y: w * 2, rotate: degrees(-90) });
-                page.drawPage(p2, { x: 0, y: w, rotate: degrees(-90) });
-            } else {
+            if (startOnLeft) {
+                // Modo: Empezar en página 1 en el lado izquierdo
+                // Estructura por pliego (4 páginas lógicas por hoja de papel A3 a doble cara):
+                // Hoja 1 Cara A (Frontal): Izquierda = Pág 1, Derecha = Pág 2
+                // Hoja 1 Cara B (Posterior): Izquierda = Pág 3, Derecha = Pág 4 (u hoja en blanco si no existe)
+                // Esto se repite sucesivamente en múltiplos de 4.
                 const totalPages = Math.ceil(pageCount / 4) * 4;
                 const sheets = totalPages / 4;
                 const indices = Array.from({length: totalPages}, (_, i) => i < pageCount ? i : null);
 
                 for (let i = 0; i < sheets; i++) {
+                    // Cara A (Frontal): Pág (4*i + 1) en la izquierda, Pág (4*i + 2) en la derecha
                     const pA = newPdf.addPage([a3W, a3H]);
-                    await drawPair(newPdf, originalPdf, pA, indices[totalPages - 1 - 2 * i], indices[2 * i], w, true);
+                    await drawPair(newPdf, originalPdf, pA, indices[4 * i], indices[4 * i + 1], w, true);
+                    
+                    // Cara B (Posterior): Pág (4*i + 3) en la izquierda, Pág (4*i + 4) en la derecha
                     const pB = newPdf.addPage([a3W, a3H]);
-                    await drawPair(newPdf, originalPdf, pB, indices[2 * i + 1], indices[totalPages - 2 - 2 * i], w, false);
+                    await drawPair(newPdf, originalPdf, pB, indices[4 * i + 2], indices[4 * i + 3], w, false);
+                }
+            } else {
+                // Modo estándar: Cuadernillo con formato de imposición clásica
+                if (pageCount === 2) {
+                    const page = newPdf.addPage([a3W, a3H]);
+                    const [p1, p2] = await newPdf.embedPdf(originalPdf, [0, 1]);
+                    page.drawPage(p1, { x: 0, y: w * 2, rotate: degrees(-90) });
+                    page.drawPage(p2, { x: 0, y: w, rotate: degrees(-90) });
+                } else {
+                    const totalPages = Math.ceil(pageCount / 4) * 4;
+                    const sheets = totalPages / 4;
+                    const indices = Array.from({length: totalPages}, (_, i) => i < pageCount ? i : null);
+
+                    for (let i = 0; i < sheets; i++) {
+                        const pA = newPdf.addPage([a3W, a3H]);
+                        await drawPair(newPdf, originalPdf, pA, indices[totalPages - 1 - 2 * i], indices[2 * i], w, true);
+                        const pB = newPdf.addPage([a3W, a3H]);
+                        await drawPair(newPdf, originalPdf, pB, indices[2 * i + 1], indices[totalPages - 2 - 2 * i], w, false);
+                    }
                 }
             }
             return newPdf;
