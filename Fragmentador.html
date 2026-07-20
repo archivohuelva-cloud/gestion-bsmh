@@ -615,17 +615,17 @@
     <!-- MENÚ SUPERIOR PRINCIPAL (GESTIÓN Y ARCHIVOS) -->
     <header>
         <div style="display: flex; align-items: center; gap: 12px;">
-            <button onclick="window.history.back()" style="background-color: #3e3e3e;">⬅️ Volver</button>
-            <button onclick="createNewProject()" style="background-color: #962d22; border-color: #962d22;">🆕 Nuevo Proyecto</button>
-            <span class="header-title">Editor de Partituras - Libreto Continuo A3</span>
+            <button onclick="window.history.back()" style="background-color: #3e3e3e;">◀ Volver</button>
+            <button onclick="createNewProject()" style="background-color: #962d22; border-color: #962d22;">✚ Nuevo Proyecto</button>
+            <span class="header-title">Fragmentador de partituras</span>
         </div>
         <div class="header-actions">
-            <button onclick="undo()" title="Deshacer (Ctrl+Z)">↩️ Deshacer</button>
-            <button onclick="redo()" title="Rehacer (Ctrl+Y)">↪️ Rehacer</button>
-            <button onclick="saveProjectJSON()" style="background-color: #b5690b; border-color: #b5690b;">💾 Guardar JSON</button>
-            <button onclick="document.getElementById('json-input').click()" style="background-color: #2980b9; border-color: #2980b9;">📂 Abrir JSON</button>
+            <button onclick="undo()" title="Deshacer (Ctrl+Z)">↺ Deshacer</button>
+            <button onclick="redo()" title="Rehacer (Ctrl+Y)">↻ Rehacer</button>
+            <button onclick="saveProjectJSON()" style="background-color: #b5690b; border-color: #b5690b;">💾 Guardar</button>
+            <button onclick="document.getElementById('json-input').click()" style="background-color: #2980b9; border-color: #2980b9;">📂 Abrir</button>
             <input type="file" id="json-input" accept=".json" style="display: none;" onchange="loadProjectJSON(event)">
-            <button onclick="exportWholeProjectZIP()" style="background-color: #27ae60; border-color: #27ae60;">📦 Guardar y Exportar ZIP</button>
+            <button onclick="exportWholeProjectZIP()" style="background-color: #27ae60; border-color: #27ae60;">📥 Descagar</button>
         </div>
     </header>
 
@@ -636,7 +636,7 @@
             <strong>Lienzo:</strong>
             <button onclick="adjustEditorZoom(0.1)" title="Acercar (Flecha Arriba)">➕ Zoom</button>
             <button onclick="adjustEditorZoom(-0.1)" title="Alejar (Flecha Abajo)">➖ Zoom</button>
-            <button onclick="resetEditorZoom()" title="Ajustar formato A3 a pantalla">Fit Pantalla</button>
+            <button onclick="resetEditorZoom()" title="Ajustar formato A3 a pantalla">Ajustar</button>
             <span id="editor-zoom-label" style="font-weight: bold; color: #00bcd4;">100%</span>
         </div>
 
@@ -700,21 +700,21 @@
         <!-- BARRA DE HERRAMIENTAS VERTICAL ESTILO PHOTOSHOP -->
         <div id="photoshop-toolbox">
             <button class="tool-btn active" id="tool-select-btn" onclick="activateSelectTool()" title="Herramienta Selección / Mover (V)">
-                🖱️
+                ➤
             </button>
             <div class="tool-separator"></div>
             <button class="tool-btn" id="tool-text-btn" onclick="addTextElement()" title="Herramienta Texto (T)">
-                ✍️
+                𝐓
             </button>
             <button class="tool-btn" id="tool-crop" onclick="startManualCrop()" disabled title="Recortar Selección (C)">
-                ✂️
+                ✂
             </button>
             <button class="tool-btn" id="tool-eraser" onclick="toggleEraser()" title="Borrador (E)">
-                🧽
+                🟠
             </button>
             <div class="tool-separator"></div>
             <button class="tool-btn" id="tool-duplicate" onclick="duplicateSelected()" disabled title="Duplicar Selección">
-                👥
+                ⧉
             </button>
             <button class="tool-btn" id="tool-bring-front" onclick="bringToFront()" disabled title="Traer Selección al Frente">
                 🔺
@@ -793,8 +793,8 @@
                 </div>
                 
                 <div style="margin-top: auto; display: flex; flex-direction: column; gap: 5px;">
-                    <button onclick="toggleSidebar('left')" style="width:100%; font-size:10px; background-color: #333;">Toggle Barra Izq.</button>
-                    <button onclick="toggleSidebar('right')" style="width:100%; font-size:10px; background-color: #333;">Toggle Barra Der.</button>
+                    <button onclick="toggleSidebar('left')" style="width:100%; font-size:10px; background-color: #333;">◀ Ocultar Barra Izquierda</button>
+                    <button onclick="toggleSidebar('right')" style="width:100%; font-size:10px; background-color: #333;">Ocultar Barra Derecha ▶</button>
                 </div>
             </div>
         </div>
@@ -1548,7 +1548,7 @@
             textEl.style.fontFamily = 'Arial';
             textEl.style.transform = 'rotate(0deg)';
             
-            textEl.setAttribute('data-layer-name', '✍️ Texto...');
+            textEl.setAttribute('data-layer-name', '𝐓 Texto...');
 
             bindTextEvents(textEl);
             workspace.appendChild(textEl);
@@ -1608,7 +1608,7 @@
                 }
                 textEl.classList.remove('editing');
                 const snippet = textEl.innerText.substring(0, 15) || 'Texto';
-                textEl.setAttribute('data-layer-name', `✍️ ${snippet}...`);
+                textEl.setAttribute('data-layer-name', `𝐓 ${snippet}...`);
                 saveState();
                 renderLayersList();
             });
@@ -1940,7 +1940,7 @@
                         label = `🖼️ Capa Imagen (${i + 1})`;
                     } else {
                         const textSnippet = el.innerText.substring(0, 15) || 'Texto';
-                        label = `✍️ Texto: "${textSnippet}..."`;
+                        label = `𝐓 Texto: "${textSnippet}..."`;
                     }
                     el.setAttribute('data-layer-name', label);
                 }
