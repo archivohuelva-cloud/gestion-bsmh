@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Multicanvas A3 de Partituras Continuas</title>
+    
+    <!-- PDF.js para renderizar PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    
+    <!-- Cropper.js para recorte manual avanzado -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+    <!-- JSZip para compresión y descarga en lote -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <!-- jsPDF para generación unificada de PDFs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+        }
+        .toolbar {
+            background-color: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 5px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            min-height: 54px;
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 104px);
+            overflow: hidden;
+        }
+        
+        /* Barra Izquierda */
+        #sidebar-left {
+            width: 260px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            height: 100%;
+        }
+        
+        /* Barra Derecha */
+        #sidebar-right {
+            width: 220px;
+            background-color: #ffffff;
+            border-left: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .upload-btn {
+            border: 2px dashed #3498db;
+            padding: 10px;
+            text-align: center;
+            background-color: #f7fafd;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: bold;
+            color: #2980b9;
+            font-size: 13px;
+        }
+        .page-counter {
+            background-color: #ecf0f1;
+            padding: 5px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 12px;
+        }
+        #page-previews {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .preview-item {
+            border: 1px solid #ddd;
+            padding: 8px;
+            background: #fff;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .preview-item:hover {
+            transform: scale(1.02);
+            border-color: #3498db;
+        }
+        .preview-item canvas {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #eee;
+            margin-bottom: 5px;
+        }
+
+        /* Gestor de páginas A3 */
+        .a3-page-item {
+            padding: 12px;
+            border: 1px solid #bdc3c7;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .a3-page-item.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        .a3-page-item .del-page {
+            background: transparent;
+            color: #e74c3c;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .a3-page-item.active .del-page {
+            color: white;
+        }
+
+        /* Panel Central */
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #e9ecef;
+            overflow: hidden;
+            position: relative;
+        }
+        #workspace-scaler {
+            transform-origin: center center;
+            transition: transform 0.05s ease;
+        }
+        #workspace {
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            width: 1191px;
+            height: 842px;
+            border: 1px solid #777;
+            overflow: hidden;
+        }
+        
+        /* Línea guía */
+        .fold-guide {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            border-left: 2px dashed #e74c3c;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* Elementos del lienzo */
+        .canvas-element {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            box-sizing: border-box;
+            border: 2px solid transparent;
+        }
+        .canvas-element.editing {
+            border: 2px solid #3498db;
+        }
+        .canvas-element.erasing {
+            cursor: crosshair !important;
+        }
+        .canvas-element .wrapper-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: relative;
+        }
+        .canvas-element canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Tiradores */
+        .resize-handle {
+            display: none;
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #3498db;
+            border: 2px solid white;
+            border-radius: 50%;
+            z-index: 10;
+        }
+        .canvas-element.editing .resize-handle {
+            display: block;
+        }
+        .handle-se { right: -6px; bottom: -6px; cursor: se-resize; }
+        .handle-sw { left: -6px; bottom: -6px; cursor: sw-resize; }
+        .handle-ne { right: -6px; top: -6px; cursor: ne-resize; }
+        .handle-nw { left: -6px; top: -6px; cursor: nw-resize; }
+
+        /* Elementos de Texto */
+        .text-element {
+            position: absolute;
+            cursor: move;
+            padding: 5px;
+            border: 1px dashed #7f8c8d;
+            font-family: inherit;
+            min-width: 100px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 50;
+            box-sizing: border-box;
+        }
+        .text-element.editing {
+            border: 2px solid #2ecc71;
+            background: white;
+            cursor: text;
+        }
+
+        /* Círculo indicador del borrador */
+        #eraser-brush-preview {
+            display: none;
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 2px dashed #e67e22;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Botones */
+        button {
+            padding: 6px 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        button.danger { background-color: #e74c3c; }
+        button.danger:hover { background-color: #c0392b; }
+        
+        .tool-control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-right: 12px;
+            border-right: 1px solid #ddd;
+            font-size: 13px;
+        }
+        
+        .text-style-btn {
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border: 1px solid #bdc3c7;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .text-style-btn.active {
+            background-color: #34495e;
+            color: white;
+            border-color: #2c3e50;
+        }
+
+        /* Modales */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            justify-content: center; align-items: center;
+        }
+        .modal-content-wrapper {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: hidden; /* Ventana fija que no crece con el zoom */
+            position: relative;
+        }
+        .modal-canvas-container {
+            flex: 1;
+            width: 100%;
+            overflow: auto; /* Barra de scroll interna independiente de la ventana */
+            border: 1px solid #ccc;
+            position: relative;
+            background-color: #7f8c8d;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        #modal-canvas {
+            display: block;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background-color: white;
+        }
+        .close-modal { align-self: flex-end; background: #e74c3c; margin-bottom: 10px; }
+
+        /* Flechas de Navegación del Visor PDF */
+        .viewer-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2100;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .viewer-nav-btn:hover:not(:disabled) {
+            background-color: #3498db;
+            transform: translateY(-50%) scale(1.1);
+        }
+        .viewer-nav-btn:disabled {
+            background-color: rgba(189, 195, 199, 0.5);
+            cursor: not-allowed;
+        }
+        .viewer-nav-left {
+            left: 20px;
+        }
+        .viewer-nav-right {
+            right: 20px;
+        }
+
+        /* Cropper */
+        #cropper-container {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 3000;
+            flex-direction: column;
+            justify-content: center; align-items: center;
+        }
+        .cropper-wrapper-inner { max-width: 80%; max-height: 70vh; background: white; }
+        .cropper-wrapper-inner img { max-width: 100%; max-height: 70vh; }
+
+        /* Elemento de Selección para Borrado de Área */
+        #eraser-area-box {
+            display: none;
+            position: absolute;
+            border: 2px dashed #e67e22;
+            background-color: rgba(230, 126, 34, 0.25);
+            pointer-events: none;
+            z-index: 9998;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Editor de Partituras - Libreto Continuo A3</h2>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="addTextElement()">✍️ Añadir Texto</button>
+            <button onclick="undo()">Deshacer</button>
+            <button onclick="redo()">Rehacer</button>
+            <button onclick="exportWholeProjectZIP()" style="background-color: #2ecc71;">💾 Guardar y Exportar Proyecto (ZIP)</button>
+        </div>
+    </header>
+
+    <div class="toolbar">
+        <div class="tool-control-group">
+            <strong>Rotación:</strong>
+            <input type="range" id="tool-rotate-slider" min="-180" max="180" value="0" disabled oninput="adjustRotation(this.value)">
+            <span id="rotate-val">0°</span>
+        </div>
+
+        <div class="tool-control-group">
+            <button id="tool-crop" onclick="startManualCrop()" disabled>✂️ Recortar</button>
+        </div>
+
+        <div class="tool-control-group">
+            <button id="tool-eraser" onclick="toggleEraser()" style="background-color: #7f8c8d;">🧽 Borrador (Off)</button>
+            
+            <select id="eraser-mode" onchange="changeEraserMode(this.value)" style="padding: 4px; font-weight: bold;">
+                <option value="brush">🖌️ Modo Pincel</option>
+                <option value="area">🟩 Modo Área (Cuadro)</option>
+            </select>
+
+            <span id="eraser-size-container">
+                <label for="eraser-size">Grosor:</label>
+                <input type="range" id="eraser-size" min="5" max="150" value="30" oninput="updateEraserIndicatorSize()">
+            </span>
+        </div>
+
+        <div class="tool-control-group" id="text-tools" style="display: none; gap: 6px;">
+            <strong>Texto:</strong>
+            <select id="font-family-select" onchange="adjustFontFamily(this.value)">
+                <option value="Arial">Arial</option>
+                <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Courier New', Courier, monospace">Courier New</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+            </select>
+            <label for="font-size-slider">Tamaño:</label>
+            <input type="range" id="font-size-slider" min="12" max="72" value="24" oninput="adjustTextSize(this.value)">
+            <span id="font-size-val">24px</span>
+            
+            <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
+            <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
+            <button class="text-style-btn" id="btn-underline" onclick="toggleTextStyle('underline')"><u>U</u></button>
+        </div>
+
+        <button id="tool-delete" onclick="deleteSelected()" class="danger" disabled>Eliminar</button>
+        
+        <!-- CONTROLES DE CAPAS (Photoshop Style) -->
+        <div class="tool-control-group">
+            <button id="tool-duplicate" onclick="duplicateSelected()" style="background-color: #27ae60;" disabled>👥 Duplicar</button>
+            <button id="tool-bring-front" onclick="bringToFront()" style="background-color: #f39c12;" disabled>🔺 Traer al Frente</button>
+            <button id="tool-send-back" onclick="sendToBack()" style="background-color: #d35400;" disabled>🔻 Enviar al Fondo</button>
+        </div>
+        
+        <span id="edit-indicator" style="margin-left: auto; color: #7f8c8d; font-style: italic; font-size: 12px;">
+            Haz un clic para editar un elemento.
+        </span>
+    </div>
+
+    <div class="main-container">
+        <!-- Barra Izquierda: PDFs de entrada -->
+        <div id="sidebar-left">
+            <h3>1. Cargar PDF</h3>
+            <div class="upload-btn" onclick="document.getElementById('pdf-input').click()">
+                📂 Abrir Archivo PDF
+                <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="handlePDFUpload(event)">
+            </div>
+
+            <h3>2. Partituras</h3>
+            <div id="page-info" class="page-counter" style="display: none;">
+                Total páginas: <span id="total-pages">0</span>
+            </div>
+            <div id="page-previews"></div>
+        </div>
+
+        <!-- Área del Lienzo Autoadaptable -->
+        <div id="canvas-container" onclick="deselectAll(event)">
+            <div id="workspace-scaler">
+                <div id="workspace">
+                    <div class="fold-guide"></div>
+                    <!-- Elemento visual para la selección del área de borrado -->
+                    <div id="eraser-area-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra Derecha: Páginas A3 y Capas -->
+        <div id="sidebar-right">
+            <h3>3. Páginas A3</h3>
+            <button onclick="addA3Page()" style="background-color: #9b59b6; width: 100%; margin-bottom: 10px;">➕ Añadir Lienzo A3</button>
+            <div id="a3-pages-list" style="margin-bottom: 15px;">
+                <!-- Se llenará de forma dinámica -->
+            </div>
+
+            <!-- SECCIÓN 4. Capas de Recorte y Elementos -->
+            <h3>4. Capas / Elementos</h3>
+            <div id="layers-list" style="display: flex; flex-direction: column; gap: 8px; border: 1px solid #ccc; padding: 8px; border-radius: 4px; background-color: #fafafa; max-height: 250px; overflow-y: auto;">
+                <!-- Se llenará de forma dinámica -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicador del círculo del borrador -->
+    <div id="eraser-brush-preview"></div>
+
+    <!-- Modales -->
+    <div id="cropper-container">
+        <div class="cropper-wrapper-inner"><img id="image-to-crop" src=""></div>
+        <div style="margin-top: 15px; display: flex; gap: 15px;">
+            <button class="danger" onclick="cancelCrop()">Cancelar</button>
+            <button onclick="confirmCrop()" style="background-color: #2ecc71;">Confirmar Recorte (Intro)</button>
+        </div>
+    </div>
+
+    <div id="preview-modal" class="modal">
+        <!-- Botones de navegación laterales -->
+        <button id="viewer-prev" class="viewer-nav-btn viewer-nav-left" onclick="navigatePreview(-1)">◀</button>
+        <button id="viewer-next" class="viewer-nav-btn viewer-nav-right" onclick="navigatePreview(1)">▶</button>
+
+        <div class="modal-content-wrapper">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button onclick="adjustPreviewZoom(0.1)" style="background-color: #2c3e50;">➕ Zoom</button>
+                    <button onclick="adjustPreviewZoom(-0.1)" style="background-color: #2c3e50;">➖ Zoom</button>
+                    <span id="preview-zoom-label" style="font-weight: bold; font-size: 14px;">100%</span>
+                </div>
+                <button class="close-modal" onclick="closeFullscreenPreview()" style="margin: 0;">Cerrar [X]</button>
+            </div>
+            <h3 id="modal-title" style="margin: 5px 0;">Vista Previa</h3>
+            <div class="modal-canvas-container">
+                <canvas id="modal-canvas"></canvas>
+            </div>
+            <button id="modal-insert-btn" style="background-color: #2ecc71; margin-top: 15px; width: 100%; padding: 10px;" onclick="insertFromModal()">Insertar en el Lienzo Activo</button>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        let currentPdf = null;
+        const workspace = document.getElementById('workspace');
+        const workspaceScaler = document.getElementById('workspace-scaler');
+        const canvasContainer = document.getElementById('canvas-container');
+        const brushPreview = document.getElementById('eraser-brush-preview');
+        
+        // El elemento borrador se define dinámicamente como let para resolver el fallo de referencias rotas al cambiar de página
+        let eraserAreaBox = document.getElementById('eraser-area-box');
+        
+        let selectedElement = null;
+        let cropperInstance = null;
+        
+        // Variables globales del Borrador
+        let eraserActive = false;
+        let currentEraserMode = 'brush'; 
+        let isDrawingEraser = false;
+        let eraserStartCoords = { x: 0, y: 0 };
+
+        // Variables del Modal Preview
+        let previewZoom = 1.0;
+        let activePreviewPageNum = null;
+
+        // Contador para la distribución alterna
+        let insertedPagesCount = 0;
+
+        // Estructura de Páginas A3
+        let pagesA3 = [
+            { id: 1, htmlContent: '<div class="fold-guide"></div>' }
+        ];
+        let activePageId = 1;
+
+        // Historial
+        let history = [];
+        let historyIndex = -1;
+
+        // Escucha de eventos de teclado para el visor PDF (Flechas para páginas y zoom)
+        window.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('preview-modal');
+            if (modal && modal.style.display === 'flex') {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    navigatePreview(-1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    navigatePreview(1);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    adjustPreviewZoom(0.1);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    adjustPreviewZoom(-0.1);
+                }
+            }
+        });
+
+        function saveState() {
+            const activePage = pagesA3.find(p => p.id === activePageId);
+            if (activePage) {
+                activePage.htmlContent = workspace.innerHTML;
+            }
+
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            history.push(JSON.stringify(pagesA3));
+            historyIndex = history.length - 1;
+        }
+
+        function resizeWorkspace() {
+            const containerWidth = canvasContainer.clientWidth - 40;
+            const containerHeight = canvasContainer.clientHeight - 40;
+            const baseWidth = 1191;
+            const baseHeight = 842;
+
+            const scaleX = containerWidth / baseWidth;
+            const scaleY = containerHeight / baseHeight;
+            scaleFactor = Math.min(scaleX, scaleY, 1);
+
+            workspaceScaler.style.transform = `scale(${scaleFactor})`;
+        }
+        window.addEventListener('resize', resizeWorkspace);
+        setTimeout(resizeWorkspace, 100);
+
+        // GESTIÓN DE PÁGINAS A3
+        function renderA3PagesList() {
+            const list = document.getElementById('a3-pages-list');
+            list.innerHTML = '';
+            pagesA3.forEach((page, index) => {
+                const div = document.createElement('div');
+                div.className = `a3-page-item ${page.id === activePageId ? 'active' : ''}`;
+                div.onclick = () => switchA3Page(page.id);
+                
+                div.innerHTML = `
+                    <span>A3 - Página ${index + 1}</span>
+                    ${pagesA3.length > 1 ? `<button class="del-page" onclick="deleteA3Page(event, ${page.id})">🗑️</button>` : ''}
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function addA3Page() {
+            const activePage = pagesA3.find(p => p.id === activePageId);
+            if (activePage) {
+                activePage.htmlContent = workspace.innerHTML;
+            }
+
+            deselectAll();
+            const newId = Date.now();
+            pagesA3.push({
+                id: newId,
+                htmlContent: '<div class="fold-guide"></div>'
+            });
+            activePageId = newId;
+            renderA3PagesList();
+            loadPageContent();
+            saveState();
+        }
+
+        function switchA3Page(id) {
+            const activePage = pagesA3.find(p => p.id === activePageId);
+            if (activePage) {
+                activePage.htmlContent = workspace.innerHTML;
+            }
+
+            deselectAll();
+            activePageId = id;
+            renderA3PagesList();
+            loadPageContent();
+        }
+
+        function deleteA3Page(event, id) {
+            event.stopPropagation();
+            if (confirm("¿Estás seguro de que deseas eliminar esta página A3 completa?")) {
+                deselectAll();
+                pagesA3 = pagesA3.filter(p => p.id !== id);
+                if (activePageId === id) {
+                    activePageId = pagesA3[0].id;
+                }
+                renderA3PagesList();
+                loadPageContent();
+                saveState();
+            }
+        }
+
+        function loadPageContent() {
+            const activePage = pagesA3.find(p => p.id === activePageId);
+            if (activePage) {
+                workspace.innerHTML = activePage.htmlContent;
+                
+                // Asegurar que exista el elemento del borrador de área y actualizar su referencia activa
+                let box = workspace.querySelector('#eraser-area-box');
+                if (!box) {
+                    box = document.createElement('div');
+                    box.id = 'eraser-area-box';
+                    workspace.appendChild(box);
+                }
+                eraserAreaBox = box;
+                eraserAreaBox.style.display = 'none'; // Se inicializa oculto para evitar fallas visuales
+                
+                const elements = workspace.querySelectorAll('.canvas-element');
+                elements.forEach(el => {
+                    const canvas = el.querySelector('canvas');
+                    if (canvas && canvas.getAttribute('data-img-data')) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const ctx = canvas.getContext('2d');
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0);
+                        };
+                        img.src = canvas.getAttribute('data-img-data');
+                    }
+                    makeElementInteractive(el);
+                    if (eraserActive) {
+                        el.classList.add('erasing');
+                    }
+                });
+                
+                const texts = workspace.querySelectorAll('.text-element');
+                texts.forEach(txt => bindTextEvents(txt));
+
+                // Recargar el panel de capas de la página actual
+                renderLayersList();
+            }
+        }
+
+        // Subida de PDF
+        function handlePDFUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                try {
+                    currentPdf = await pdfjsLib.getDocument(typedarray).promise;
+                    document.getElementById('page-info').style.display = 'block';
+                    document.getElementById('total-pages').innerText = currentPdf.numPages;
+                    renderPreviews();
+                } catch (error) {
+                    alert("Error al cargar PDF.");
+                }
+            };
+            fileReader.readAsArrayBuffer(file);
+        }
+
+        // Previsualizaciones de PDF
+        async function renderPreviews() {
+            const previewsContainer = document.getElementById('page-previews');
+            previewsContainer.innerHTML = '';
+
+            for (let pageNum = 1; pageNum <= currentPdf.numPages; pageNum++) {
+                const page = await currentPdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 0.3 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.onclick = () => showFullscreenPreview(pageNum);
+                div.innerHTML = `
+                    <strong>Pág. ${pageNum}</strong>
+                    <div class="btn-group" style="margin-top: 5px;">
+                        <button onclick="event.stopPropagation(); addPageToWorkspace(${pageNum})" style="background-color: #2ecc71; width: 100%;">➕ Insertar</button>
+                    </div>
+                `;
+                div.insertBefore(canvas, div.firstChild);
+                previewsContainer.appendChild(div);
+            }
+        }
+
+        // Mostrar vista previa con Zoom Ajustable
+        async function showFullscreenPreview(pageNum) {
+            activePreviewPageNum = pageNum;
+            previewZoom = 1.0;
+            
+            const modal = document.getElementById('preview-modal');
+            modal.style.display = 'flex';
+            
+            renderPreviewWithZoom();
+            updateNavigationButtons();
+        }
+
+        async function renderPreviewWithZoom() {
+            if (!currentPdf || !activePreviewPageNum) return;
+            const canvas = document.getElementById('modal-canvas');
+            const page = await currentPdf.getPage(activePreviewPageNum);
+            
+            const viewport = page.getViewport({ scale: previewZoom * 1.5 });
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            document.getElementById('modal-title').innerText = `Visualizando Página ${activePreviewPageNum}`;
+            document.getElementById('preview-zoom-label').innerText = Math.round(previewZoom * 100) + '%';
+        }
+
+        function adjustPreviewZoom(val) {
+            previewZoom = Math.max(0.3, Math.min(4.0, previewZoom + val));
+            renderPreviewWithZoom();
+        }
+
+        // Navegación secuencial de páginas dentro del visor sin cerrar
+        function navigatePreview(direction) {
+            if (!currentPdf) return;
+            let targetPage = activePreviewPageNum + direction;
+            if (targetPage >= 1 && targetPage <= currentPdf.numPages) {
+                activePreviewPageNum = targetPage;
+                renderPreviewWithZoom();
+                updateNavigationButtons();
+            }
+        }
+
+        function updateNavigationButtons() {
+            if (!currentPdf) return;
+            document.getElementById('viewer-prev').disabled = (activePreviewPageNum <= 1);
+            document.getElementById('viewer-next').disabled = (activePreviewPageNum >= currentPdf.numPages);
+        }
+
+        function insertFromModal() {
+            if (activePreviewPageNum) {
+                addPageToWorkspace(activePreviewPageNum);
+                closeFullscreenPreview();
+            }
+        }
+
+        function closeFullscreenPreview() {
+            document.getElementById('preview-modal').style.display = 'none';
+            activePreviewPageNum = null;
+        }
+
+        // Añadir página al lienzo activo
+        async function addPageToWorkspace(pageNum) {
+            if (!currentPdf) return;
+
+            let targetLeft = 0;
+            let targetTop = 0;
+            const targetWidth = 595;
+            const targetHeight = 842;
+
+            if (insertedPagesCount > 0 && insertedPagesCount % 2 !== 0) {
+                targetLeft = 596; 
+            } else if (insertedPagesCount > 0 && insertedPagesCount % 2 === 0) {
+                addA3Page();
+                targetLeft = 0;
+            }
+
+            const page = await currentPdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2.0 });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+            canvas.setAttribute('data-img-data', canvas.toDataURL());
+
+            const element = document.createElement('div');
+            element.className = 'canvas-element';
+            if (eraserActive) element.classList.add('erasing');
+            element.style.left = targetLeft + 'px';
+            element.style.top = targetTop + 'px';
+            element.style.width = targetWidth + 'px';
+            element.style.height = targetHeight + 'px';
+            element.style.transform = 'rotate(0deg)';
+
+            element.innerHTML = `
+                <div class="resize-handle handle-nw"></div>
+                <div class="resize-handle handle-ne"></div>
+                <div class="resize-handle handle-sw"></div>
+                <div class="resize-handle handle-se"></div>
+                <div class="wrapper-canvas"></div>
+            `;
+
+            element.querySelector('.wrapper-canvas').appendChild(canvas);
+            workspace.appendChild(element);
+
+            makeElementInteractive(element);
+            insertedPagesCount++;
+            saveState();
+            renderLayersList();
+        }
+
+        // Lógica interactiva del Elemento de Imagen
+        function makeElementInteractive(element) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            const canvas = element.querySelector('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Arrastrar y Selección en un único clic intuitivo
+            element.addEventListener('mousedown', (e) => {
+                if (e.target.classList.contains('resize-handle') || eraserActive) return;
+                e.stopPropagation();
+                
+                if (selectedElement !== element) {
+                    deselectAll();
+                    selectedElement = element;
+                    element.classList.add('editing');
+                    
+                    let currentTransform = element.style.transform || 'rotate(0deg)';
+                    let match = currentTransform.match(/rotate\(([^)]+)deg\)/);
+                    let currentRotation = match ? parseInt(match[1]) : 0;
+                    document.getElementById('tool-rotate-slider').value = currentRotation;
+                    document.getElementById('rotate-val').innerText = currentRotation + '°';
+
+                    enableToolbar('image');
+                    renderLayersList();
+                }
+
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                
+                document.onmouseup = () => {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                    saveState();
+                };
+                
+                document.onmousemove = (ev) => {
+                    ev.preventDefault();
+                    pos1 = (pos3 - ev.clientX) / scaleFactor;
+                    pos2 = (pos4 - ev.clientY) / scaleFactor;
+                    pos3 = ev.clientX;
+                    pos4 = ev.clientY;
+                    
+                    element.style.top = (element.offsetTop - pos2) + "px";
+                    element.style.left = (element.offsetLeft - pos1) + "px";
+                };
+            });
+
+            const getCanvasCoords = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+                const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+                return { x, y };
+            };
+
+            // Eventos del Borrador
+            element.addEventListener('mousedown', (e) => {
+                if (!eraserActive) return;
+                e.stopPropagation();
+                isDrawingEraser = true;
+
+                const coords = getCanvasCoords(e);
+                eraserStartCoords = { x: coords.x, y: coords.y, clientX: e.clientX, clientY: e.clientY };
+
+                if (currentEraserMode === 'brush') {
+                    drawWhiteEraserBrush(coords.x, coords.y, canvas, ctx);
+                } else if (currentEraserMode === 'area') {
+                    const workspaceRect = workspace.getBoundingClientRect();
+                    const startX = (e.clientX - workspaceRect.left) / scaleFactor;
+                    const startY = (e.clientY - workspaceRect.top) / scaleFactor;
+
+                    eraserAreaBox.style.left = startX + 'px';
+                    eraserAreaBox.style.top = startY + 'px';
+                    eraserAreaBox.style.width = '0px';
+                    eraserAreaBox.style.height = '0px';
+                    eraserAreaBox.style.display = 'block';
+                }
+            });
+
+            element.addEventListener('mousemove', (e) => {
+                if (!eraserActive) return;
+                
+                if (currentEraserMode === 'brush') {
+                    brushPreview.style.left = e.clientX + 'px';
+                    brushPreview.style.top = e.clientY + 'px';
+                    if (isDrawingEraser) {
+                        const coords = getCanvasCoords(e);
+                        drawWhiteEraserBrush(coords.x, coords.y, canvas, ctx);
+                    }
+                } else if (currentEraserMode === 'area' && isDrawingEraser) {
+                    const workspaceRect = workspace.getBoundingClientRect();
+                    const startX = (eraserStartCoords.clientX - workspaceRect.left) / scaleFactor;
+                    const startY = (eraserStartCoords.clientY - workspaceRect.top) / scaleFactor;
+                    const currentX = (e.clientX - workspaceRect.left) / scaleFactor;
+                    const currentY = (e.clientY - workspaceRect.top) / scaleFactor;
+
+                    const width = currentX - startX;
+                    const height = currentY - startY;
+
+                    eraserAreaBox.style.left = (width < 0 ? currentX : startX) + 'px';
+                    eraserAreaBox.style.top = (height < 0 ? currentY : startY) + 'px';
+                    eraserAreaBox.style.width = Math.abs(width) + 'px';
+                    eraserAreaBox.style.height = Math.abs(height) + 'px';
+                }
+            });
+
+            const drawWhiteEraserBrush = (x, y, cv, cx) => {
+                const brushSize = parseInt(document.getElementById('eraser-size').value) * (cv.width / cv.offsetWidth);
+                cx.save();
+                cx.fillStyle = '#ffffff';
+                cx.beginPath();
+                cx.arc(x, y, brushSize / 2, 0, Math.PI * 2, false);
+                cx.fill();
+                cx.restore();
+                cv.setAttribute('data-img-data', cv.toDataURL());
+            };
+
+            element.addEventListener('mouseup', (e) => {
+                if (!eraserActive || !isDrawingEraser) return;
+                isDrawingEraser = false;
+
+                if (currentEraserMode === 'area') {
+                    eraserAreaBox.style.display = 'none';
+                    const endCoords = getCanvasCoords(e);
+                    
+                    const x = Math.min(eraserStartCoords.x, endCoords.x);
+                    const y = Math.min(eraserStartCoords.y, endCoords.y);
+                    const width = Math.abs(endCoords.x - eraserStartCoords.x);
+                    const height = Math.abs(endCoords.y - eraserStartCoords.y);
+
+                    ctx.save();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(x, y, width, height);
+                    ctx.restore();
+                    
+                    canvas.setAttribute('data-img-data', canvas.toDataURL());
+                }
+                saveState();
+            });
+
+            // Escalar tiradores
+            const handles = element.querySelectorAll('.resize-handle');
+            handles.forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    const isRight = handle.classList.contains('handle-se') || handle.classList.contains('handle-ne');
+                    const isBottom = handle.classList.contains('handle-se') || handle.classList.contains('handle-sw');
+                    const isLeft = handle.classList.contains('handle-nw') || handle.classList.contains('handle-sw');
+                    const isTop = handle.classList.contains('handle-nw') || handle.classList.contains('handle-ne');
+
+                    const startWidth = parseInt(document.defaultView.getComputedStyle(element).width, 10);
+                    const startHeight = parseInt(document.defaultView.getComputedStyle(element).height, 10);
+                    const aspectRatio = startWidth / startHeight;
+
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const startLeft = element.offsetLeft;
+                    const startTop = element.offsetTop;
+
+                    document.onmousemove = (ev) => {
+                        let deltaX = (ev.clientX - startX) / scaleFactor;
+                        let deltaY = (ev.clientY - startY) / scaleFactor;
+
+                        let newWidth = startWidth;
+                        let newHeight = startHeight;
+
+                        if (ev.shiftKey) {
+                            if (isRight) {
+                                newWidth = startWidth + deltaX;
+                                newHeight = newWidth / aspectRatio;
+                            } else if (isLeft) {
+                                newWidth = startWidth - deltaX;
+                                newHeight = newWidth / aspectRatio;
+                            } else if (isBottom) {
+                                newHeight = startHeight + deltaY;
+                                newWidth = newHeight * aspectRatio;
+                            } else if (isTop) {
+                                newHeight = startHeight - deltaY;
+                                newWidth = newHeight * aspectRatio;
+                            }
+                        } else {
+                            if (isRight) newWidth = startWidth + deltaX;
+                            if (isBottom) newHeight = startHeight + deltaY;
+                            if (isLeft) newWidth = startWidth - deltaX;
+                            if (isTop) newHeight = startHeight - deltaY;
+                        }
+
+                        if (newWidth < 30) newWidth = 30;
+                        if (newHeight < 30) newHeight = 30;
+
+                        element.style.width = newWidth + 'px';
+                        element.style.height = newHeight + 'px';
+
+                        if (isLeft) {
+                            element.style.left = (startLeft + (startWidth - newWidth)) + 'px';
+                        }
+                        if (isTop) {
+                            element.style.top = (startTop + (startHeight - newHeight)) + 'px';
+                        }
+                    };
+
+                    document.onmouseup = () => {
+                        document.onmouseup = null;
+                        document.onmousemove = null;
+                        saveState();
+                    };
+                });
+            });
+        }
+
+        // HERRAMIENTA: Añadir Texto
+        function addTextElement() {
+            const textEl = document.createElement('div');
+            textEl.className = 'text-element';
+            textEl.contentEditable = "true";
+            textEl.innerText = "Doble clic para escribir...";
+            textEl.style.left = '100px';
+            textEl.style.top = '100px';
+            textEl.style.fontSize = '24px';
+            textEl.style.color = '#000';
+            textEl.style.fontWeight = 'normal';
+            textEl.style.fontStyle = 'normal';
+            textEl.style.textDecoration = 'none';
+            textEl.style.fontFamily = 'Arial';
+            textEl.style.transform = 'rotate(0deg)';
+
+            bindTextEvents(textEl);
+            workspace.appendChild(textEl);
+            saveState();
+            renderLayersList();
+        }
+
+        function bindTextEvents(textEl) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            
+            textEl.addEventListener('mousedown', (e) => {
+                if (textEl.classList.contains('editing') || eraserActive) return;
+                e.stopPropagation();
+                deselectAll();
+                selectedElement = textEl;
+                textEl.style.border = "2px solid #3498db";
+                enableToolbar('text');
+                renderLayersList();
+
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+
+                document.onmouseup = () => {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                    saveState();
+                };
+
+                document.onmousemove = (ev) => {
+                    ev.preventDefault();
+                    pos1 = (pos3 - ev.clientX) / scaleFactor;
+                    pos2 = (pos4 - ev.clientY) / scaleFactor;
+                    pos3 = ev.clientX;
+                    pos4 = ev.clientY;
+                    textEl.style.top = (textEl.offsetTop - pos2) + "px";
+                    textEl.style.left = (textEl.offsetLeft - pos1) + "px";
+                };
+            });
+
+            textEl.addEventListener('dblclick', (e) => {
+                if (eraserActive) return;
+                e.stopPropagation();
+                textEl.classList.add('editing');
+                textEl.focus();
+            });
+
+            textEl.addEventListener('blur', () => {
+                textEl.classList.remove('editing');
+                saveState();
+                renderLayersList();
+            });
+        }
+
+        function adjustFontFamily(font) {
+            if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
+            selectedElement.style.fontFamily = font;
+            saveState();
+        }
+
+        function toggleTextStyle(style) {
+            if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
+            
+            if (style === 'bold') {
+                const isBold = selectedElement.style.fontWeight === 'bold';
+                selectedElement.style.fontWeight = isBold ? 'normal' : 'bold';
+                document.getElementById('btn-bold').classList.toggle('active', !isBold);
+            } else if (style === 'italic') {
+                const isItalic = selectedElement.style.fontStyle === 'italic';
+                selectedElement.style.fontStyle = isItalic ? 'normal' : 'italic';
+                document.getElementById('btn-italic').classList.toggle('active', !isItalic);
+            } else if (style === 'underline') {
+                const isUnderline = selectedElement.style.textDecoration === 'underline';
+                selectedElement.style.textDecoration = isUnderline ? 'none' : 'underline';
+                document.getElementById('btn-underline').classList.toggle('active', !isUnderline);
+            }
+            saveState();
+        }
+
+        // Habilitar Barra de Herramientas
+        function enableToolbar(type) {
+            document.getElementById('tool-rotate-slider').disabled = true;
+            document.getElementById('tool-crop').disabled = true;
+            document.getElementById('text-tools').style.display = 'none';
+            document.getElementById('tool-delete').disabled = false;
+            
+            // Habilitar controles de capas adicionales
+            document.getElementById('tool-duplicate').disabled = false;
+            document.getElementById('tool-bring-front').disabled = false;
+            document.getElementById('tool-send-back').disabled = false;
+
+            if (type === 'image') {
+                document.getElementById('tool-rotate-slider').disabled = false;
+                document.getElementById('tool-crop').disabled = false;
+                document.getElementById('edit-indicator').innerHTML = "<strong>Edición de Imagen:</strong> Rotación, borrador o recorte.";
+            } else if (type === 'text') {
+                document.getElementById('text-tools').style.display = 'flex';
+                document.getElementById('tool-rotate-slider').disabled = false;
+                
+                let currentSize = parseInt(selectedElement.style.fontSize) || 24;
+                document.getElementById('font-size-slider').value = currentSize;
+                document.getElementById('font-size-val').innerText = currentSize + 'px';
+                
+                document.getElementById('font-family-select').value = selectedElement.style.fontFamily;
+                
+                document.getElementById('btn-bold').classList.toggle('active', selectedElement.style.fontWeight === 'bold');
+                document.getElementById('btn-italic').classList.toggle('active', selectedElement.style.fontStyle === 'italic');
+                document.getElementById('btn-underline').classList.toggle('active', selectedElement.style.textDecoration === 'underline');
+                
+                let currentTransform = selectedElement.style.transform || 'rotate(0deg)';
+                let match = currentTransform.match(/rotate\(([^)]+)deg\)/);
+                let currentRotation = match ? parseInt(match[1]) : 0;
+                document.getElementById('tool-rotate-slider').value = currentRotation;
+                document.getElementById('rotate-val').innerText = currentRotation + '°';
+                
+                document.getElementById('edit-indicator').innerHTML = "<strong>Edición de Texto:</strong> Formato, rotación o arrastre.";
+            }
+        }
+
+        function deselectAll(e) {
+            if (e && e.target.closest('.canvas-element, .text-element')) return;
+            if (selectedElement) {
+                selectedElement.classList.remove('editing');
+                if (selectedElement.classList.contains('text-element')) {
+                    selectedElement.style.border = '1px dashed #7f8c8d';
+                }
+                selectedElement = null;
+                enableToolbar('none');
+                document.getElementById('tool-delete').disabled = true;
+                
+                // Deshabilitar controles de capas
+                document.getElementById('tool-duplicate').disabled = true;
+                document.getElementById('tool-bring-front').disabled = true;
+                document.getElementById('tool-send-back').disabled = true;
+                
+                document.getElementById('edit-indicator').innerText = "Haz un clic para editar un elemento del lienzo.";
+            }
+            renderLayersList();
+        }
+
+        function adjustTextSize(size) {
+            if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
+            selectedElement.style.fontSize = size + 'px';
+            document.getElementById('font-size-val').innerText = size + 'px';
+            saveState();
+        }
+
+        function adjustRotation(val) {
+            if (!selectedElement) return;
+            document.getElementById('rotate-val').innerText = val + '°';
+            selectedElement.style.transform = `rotate(${val}deg)`;
+            saveState();
+        }
+
+        // Recorte con Cropper
+        function startManualCrop() {
+            if (!selectedElement) return;
+            const originalCanvas = selectedElement.querySelector('canvas');
+            const cropperContainer = document.getElementById('cropper-container');
+            const imageToCrop = document.getElementById('image-to-crop');
+
+            imageToCrop.src = originalCanvas.toDataURL();
+            cropperContainer.style.display = 'flex';
+
+            setTimeout(() => {
+                cropperInstance = new Cropper(imageToCrop, {
+                    autoCropArea: 0.8,
+                    viewMode: 1,
+                    movable: true, zoomable: true, rotatable: false, scalable: false
+                });
+            }, 100);
+            window.addEventListener('keydown', handleCropKeydown);
+        }
+
+        function handleCropKeydown(e) { if (e.key === 'Enter') confirmCrop(); }
+
+        function confirmCrop() {
+            if (!cropperInstance || !selectedElement) return;
+            const croppedCanvas = cropperInstance.getCroppedCanvas({ imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
+            const wrapper = selectedElement.querySelector('.wrapper-canvas');
+            
+            croppedCanvas.setAttribute('data-img-data', croppedCanvas.toDataURL());
+            wrapper.innerHTML = ''; 
+            wrapper.appendChild(croppedCanvas);
+
+            selectedElement.style.width = (croppedCanvas.width / 2) + 'px';
+            selectedElement.style.height = (croppedCanvas.height / 2) + 'px';
+
+            makeElementInteractive(selectedElement);
+            cancelCrop();
+            saveState();
+            renderLayersList();
+        }
+
+        function cancelCrop() {
+            document.getElementById('cropper-container').style.display = 'none';
+            if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+            window.removeEventListener('keydown', handleCropKeydown);
+        }
+
+        // Control del Borrador Global
+        function toggleEraser() {
+            deselectAll();
+            eraserActive = !eraserActive;
+            const btn = document.getElementById('tool-eraser');
+            const canvasElements = workspace.querySelectorAll('.canvas-element');
+
+            if (eraserActive) {
+                btn.innerText = "🧽 Borrador (On)";
+                btn.style.backgroundColor = "#e67e22";
+                canvasElements.forEach(el => el.classList.add('erasing'));
+                
+                if (currentEraserMode === 'brush') {
+                    brushPreview.style.display = 'block';
+                    updateEraserIndicatorSize();
+                }
+            } else {
+                btn.innerText = "🧽 Borrador (Off)";
+                btn.style.backgroundColor = "#7f8c8d";
+                brushPreview.style.display = 'none';
+                canvasElements.forEach(el => el.classList.remove('erasing'));
+                if (eraserAreaBox) eraserAreaBox.style.display = 'none';
+                isDrawingEraser = false;
+            }
+        }
+
+        function changeEraserMode(mode) {
+            currentEraserMode = mode;
+            if (eraserActive && mode === 'brush') {
+                brushPreview.style.display = 'block';
+                updateEraserIndicatorSize();
+            } else {
+                brushPreview.style.display = 'none';
+            }
+        }
+
+        function updateEraserIndicatorSize() {
+            if (!eraserActive || currentEraserMode !== 'brush') return;
+            const size = parseInt(document.getElementById('eraser-size').value);
+            const scaledSize = size * scaleFactor;
+            brushPreview.style.width = scaledSize + 'px';
+            brushPreview.style.height = scaledSize + 'px';
+        }
+
+        function deleteSelected() {
+            if (!selectedElement) return;
+            selectedElement.remove();
+            deselectAll();
+            saveState();
+            renderLayersList();
+        }
+
+        // GESTIÓN DE CAPAS (Photoshop Style)
+        function duplicateSelected() {
+            if (!selectedElement) return;
+
+            let clone;
+            const offsetDistance = 20;
+
+            if (selectedElement.classList.contains('canvas-element')) {
+                clone = selectedElement.cloneNode(true);
+                
+                const srcCanvas = selectedElement.querySelector('canvas');
+                const destCanvas = clone.querySelector('canvas');
+                if (srcCanvas && destCanvas) {
+                    destCanvas.width = srcCanvas.width;
+                    destCanvas.height = srcCanvas.height;
+                    const destCtx = destCanvas.getContext('2d');
+                    destCtx.drawImage(srcCanvas, 0, 0);
+                    destCanvas.setAttribute('data-img-data', srcCanvas.toDataURL());
+                }
+
+                clone.classList.remove('editing');
+                clone.style.left = (parseInt(selectedElement.style.left || 0) + offsetDistance) + 'px';
+                clone.style.top = (parseInt(selectedElement.style.top || 0) + offsetDistance) + 'px';
+                
+                workspace.appendChild(clone);
+                makeElementInteractive(clone);
+            } else if (selectedElement.classList.contains('text-element')) {
+                clone = selectedElement.cloneNode(true);
+                clone.classList.remove('editing');
+                clone.style.left = (parseInt(selectedElement.style.left || 0) + offsetDistance) + 'px';
+                clone.style.top = (parseInt(selectedElement.style.top || 0) + offsetDistance) + 'px';
+                
+                workspace.appendChild(clone);
+                bindTextEvents(clone);
+            }
+
+            deselectAll();
+            if (clone) {
+                selectedElement = clone;
+                clone.classList.add('editing');
+                if (clone.classList.contains('text-element')) {
+                    enableToolbar('text');
+                } else {
+                    enableToolbar('image');
+                }
+            }
+            saveState();
+            renderLayersList();
+        }
+
+        function bringToFront() {
+            if (!selectedElement) return;
+            workspace.appendChild(selectedElement);
+            saveState();
+            renderLayersList();
+        }
+
+        function sendToBack() {
+            if (!selectedElement) return;
+            const foldGuide = workspace.querySelector('.fold-guide');
+            if (foldGuide && foldGuide.nextSibling) {
+                workspace.insertBefore(selectedElement, foldGuide.nextSibling);
+            } else {
+                workspace.insertBefore(selectedElement, workspace.firstChild);
+            }
+            saveState();
+            renderLayersList();
+        }
+
+        // PANEL VISUAL DE CAPAS (Photoshop Style)
+        function renderLayersList() {
+            const list = document.getElementById('layers-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            const elements = workspace.querySelectorAll('.canvas-element, .text-element');
+            if (elements.length === 0) {
+                list.innerHTML = '<div style="color: #7f8c8d; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">Sin capas activas</div>';
+                return;
+            }
+
+            // Renderizar de arriba hacia abajo (las de arriba están más al frente en el DOM)
+            for (let i = elements.length - 1; i >= 0; i--) {
+                const el = elements[i];
+                const isSelected = (el === selectedElement);
+                
+                const div = document.createElement('div');
+                div.style.padding = '6px 8px';
+                div.style.border = '1px solid ' + (isSelected ? '#3498db' : '#ddd');
+                div.style.backgroundColor = isSelected ? '#ebf5fb' : '#ffffff';
+                div.style.borderRadius = '4px';
+                div.style.cursor = 'pointer';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                div.style.fontSize = '12px';
+                div.style.fontWeight = isSelected ? 'bold' : 'normal';
+
+                let label = '';
+                if (el.classList.contains('canvas-element')) {
+                    label = `🖼️ Capa Imagen (${i + 1})`;
+                } else {
+                    const textSnippet = el.innerText.substring(0, 15) || 'Texto';
+                    label = `✍️ Texto: "${textSnippet}..."`;
+                }
+
+                div.innerHTML = `
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">${label}</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button onclick="event.stopPropagation(); selectLayerByIndex(${i})" style="padding: 2px 5px; font-size: 10px; background-color: #3498db; color: white;">👁️</button>
+                        <button onclick="event.stopPropagation(); deleteLayerByIndex(${i})" style="padding: 2px 5px; font-size: 10px; background-color: #e74c3c; color: white;">🗑️</button>
+                    </div>
+                `;
+
+                div.onclick = () => selectLayerByIndex(i);
+                list.appendChild(div);
+            }
+        }
+
+        function selectLayerByIndex(index) {
+            const elements = workspace.querySelectorAll('.canvas-element, .text-element');
+            const el = elements[index];
+            if (el) {
+                if (selectedElement && selectedElement !== el) {
+                    selectedElement.classList.remove('editing');
+                    if (selectedElement.classList.contains('text-element')) {
+                        selectedElement.style.border = '1px dashed #7f8c8d';
+                    }
+                }
+                selectedElement = el;
+                el.classList.add('editing');
+                if (el.classList.contains('text-element')) {
+                    el.style.border = "2px solid #3498db";
+                    enableToolbar('text');
+                } else {
+                    enableToolbar('image');
+                }
+                renderLayersList();
+            }
+        }
+
+        function deleteLayerByIndex(index) {
+            const elements = workspace.querySelectorAll('.canvas-element, .text-element');
+            const el = elements[index];
+            if (el) {
+                if (confirm("¿Seguro que deseas eliminar esta capa?")) {
+                    el.remove();
+                    deselectAll();
+                    saveState();
+                    renderLayersList();
+                }
+            }
+        }
+
+        // Historial
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                pagesA3 = JSON.parse(history[historyIndex]);
+                loadPageContent();
+                renderA3PagesList();
+            }
+        }
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                pagesA3 = JSON.parse(history[historyIndex]);
+                loadPageContent();
+                renderA3PagesList();
+            }
+        }
+
+        // Helper asíncrono para asegurar la carga completa de recursos gráficos
+        function loadImgAsync(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = (e) => reject(e);
+                img.src = src;
+            });
+        }
+
+        // EXPORTACIÓN AVANZADA: Generar ZIP con carpetas A3 e individuales A4 unificadas en un único PDF cada una
+        async function exportWholeProjectZIP() {
+            deselectAll();
+            
+            const activePage = pagesA3.find(p => p.id === activePageId);
+            if (activePage) {
+                activePage.htmlContent = workspace.innerHTML;
+            }
+
+            const { jsPDF } = window.jspdf;
+
+            // Inicializar jsPDF (Dimensiones reales a escala pt de impresión)
+            // A3 Landscape: 1190.55 pt x 841.89 pt (Equivalente al ratio 1191x842)
+            const pdfA3 = new jsPDF({
+                orientation: 'landscape',
+                unit: 'pt',
+                format: 'a3'
+            });
+
+            // A4 Portrait: 595.28 pt x 841.89 pt (Equivalente al ratio 595x842)
+            const pdfA4 = new jsPDF({
+                orientation: 'portrait',
+                unit: 'pt',
+                format: 'a4'
+            });
+
+            // Elemento auxiliar temporal oculto para renderizar los lienzos sin escalar
+            const renderDiv = document.createElement('div');
+            renderDiv.style.width = '1191px';
+            renderDiv.style.height = '842px';
+            renderDiv.style.position = 'fixed';
+            renderDiv.style.top = '-9999px';
+            renderDiv.style.left = '-9999px';
+            renderDiv.style.backgroundColor = 'white';
+            document.body.appendChild(renderDiv);
+
+            // Escala de resolución moderada para evitar archivos gigantescos
+            const exportScale = 2.5;
+
+            for (let index = 0; index < pagesA3.length; index++) {
+                const page = pagesA3[index];
+                renderDiv.innerHTML = page.htmlContent;
+
+                // Cargar asíncronamente los búferes de imagen y restaurarlos en cada canvas
+                const elList = renderDiv.querySelectorAll('.canvas-element');
+                for (let el of elList) {
+                    const canvas = el.querySelector('canvas');
+                    if (canvas && canvas.getAttribute('data-img-data')) {
+                        try {
+                            const img = await loadImgAsync(canvas.getAttribute('data-img-data'));
+                            const ctx = canvas.getContext('2d');
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0);
+                        } catch (err) {
+                            console.error("Error al restaurar canvas para exportación:", err);
+                        }
+                    }
+                }
+
+                // Ocultar guías visuales y tiradores
+                const guides = renderDiv.querySelectorAll('.resize-handle, .fold-guide');
+                guides.forEach(g => g.style.setProperty('display', 'none', 'important'));
+
+                // Renderizar el lienzo completo en un Canvas de alta resolución
+                const a3Canvas = document.createElement('canvas');
+                a3Canvas.width = 1191 * exportScale;
+                a3Canvas.height = 842 * exportScale;
+                const a3Ctx = a3Canvas.getContext('2d');
+                a3Ctx.fillStyle = '#ffffff';
+                a3Ctx.fillRect(0, 0, a3Canvas.width, a3Canvas.height);
+
+                const items = renderDiv.querySelectorAll('.canvas-element, .text-element');
+                for (let item of items) {
+                    const left = parseFloat(item.style.left) || 0;
+                    const top = parseFloat(item.style.top) || 0;
+                    const width = parseFloat(item.style.width) || item.offsetWidth || 0;
+                    const height = parseFloat(item.style.height) || item.offsetHeight || 0;
+                    
+                    let rot = 0;
+                    const trans = item.style.transform || '';
+                    const match = trans.match(/rotate\(([^)]+)deg\)/);
+                    if (match) rot = parseFloat(match[1]);
+
+                    a3Ctx.save();
+                    a3Ctx.translate((left + width/2) * exportScale, (top + height/2) * exportScale);
+                    a3Ctx.rotate(rot * Math.PI / 180);
+
+                    if (item.classList.contains('canvas-element')) {
+                        const originalCanvas = item.querySelector('canvas');
+                        if (originalCanvas) {
+                            a3Ctx.drawImage(originalCanvas, -width/2 * exportScale, -height/2 * exportScale, width * exportScale, height * exportScale);
+                        }
+                    } else if (item.classList.contains('text-element')) {
+                        const text = item.innerText;
+                        const fontSize = item.style.fontSize || '24px';
+                        const fontFamily = item.style.fontFamily || 'Arial';
+                        const fontWeight = item.style.fontWeight || 'normal';
+                        const fontStyle = item.style.fontStyle || 'normal';
+
+                        const sizeNumeric = parseFloat(fontSize) || 24;
+                        const scaledFontSize = sizeNumeric * exportScale;
+
+                        a3Ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}`;
+                        a3Ctx.textBaseline = 'top';
+
+                        a3Ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        a3Ctx.fillRect(-width/2 * exportScale, -height/2 * exportScale, width * exportScale, height * exportScale);
+
+                        a3Ctx.fillStyle = item.style.color || '#000';
+                        const lines = text.split('\n');
+                        let currentY = (-height/2 + 5) * exportScale;
+                        lines.forEach(line => {
+                            a3Ctx.fillText(line, (-width/2 + 5) * exportScale, currentY);
+                            currentY += scaledFontSize * 1.2;
+                        });
+                    }
+                    a3Ctx.restore();
+                }
+
+                // Generar imagen para la página A3 utilizando JPEG optimizado para reducir enormemente el tamaño del archivo
+                const a3ImgData = a3Canvas.toDataURL("image/jpeg", 0.82);
+
+                // Añadir página al documento PDF A3 Único
+                if (index > 0) {
+                    pdfA3.addPage('a3', 'landscape');
+                }
+                pdfA3.addImage(a3ImgData, 'JPEG', 0, 0, 1190.55, 841.89);
+
+                // SECCIONAR EN DOS PÁGINAS A4 INDIVIDUALES (Mitad izquierda y Mitad derecha) con compresión optimizada
+                // Página A4 Izquierda
+                const leftCanvas = document.createElement('canvas');
+                leftCanvas.width = 595 * exportScale;
+                leftCanvas.height = 842 * exportScale;
+                const leftCtx = leftCanvas.getContext('2d');
+                leftCtx.drawImage(a3Canvas, 0, 0, 595 * exportScale, 842 * exportScale, 0, 0, 595 * exportScale, 842 * exportScale);
+                const leftImgData = leftCanvas.toDataURL("image/jpeg", 0.82);
+
+                if (index > 0 || (index === 0 && pdfA4.internal.getNumberOfPages() > 1)) {
+                    pdfA4.addPage('a4', 'portrait');
+                }
+                pdfA4.addImage(leftImgData, 'JPEG', 0, 0, 595.28, 841.89);
+
+                // Página A4 Derecha
+                const rightCanvas = document.createElement('canvas');
+                rightCanvas.width = 595 * exportScale;
+                rightCanvas.height = 842 * exportScale;
+                const rightCtx = rightCanvas.getContext('2d');
+                rightCtx.drawImage(a3Canvas, 596 * exportScale, 0, 595 * exportScale, 842 * exportScale, 0, 0, 595 * exportScale, 842 * exportScale);
+                const rightImgData = rightCanvas.toDataURL("image/jpeg", 0.82);
+
+                pdfA4.addPage('a4', 'portrait');
+                pdfA4.addImage(rightImgData, 'JPEG', 0, 0, 595.28, 841.89);
+            }
+
+            document.body.removeChild(renderDiv);
+
+            // Generar los arrays de bytes para el ZIP
+            const a3PdfOutput = pdfA3.output('arraybuffer');
+            const a4PdfOutput = pdfA4.output('arraybuffer');
+
+            const zip = new JSZip();
+            const a3Folder = zip.folder("Partituras impresion en A3");
+            const a4Folder = zip.folder("Partituras en A4");
+
+            // Guardar archivos PDF unificados dentro de sus carpetas
+            a3Folder.file("Libreto_Completo_A3.pdf", a3PdfOutput);
+            a4Folder.file("Partituras_Individuales_A4.pdf", a4PdfOutput);
+
+            // Generar y descargar el ZIP
+            zip.generateAsync({ type: "blob" }).then(function(content) {
+                const link = document.createElement('a');
+                link.download = "Proyecto_Partituras_Completo.zip";
+                link.href = URL.createObjectURL(content);
+                link.click();
+            });
+        }
+
+        // Inicio
+        renderA3PagesList();
+        saveState();
+    </script>
+</body>
+</html>
