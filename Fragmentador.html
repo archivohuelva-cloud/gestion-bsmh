@@ -21,208 +21,317 @@
     <style>
         * { box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f0f2f5;
+            background-color: #1e1e1e; /* Fondo oscuro estilo Photoshop */
+            color: #ccc;
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            user-select: none;
         }
+        
+        /* HEADER PRINCIPAL */
         header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 8px 20px;
+            background-color: #2c2c2c;
+            border-bottom: 1px solid #1a1a1a;
+            color: #e0e0e0;
+            padding: 5px 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            height: 50px;
+            height: 40px;
+            font-size: 13px;
         }
+        .header-title {
+            font-weight: 600;
+            margin: 0;
+            font-size: 14px;
+            color: #fff;
+        }
+        .header-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* BARRA DE PROPIEDADES (Dinámica estilo Photoshop) */
         .toolbar {
-            background-color: #fff;
-            border-bottom: 1px solid #ddd;
-            padding: 5px 20px;
+            background-color: #333333;
+            border-bottom: 1px solid #222;
+            padding: 0 15px;
             display: flex;
             gap: 15px;
             align-items: center;
-            flex-wrap: wrap;
-            min-height: 54px;
+            height: 38px;
+            font-size: 12px;
+            color: #d5d5d5;
         }
+        
+        /* CONTENEDOR PRINCIPAL */
         .main-container {
             display: flex;
             flex: 1;
-            height: calc(100vh - 104px);
+            height: calc(100vh - 78px);
             overflow: hidden;
             position: relative;
-        }
-        
-        /* Botón de alternancia de barras laterales */
-        .toggle-sidebar-btn {
-            background-color: #34495e;
-            color: white;
-            border: none;
-            cursor: pointer;
-            padding: 4px 8px;
-            font-size: 12px;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-        }
-        .toggle-sidebar-btn:hover {
-            background-color: #1a252f;
+            background-color: #1a1a1a;
         }
 
-        /* Barra Izquierda */
-        #sidebar-left {
-            width: 260px;
-            background-color: #ffffff;
-            border-right: 1px solid #ccc;
+        /* BARRA DE HERRAMIENTAS LATERAL ESTILO PHOTOSHOP */
+        #photoshop-toolbox {
+            width: 48px;
+            background-color: #2b2b2b;
+            border-right: 1px solid #1c1c1c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+            gap: 4px;
+            z-index: 10;
+        }
+        .tool-btn {
+            width: 36px;
+            height: 36px;
+            background-color: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            color: #d5d5d5;
+            font-size: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .tool-btn:hover {
+            background-color: #3d3d3d;
+            color: #fff;
+        }
+        .tool-btn.active {
+            background-color: #4a4a4a;
+            border-color: #555;
+            color: #00bcd4; /* Azul cyan de estado activo */
+        }
+        .tool-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background-color: transparent !important;
+        }
+        .tool-separator {
+            width: 24px;
+            height: 1px;
+            background-color: #3e3e3e;
+            margin: 4px 0;
+        }
+
+        /* PANELES LATERALES (IZQUIERDA Y DERECHA) */
+        .panel {
+            background-color: #2b2b2b;
+            color: #b5b5b5;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s, opacity 0.25s;
+            overflow: hidden;
+            z-index: 5;
+            font-size: 12px;
+        }
+        .panel-header {
+            background-color: #222;
+            padding: 6px 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            color: #aaa;
+            border-bottom: 1px solid #181818;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-content {
             padding: 10px;
             display: flex;
             flex-direction: column;
             gap: 10px;
             overflow-y: auto;
-            height: 100%;
-            transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+            flex: 1;
+        }
+        
+        #sidebar-left {
+            width: 240px;
+            border-right: 1px solid #1c1c1c;
         }
         #sidebar-left.collapsed {
-            width: 0px;
-            padding: 0px;
-            overflow: hidden;
+            width: 0px !important;
+            padding: 0px !important;
             opacity: 0;
             border-right: none;
         }
         
-        /* Barra Derecha */
         #sidebar-right {
-            width: 220px;
-            background-color: #ffffff;
-            border-left: 1px solid #ccc;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            overflow-y: auto;
-            height: 100%;
-            transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+            width: 230px;
+            border-left: 1px solid #1c1c1c;
         }
         #sidebar-right.collapsed {
-            width: 0px;
-            padding: 0px;
-            overflow: hidden;
+            width: 0px !important;
+            padding: 0px !important;
             opacity: 0;
             border-left: none;
         }
 
-        .upload-btn {
-            border: 2px dashed #3498db;
-            padding: 10px;
-            text-align: center;
-            background-color: #f7fafd;
+        /* BOTONES / TIRADORES FLOTANTES PARA RESTAURAR MENÚS LATERALES CONTRÁIDOS */
+        .sidebar-restore-btn {
+            display: none;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 80px;
+            background-color: #2c2c2c;
+            border: 1px solid #444;
+            color: #bbb;
             cursor: pointer;
-            border-radius: 6px;
-            font-weight: bold;
-            color: #2980b9;
-            font-size: 13px;
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            border-radius: 4px;
+            transition: background-color 0.2s, color 0.2s;
         }
-        .page-counter {
-            background-color: #ecf0f1;
-            padding: 5px;
+        .sidebar-restore-btn:hover {
+            background-color: #00bcd4;
+            color: #fff;
+        }
+        #restore-left-btn {
+            left: 50px; /* Ajustado para librar la caja de herramientas vertical izquierda */
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+        }
+        #restore-right-btn {
+            right: 0;
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+        }
+
+        /* CONTROLES DE ENTRADA */
+        .upload-btn {
+            border: 1px dashed #555;
+            padding: 12px;
+            text-align: center;
+            background-color: #333;
+            cursor: pointer;
             border-radius: 4px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #ddd;
+            font-size: 11px;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .upload-btn:hover {
+            background-color: #3d3d3d;
+            border-color: #777;
+        }
+        .page-counter {
+            background-color: #222;
+            padding: 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #aaa;
             text-align: center;
-            font-size: 12px;
+            font-size: 11px;
+            border: 1px solid #181818;
         }
         #page-previews {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
         }
         .preview-item {
-            border: 1px solid #ddd;
-            padding: 8px;
-            background: #fff;
+            border: 1px solid #3e3e3e;
+            padding: 6px;
+            background: #222;
             border-radius: 4px;
             text-align: center;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: border-color 0.2s;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .preview-item:hover {
-            transform: scale(1.02);
-            border-color: #3498db;
+            border-color: #555;
         }
         .preview-item canvas {
             width: 100%;
             max-width: 100%;
             height: auto;
-            border: 1px solid #eee;
-            margin-bottom: 8px;
+            border: 1px solid #111;
+            margin-bottom: 6px;
             display: block;
         }
         .preview-title {
             font-weight: bold;
-            font-size: 13px;
-            margin-bottom: 6px;
-            color: #2c3e50;
+            font-size: 11px;
+            margin-bottom: 4px;
+            color: #999;
             width: 100%;
             text-align: center;
         }
 
-        /* Gestor de páginas A3 */
+        /* GESTOR DE PÁGINAS A3 */
         .a3-page-item {
-            padding: 12px;
-            border: 1px solid #bdc3c7;
-            background-color: #f9f9f9;
+            padding: 8px 10px;
+            border: 1px solid #3e3e3e;
+            background-color: #333;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 11px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: #ccc;
+            margin-bottom: 6px;
         }
         .a3-page-item.active {
-            background-color: #3498db;
-            color: white;
-            border-color: #2980b9;
+            background-color: #444;
+            color: #fff;
+            border-color: #00bcd4;
         }
         .a3-page-item .del-page {
             background: transparent;
             color: #e74c3c;
             border: none;
             cursor: pointer;
-            font-size: 14px;
-        }
-        .a3-page-item.active .del-page {
-            color: white;
+            font-size: 13px;
+            padding: 0;
         }
 
-        /* Panel Central con Soporte de Desplazamiento y Zoom Mejorado */
+        /* PANEL CENTRAL CON ZOOM ADAPTABLE AL MÁXIMO ANCHO DE VENTANA */
         #canvas-container {
             flex: 1;
             display: flex;
-            justify-content: flex-start; /* Permite que el alineamiento empiece en top/left para evitar cortes al hacer scroll */
+            justify-content: flex-start; /* Alineación superior izquierda correcta para soportar scrollbars nativos */
             align-items: flex-start;
-            background-color: #e9ecef;
-            overflow: auto; /* Permite desplazamiento libre con scrollbars */
+            background-color: #1e1e1e; /* Gris Photoshop oscuro */
+            overflow: auto; /* Habilita scrollbars cuando el lienzo rebasa la ventana */
             position: relative;
-            padding: 150px; /* Margen para permitir scroll amplio al aplicar Zoom */
+            padding: 40px; /* Margen de respiro estándar para no aprisionar el lienzo */
         }
         #workspace-scaler {
-            transform-origin: top left; /* Evita cortes del margen superior */
+            transform-origin: top left; /* Evita desplazamientos indeseados al cambiar la escala */
             transition: transform 0.05s ease;
             display: inline-block;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         #workspace {
             background-color: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             position: relative;
             width: 1191px;
             height: 842px;
-            border: 1px solid #777;
             overflow: hidden;
         }
         
@@ -233,9 +342,10 @@
             top: 0;
             bottom: 0;
             width: 0;
-            border-left: 2px dashed #e74c3c;
+            border-left: 1px dashed #e74c3c;
             pointer-events: none;
             z-index: 1000;
+            opacity: 0.7;
         }
 
         /* Elementos del lienzo */
@@ -244,10 +354,10 @@
             cursor: move;
             user-select: none;
             box-sizing: border-box;
-            border: 2px solid transparent;
+            border: 1px solid transparent;
         }
         .canvas-element.editing {
-            border: 2px solid #3498db;
+            border: 1px solid #00bcd4;
         }
         .canvas-element.erasing {
             cursor: crosshair !important;
@@ -264,31 +374,30 @@
             display: block;
         }
 
-        /* Tiradores */
+        /* Tiradores de Redimensión */
         .resize-handle {
             display: none;
             position: absolute;
-            width: 12px;
-            height: 12px;
-            background-color: #3498db;
-            border: 2px solid white;
-            border-radius: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: #00bcd4;
+            border: 1px solid white;
             z-index: 10;
         }
         .canvas-element.editing .resize-handle {
             display: block;
         }
-        .handle-se { right: -6px; bottom: -6px; cursor: se-resize; }
-        .handle-sw { left: -6px; bottom: -6px; cursor: sw-resize; }
-        .handle-ne { right: -6px; top: -6px; cursor: ne-resize; }
-        .handle-nw { left: -6px; top: -6px; cursor: nw-resize; }
+        .handle-se { right: -4px; bottom: -4px; cursor: se-resize; }
+        .handle-sw { left: -4px; bottom: -4px; cursor: sw-resize; }
+        .handle-ne { right: -4px; top: -4px; cursor: ne-resize; }
+        .handle-nw { left: -4px; top: -4px; cursor: nw-resize; }
 
         /* Elementos de Texto */
         .text-element {
             position: absolute;
             cursor: move;
             padding: 5px;
-            border: 1px dashed #7f8c8d;
+            border: 1px dashed #999;
             font-family: inherit;
             min-width: 100px;
             outline: none;
@@ -297,7 +406,7 @@
             box-sizing: border-box;
         }
         .text-element.editing {
-            border: 2px solid #2ecc71;
+            border: 1px solid #2ecc71;
             background: white;
             cursor: text;
         }
@@ -308,50 +417,85 @@
             position: fixed;
             width: 20px;
             height: 20px;
-            border: 2px dashed #e67e22;
+            border: 1px dashed #e67e22;
             border-radius: 50%;
             pointer-events: none;
             z-index: 9999;
             transform: translate(-50%, -50%);
-            background-color: rgba(255, 255, 255, 0.4);
+            background-color: rgba(255, 255, 255, 0.3);
         }
 
-        /* Botones */
+        /* Botones generales */
         button {
-            padding: 6px 12px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            padding: 4px 10px;
+            background-color: #444;
+            color: #eee;
+            border: 1px solid #555;
+            border-radius: 3px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 13px;
+            font-weight: 600;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: background-color 0.2s, border-color 0.2s;
         }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        button.danger { background-color: #e74c3c; }
-        button.danger:hover { background-color: #c0392b; }
+        button:hover { background-color: #555; border-color: #666; color: #fff; }
+        button:disabled { background-color: #2b2b2b; border-color: #3a3a3a; color: #666; cursor: not-allowed; }
+        button.danger { background-color: #c0392b; border-color: #bdc3c7; }
+        button.danger:hover { background-color: #e74c3c; }
         
         .tool-control-group {
             display: flex;
             align-items: center;
             gap: 8px;
             padding-right: 12px;
-            border-right: 1px solid #ddd;
-            font-size: 13px;
+            border-right: 1px solid #444;
+            font-size: 11px;
+        }
+        .tool-control-group:last-child {
+            border-right: none;
         }
         
         .text-style-btn {
-            background-color: #ecf0f1;
-            color: #2c3e50;
-            border: 1px solid #bdc3c7;
-            padding: 4px 8px;
-            font-size: 12px;
+            background-color: #333;
+            color: #aaa;
+            border: 1px solid #444;
+            padding: 3px 6px;
+            font-size: 10px;
         }
         .text-style-btn.active {
-            background-color: #34495e;
+            background-color: #00bcd4;
             color: white;
-            border-color: #2c3e50;
+            border-color: #00bcd4;
+        }
+
+        /* Input sliders estilo Photoshop */
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: #444;
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00bcd4;
+            cursor: pointer;
+        }
+
+        select {
+            background-color: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            outline: none;
         }
 
         /* Modales */
@@ -364,9 +508,11 @@
             justify-content: center; align-items: center;
         }
         .modal-content-wrapper {
-            background-color: white;
+            background-color: #222;
+            color: #ddd;
+            border: 1px solid #444;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 6px;
             width: 80%;
             height: 85vh;
             display: flex;
@@ -379,9 +525,9 @@
             flex: 1;
             width: 100%;
             overflow: auto;
-            border: 1px solid #ccc;
+            border: 1px solid #444;
             position: relative;
-            background-color: #7f8c8d;
+            background-color: #111;
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -389,46 +535,44 @@
         }
         #modal-canvas {
             display: block;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             background-color: white;
         }
-        .close-modal { align-self: flex-end; background: #e74c3c; margin-bottom: 10px; }
+        .close-modal { align-self: flex-end; background: #e74c3c; margin-bottom: 10px; border: none;}
 
         /* Flechas de Navegación del Visor PDF */
         .viewer-nav-btn {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background-color: rgba(44, 62, 80, 0.9);
+            background-color: rgba(0, 0, 0, 0.8);
             color: white;
-            border: none;
+            border: 1px solid #444;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 24px;
+            width: 44px;
+            height: 44px;
+            font-size: 20px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 2100;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
             transition: background-color 0.2s, transform 0.2s;
         }
         .viewer-nav-btn:hover:not(:disabled) {
-            background-color: #3498db;
-            transform: translateY(-50%) scale(1.1);
+            background-color: #00bcd4;
+            transform: translateY(-50%) scale(1.05);
         }
         .viewer-nav-btn:disabled {
-            background-color: rgba(189, 195, 199, 0.5);
+            background-color: rgba(50, 50, 50, 0.5);
+            color: #555;
+            border-color: #222;
             cursor: not-allowed;
         }
-        .viewer-nav-left {
-            left: 20px;
-        }
-        .viewer-nav-right {
-            right: 20px;
-        }
+        .viewer-nav-left { left: 20px; }
+        .viewer-nav-right { right: 20px; }
 
         /* Cropper */
         #cropper-container {
@@ -457,156 +601,204 @@
         .layer-item {
             transition: transform 0.15s ease, background-color 0.2s;
             user-select: none;
+            border-bottom: 1px solid #222;
         }
         .layer-item.dragging {
             opacity: 0.5;
-            background-color: #eef2f7 !important;
-            border: 2px dashed #3498db !important;
+            background-color: #3a3a3a !important;
+            border: 1px dashed #00bcd4 !important;
         }
     </style>
 </head>
 <body>
 
+    <!-- MENÚ SUPERIOR PRINCIPAL (GESTIÓN Y ARCHIVOS) -->
     <header>
-        <div style="display: flex; align-items: center; gap: 15px;">
-            <button onclick="window.history.back()" style="background-color: #7f8c8d;">⬅️ Volver</button>
-            <button onclick="createNewProject()" style="background-color: #e74c3c;">🆕 Nuevo Proyecto</button>
-            <h2 style="margin: 0;">Editor de Partituras - Libreto Continuo A3</h2>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button onclick="window.history.back()" style="background-color: #3e3e3e;">⬅️ Volver</button>
+            <button onclick="createNewProject()" style="background-color: #962d22; border-color: #962d22;">🆕 Nuevo Proyecto</button>
+            <span class="header-title">Editor de Partituras - Libreto Continuo A3</span>
         </div>
-        <div style="display: flex; gap: 10px;">
-            <button onclick="addTextElement()">✍️ Añadir Texto</button>
-            <button onclick="undo()">Deshacer</button>
-            <button onclick="redo()">Rehacer</button>
-            <button onclick="saveProjectJSON()" style="background-color: #f39c12;">💾 Guardar JSON</button>
-            <button onclick="document.getElementById('json-input').click()" style="background-color: #3498db;">📂 Abrir JSON</button>
+        <div class="header-actions">
+            <button onclick="undo()" title="Deshacer (Ctrl+Z)">↩️ Deshacer</button>
+            <button onclick="redo()" title="Rehacer (Ctrl+Y)">↪️ Rehacer</button>
+            <button onclick="saveProjectJSON()" style="background-color: #b5690b; border-color: #b5690b;">💾 Guardar JSON</button>
+            <button onclick="document.getElementById('json-input').click()" style="background-color: #2980b9; border-color: #2980b9;">📂 Abrir JSON</button>
             <input type="file" id="json-input" accept=".json" style="display: none;" onchange="loadProjectJSON(event)">
-            <button onclick="exportWholeProjectZIP()" style="background-color: #2ecc71;">💾 Guardar y Exportar Proyecto (ZIP)</button>
+            <button onclick="exportWholeProjectZIP()" style="background-color: #27ae60; border-color: #27ae60;">📦 Guardar y Exportar ZIP</button>
         </div>
     </header>
 
+    <!-- BARRA DE OPCIONES DINÁMICAS (ESTILO PHOTOSHOP) -->
     <div class="toolbar">
-        <!-- Controles para Ocultar/Mostrar Menús Laterales -->
+        <!-- Opciones Globales del Lienzo / Zoom -->
         <div class="tool-control-group">
-            <button class="toggle-sidebar-btn" onclick="toggleSidebar('left')">◀ Off/On Barra Izq.</button>
-            <button class="toggle-sidebar-btn" onclick="toggleSidebar('right')">Off/On Barra Der. ▶</button>
+            <strong>Lienzo:</strong>
+            <button onclick="adjustEditorZoom(0.1)" title="Acercar (Flecha Arriba)">➕ Zoom</button>
+            <button onclick="adjustEditorZoom(-0.1)" title="Alejar (Flecha Abajo)">➖ Zoom</button>
+            <button onclick="resetEditorZoom()" title="Ajustar formato A3 a pantalla">Fit Pantalla</button>
+            <span id="editor-zoom-label" style="font-weight: bold; color: #00bcd4;">100%</span>
         </div>
 
-        <!-- Controles de Zoom del Editor Principal -->
-        <div class="tool-control-group">
-            <strong>Zoom Editor:</strong>
-            <button onclick="adjustEditorZoom(0.1)">➕ Zoom</button>
-            <button onclick="adjustEditorZoom(-0.1)">➖ Zoom</button>
-            <button onclick="resetEditorZoom()">Ajustar Pantalla</button>
-            <span id="editor-zoom-label" style="font-weight: bold;">100%</span>
-        </div>
-
-        <div class="tool-control-group">
-            <strong>Rotación:</strong>
-            <input type="range" id="tool-rotate-slider" min="-180" max="180" value="0" disabled oninput="adjustRotation(this.value)">
-            <span id="rotate-val">0°</span>
-        </div>
-
-        <div class="tool-control-group">
-            <button id="tool-crop" onclick="startManualCrop()" disabled>✂️ Recortar</button>
-        </div>
-
-        <div class="tool-control-group">
-            <button id="tool-eraser" onclick="toggleEraser()" style="background-color: #7f8c8d;">🧽 Borrador (Off)</button>
+        <!-- Controles dinámicos de herramientas específicas -->
+        <div id="dynamic-properties-container" style="display: flex; align-items: center; flex: 1;">
             
-            <select id="eraser-mode" onchange="changeEraserMode(this.value)" style="padding: 4px; font-weight: bold;">
-                <option value="brush">🖌️ Modo Pincel</option>
-                <option value="area">🟩 Modo Área (Cuadro)</option>
-            </select>
+            <!-- Propiedades de Imagen / Transformación (se muestran por defecto al seleccionar imagen) -->
+            <div id="properties-image" style="display: flex; align-items: center; gap: 15px;">
+                <div class="tool-control-group">
+                    <strong>Rotación:</strong>
+                    <input type="range" id="tool-rotate-slider" min="-180" max="180" value="0" disabled oninput="adjustRotation(this.value)">
+                    <span id="rotate-val">0°</span>
+                </div>
+            </div>
 
-            <span id="eraser-size-container">
-                <label for="eraser-size">Grosor:</label>
-                <input type="range" id="eraser-size" min="5" max="150" value="30" oninput="updateEraserIndicatorSize()">
-            </span>
+            <!-- Propiedades del Borrador (se muestran al activar borrador) -->
+            <div id="properties-eraser" style="display: none; align-items: center; gap: 15px;">
+                <div class="tool-control-group">
+                    <strong>Borrador:</strong>
+                    <select id="eraser-mode" onchange="changeEraserMode(this.value)">
+                        <option value="brush">🖌️ Modo Pincel</option>
+                        <option value="area">🟩 Modo Área (Cuadro)</option>
+                    </select>
+                    <span id="eraser-size-container">
+                        <label for="eraser-size">Grosor:</label>
+                        <input type="range" id="eraser-size" min="5" max="150" value="30" oninput="updateEraserIndicatorSize()">
+                    </span>
+                </div>
+            </div>
+
+            <!-- Propiedades de Texto (se muestran al crear/seleccionar texto) -->
+            <div id="properties-text" style="display: none; align-items: center; gap: 15px;">
+                <div class="tool-control-group" id="text-tools">
+                    <strong>Formato de Texto:</strong>
+                    <select id="font-family-select" onchange="adjustFontFamily(this.value)">
+                        <option value="Arial">Arial</option>
+                        <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="'Courier New', Courier, monospace">Courier New</option>
+                        <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                    </select>
+                    <label for="font-size-slider">Tamaño:</label>
+                    <input type="range" id="font-size-slider" min="12" max="72" value="24" oninput="adjustTextSize(this.value)">
+                    <span id="font-size-val">24px</span>
+                    
+                    <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
+                    <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
+                    <button class="text-style-btn" id="btn-underline" onclick="toggleTextStyle('underline')"><u>U</u></button>
+                </div>
+            </div>
+
         </div>
 
-        <div class="tool-control-group" id="text-tools" style="display: none; gap: 6px;">
-            <strong>Texto:</strong>
-            <select id="font-family-select" onchange="adjustFontFamily(this.value)">
-                <option value="Arial">Arial</option>
-                <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                <option value="Georgia, serif">Georgia</option>
-                <option value="'Courier New', Courier, monospace">Courier New</option>
-                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-            </select>
-            <label for="font-size-slider">Tamaño:</label>
-            <input type="range" id="font-size-slider" min="12" max="72" value="24" oninput="adjustTextSize(this.value)">
-            <span id="font-size-val">24px</span>
-            
-            <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
-            <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
-            <button class="text-style-btn" id="btn-underline" onclick="toggleTextStyle('underline')"><u>U</u></button>
-        </div>
-
-        <button id="tool-delete" onclick="deleteSelected()" class="danger" disabled>Eliminar</button>
-        
-        <!-- CONTROLES DE CAPAS (Photoshop Style) -->
-        <div class="tool-control-group">
-            <button id="tool-duplicate" onclick="duplicateSelected()" style="background-color: #27ae60;" disabled>👥 Duplicar</button>
-            <button id="tool-bring-front" onclick="bringToFront()" style="background-color: #f39c12;" disabled>🔺 Traer al Frente</button>
-            <button id="tool-send-back" onclick="sendToBack()" style="background-color: #d35400;" disabled>🔻 Enviar al Fondo</button>
-        </div>
-        
-        <span id="edit-indicator" style="margin-left: auto; color: #7f8c8d; font-style: italic; font-size: 12px;">
-            Haz un clic para editar un elemento.
+        <span id="edit-indicator" style="margin-left: auto; color: #888; font-style: italic; font-size: 11px;">
+            Haz un clic para seleccionar un elemento.
         </span>
     </div>
 
     <div class="main-container">
-        <!-- Barra Izquierda: PDFs de entrada -->
-        <div id="sidebar-left">
-            <h3>1. Cargar PDF</h3>
-            <div class="upload-btn" onclick="document.getElementById('pdf-input').click()">
-                📂 Abrir Archivo PDF
-                <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="handlePDFUpload(event)">
-            </div>
-
-            <!-- Inserción por rango de páginas -->
-            <div id="range-insert-container" style="display: none; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background-color: #fdfefe; margin-top: 5px;">
-                <h4 style="margin: 0 0 8px 0; font-size: 12px; color: #2c3e50;">Insertar Rango</h4>
-                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
-                    <input type="number" id="range-start" placeholder="Desde" min="1" style="width: 50%; padding: 4px; font-size: 12px;">
-                    <input type="number" id="range-end" placeholder="Hasta" min="1" style="width: 50%; padding: 4px; font-size: 12px;">
-                </div>
-                <button onclick="insertPageRange()" style="width: 100%; padding: 6px; background-color: #9b59b6; font-size: 12px;">➕ Insertar Rango</button>
-            </div>
-
-            <h3>2. Partituras</h3>
-            <div id="page-info" class="page-counter" style="display: none;">
-                Total páginas: <span id="total-pages">0</span>
-            </div>
-            <div id="page-previews"></div>
+        
+        <!-- BARRA DE HERRAMIENTAS VERTICAL ESTILO PHOTOSHOP -->
+        <div id="photoshop-toolbox">
+            <button class="tool-btn active" id="tool-select-btn" onclick="activateSelectTool()" title="Herramienta Selección / Mover (V)">
+                🖱️
+            </button>
+            <div class="tool-separator"></div>
+            <button class="tool-btn" id="tool-text-btn" onclick="addTextElement()" title="Herramienta Texto (T)">
+                ✍️
+            </button>
+            <button class="tool-btn" id="tool-crop" onclick="startManualCrop()" disabled title="Recortar Selección (C)">
+                ✂️
+            </button>
+            <button class="tool-btn" id="tool-eraser" onclick="toggleEraser()" title="Borrador (E)">
+                🧽
+            </button>
+            <div class="tool-separator"></div>
+            <button class="tool-btn" id="tool-duplicate" onclick="duplicateSelected()" disabled title="Duplicar Selección">
+                👥
+            </button>
+            <button class="tool-btn" id="tool-bring-front" onclick="bringToFront()" disabled title="Traer Selección al Frente">
+                🔺
+            </button>
+            <button class="tool-btn" id="tool-send-back" onclick="sendToBack()" disabled title="Enviar Selección al Fondo">
+                🔻
+            </button>
+            <div class="tool-separator"></div>
+            <button class="tool-btn" id="tool-delete" onclick="deleteSelected()" disabled style="color: #e74c3c;" title="Eliminar Selección (Supr)">
+                🗑️
+            </button>
         </div>
+
+        <!-- Panel Izquierdo: Gestión de PDFs -->
+        <div id="sidebar-left" class="panel">
+            <div class="panel-header">
+                <span>1. Cargar PDFs de Entrada</span>
+                <button onclick="toggleSidebar('left')" style="background:transparent; border:none; padding:0; font-size:10px; color: #aaa; cursor:pointer;">◀</button>
+            </div>
+            <div class="panel-content">
+                <div class="upload-btn" onclick="document.getElementById('pdf-input').click()">
+                    📂 Abrir Archivo PDF
+                    <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="handlePDFUpload(event)">
+                </div>
+
+                <!-- Rango de páginas -->
+                <div id="range-insert-container" style="display: none; border: 1px solid #444; padding: 10px; border-radius: 4px; background-color: #222;">
+                    <span style="font-weight: bold; font-size: 11px; display: block; margin-bottom: 8px;">Insertar Rango</span>
+                    <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                        <input type="number" id="range-start" placeholder="Desde" min="1" style="width: 50%; padding: 4px; font-size: 11px; background:#333; color:#fff; border:1px solid #555;">
+                        <input type="number" id="range-end" placeholder="Hasta" min="1" style="width: 50%; padding: 4px; font-size: 11px; background:#333; color:#fff; border:1px solid #555;">
+                    </div>
+                    <button onclick="insertPageRange()" style="width: 100%; background-color: #8e44ad; border-color: #8e44ad;">➕ Insertar Rango</button>
+                </div>
+
+                <div id="page-info" class="page-counter" style="display: none;">
+                    Total páginas PDF: <span id="total-pages">0</span>
+                </div>
+                <div id="page-previews"></div>
+            </div>
+        </div>
+
+        <!-- BOTONES / PESTAÑAS FLOTANTES PARA RESTAURAR MENÚS LATERALES CONTRÁIDOS (Estilo Photoshop) -->
+        <button id="restore-left-btn" class="sidebar-restore-btn" onclick="toggleSidebar('left')" title="Mostrar Barra Izquierda (Flecha Izquierda)">▶</button>
+        <button id="restore-right-btn" class="sidebar-restore-btn" onclick="toggleSidebar('right')" title="Mostrar Barra Derecha (Flecha Derecha)">◀</button>
 
         <!-- Área del Lienzo Autoadaptable -->
         <div id="canvas-container" onclick="deselectAll(event)">
             <div id="workspace-scaler">
                 <div id="workspace">
                     <div class="fold-guide"></div>
-                    <!-- Elemento visual para la selección del área de borrado -->
+                    <!-- Selección del área de borrado -->
                     <div id="eraser-area-box"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Barra Derecha: Páginas A3 y Capas -->
-        <div id="sidebar-right">
-            <h3>3. Páginas A3</h3>
-            <button onclick="addA3Page()" style="background-color: #9b59b6; width: 100%; margin-bottom: 10px;">➕ Añadir Lienzo A3</button>
-            <div id="a3-pages-list" style="margin-bottom: 15px;">
-                <!-- Se llenará de forma dinámica -->
+        <!-- Panel Derecho: Capas y Páginas A3 -->
+        <div id="sidebar-right" class="panel">
+            <div class="panel-header">
+                <button onclick="toggleSidebar('right')" style="background:transparent; border:none; padding:0; font-size:10px; color: #aaa; cursor:pointer;">▶</button>
+                <span>Navegación y Capas</span>
             </div>
+            <div class="panel-content">
+                <span style="font-weight: bold; font-size: 11px;">Páginas A3</span>
+                <button onclick="addA3Page()" style="background-color: #8e44ad; border-color: #8e44ad; width: 100%; margin-bottom: 5px;">➕ Añadir Lienzo A3</button>
+                <div id="a3-pages-list">
+                    <!-- Se llena de forma dinámica -->
+                </div>
 
-            <!-- SECCIÓN 4. Capas de Recorte y Elementos -->
-            <h3>4. Capas / Elementos</h3>
-            <div id="layers-list" style="display: flex; flex-direction: column; gap: 8px; border: 1px solid #ccc; padding: 8px; border-radius: 4px; background-color: #fafafa; max-height: 250px; overflow-y: auto;">
-                <!-- Se llenará de forma dinámica -->
+                <div style="border-top: 1px solid #3e3e3e; margin-top: 5px; padding-top: 10px;">
+                    <span style="font-weight: bold; font-size: 11px; display: block; margin-bottom: 8px;">Capas / Elementos</span>
+                    <div id="layers-list" style="display: flex; flex-direction: column; gap: 4px; border: 1px solid #444; padding: 4px; border-radius: 4px; background-color: #222; max-height: 280px; overflow-y: auto;">
+                        <!-- Se llena de forma dinámica -->
+                    </div>
+                </div>
+                
+                <div style="margin-top: auto; display: flex; flex-direction: column; gap: 5px;">
+                    <button onclick="toggleSidebar('left')" style="width:100%; font-size:10px; background-color: #333;">Toggle Barra Izq.</button>
+                    <button onclick="toggleSidebar('right')" style="width:100%; font-size:10px; background-color: #333;">Toggle Barra Der.</button>
+                </div>
             </div>
         </div>
+
     </div>
 
     <!-- Indicador del círculo del borrador -->
@@ -617,29 +809,28 @@
         <div class="cropper-wrapper-inner"><img id="image-to-crop" src=""></div>
         <div style="margin-top: 15px; display: flex; gap: 15px;">
             <button class="danger" onclick="cancelCrop()">Cancelar</button>
-            <button onclick="confirmCrop()" style="background-color: #2ecc71;">Confirmar Recorte (Intro)</button>
+            <button onclick="confirmCrop()" style="background-color: #2ecc71; border-color: #2ecc71;">Confirmar Recorte (Intro)</button>
         </div>
     </div>
 
     <div id="preview-modal" class="modal">
-        <!-- Botones de navegación laterales -->
         <button id="viewer-prev" class="viewer-nav-btn viewer-nav-left" onclick="navigatePreview(-1)">◀</button>
         <button id="viewer-next" class="viewer-nav-btn viewer-nav-right" onclick="navigatePreview(1)">▶</button>
 
         <div class="modal-content-wrapper">
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 10px;">
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <button onclick="adjustPreviewZoom(0.1)" style="background-color: #2c3e50;">➕ Zoom</button>
-                    <button onclick="adjustPreviewZoom(-0.1)" style="background-color: #2c3e50;">➖ Zoom</button>
-                    <span id="preview-zoom-label" style="font-weight: bold; font-size: 14px;">100%</span>
+                    <button onclick="adjustPreviewZoom(0.1)" style="background-color: #333;">➕ Zoom</button>
+                    <button onclick="adjustPreviewZoom(-0.1)" style="background-color: #333;">➖ Zoom</button>
+                    <span id="preview-zoom-label" style="font-weight: bold; font-size: 13px; color: #00bcd4;">100%</span>
                 </div>
-                <button class="close-modal" onclick="closeFullscreenPreview()" style="margin: 0;">Cerrar [X]</button>
+                <button class="close-modal" onclick="closeFullscreenPreview()">Cerrar [X]</button>
             </div>
-            <h3 id="modal-title" style="margin: 5px 0;">Vista Previa</h3>
+            <h3 id="modal-title" style="margin: 5px 0; font-size: 14px;">Vista Previa</h3>
             <div class="modal-canvas-container">
                 <canvas id="modal-canvas"></canvas>
             </div>
-            <button id="modal-insert-btn" style="background-color: #2ecc71; margin-top: 15px; width: 100%; padding: 10px;" onclick="insertFromModal()">Insertar en el Lienzo Activo</button>
+            <button id="modal-insert-btn" style="background-color: #27ae60; border-color:#27ae60; margin-top: 15px; width: 100%; padding: 8px; font-size:12px;" onclick="insertFromModal()">Insertar en el Lienzo Activo</button>
         </div>
     </div>
 
@@ -684,9 +875,11 @@
         let history = [];
         let historyIndex = -1;
 
-        // Atajos de Teclado (Deshacer, Rehacer, etc.)
+        // ATAJOS DE TECLADO CONFIGURADOS (Tanto para Modal Visor como para Ventana Principal del Editor)
         window.addEventListener('keydown', (e) => {
             const modal = document.getElementById('preview-modal');
+            
+            // Si el visor de PDFs del modal está activo
             if (modal && modal.style.display === 'flex') {
                 if (e.key === 'ArrowLeft') {
                     e.preventDefault();
@@ -704,6 +897,33 @@
                 return;
             }
 
+            // Evitar conflictos con los comandos de flechas de teclado si el usuario está escribiendo dentro de un campo o texto editable
+            if (document.activeElement && (
+                document.activeElement.tagName === 'INPUT' || 
+                document.activeElement.tagName === 'SELECT' || 
+                document.activeElement.tagName === 'TEXTAREA' || 
+                document.activeElement.contentEditable === "true" ||
+                document.activeElement.classList.contains('text-element')
+            )) {
+                return;
+            }
+
+            // ATAJOS EN VENTANA PRINCIPAL (Flechas de dirección para toggle de barras y zoom progresivo)
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                toggleSidebar('left');
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                toggleSidebar('right');
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                adjustEditorZoom(0.05); // Zoom + progresivo
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                adjustEditorZoom(-0.05); // Zoom - progresivo
+            }
+
+            // Deshacer / Rehacer estándar con Ctrl
             if (e.ctrlKey) {
                 if (e.key.toLowerCase() === 'z') {
                     e.preventDefault();
@@ -729,6 +949,7 @@
             historyIndex = history.length - 1;
         }
 
+        // REDIMENSIÓN AJUSTADA AL COMPLETO (Se autoadapta a la pantalla del navegador sin márgenes excesivos)
         function resizeWorkspace() {
             if (customEditorZoom !== null) {
                 workspaceScaler.style.transform = `scale(${customEditorZoom})`;
@@ -737,15 +958,18 @@
                 return;
             }
 
-            // Calculado óptimo con tolerancia sutil de 40px para que el lienzo aproveche la pantalla al completo
-            const containerWidth = canvasContainer.clientWidth - 40; 
+            // Espacio disponible real dentro del contenedor del canvas
+            const containerWidth = canvasContainer.clientWidth - 40; // Margen de holgura mínimo
             const containerHeight = canvasContainer.clientHeight - 40;
             const baseWidth = 1191;
             const baseHeight = 842;
 
             const scaleX = containerWidth / baseWidth;
             const scaleY = containerHeight / baseHeight;
-            scaleFactor = Math.min(scaleX, scaleY, 1);
+            
+            // Elegir escala óptima para que quepa de forma completa a lo alto y a lo ancho
+            scaleFactor = Math.min(scaleX, scaleY); 
+            if (scaleFactor < 0.1) scaleFactor = 0.1;
 
             workspaceScaler.style.transform = `scale(${scaleFactor})`;
             document.getElementById('editor-zoom-label').innerText = Math.round(scaleFactor * 100) + '%';
@@ -762,20 +986,26 @@
             resizeWorkspace();
         }
 
-        // Restablecer el zoom del editor (ajustar a pantalla)
+        // Restablecer el zoom del editor (ajustar a pantalla de forma óptima)
         function resetEditorZoom() {
             customEditorZoom = null;
             resizeWorkspace();
+            canvasContainer.scrollLeft = 0;
+            canvasContainer.scrollTop = 0;
         }
 
-        // Mostrar / Ocultar Barras Laterales
+        // Mostrar / Ocultar Barras Laterales con soporte de restauración (Estilo Photoshop)
         function toggleSidebar(side) {
             if (side === 'left') {
                 const sidebar = document.getElementById('sidebar-left');
-                sidebar.classList.toggle('collapsed');
+                const restoreBtn = document.getElementById('restore-left-btn');
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                restoreBtn.style.display = isCollapsed ? 'flex' : 'none';
             } else if (side === 'right') {
                 const sidebar = document.getElementById('sidebar-right');
-                sidebar.classList.toggle('collapsed');
+                const restoreBtn = document.getElementById('restore-right-btn');
+                const isCollapsed = sidebar.classList.toggle('collapsed');
+                restoreBtn.style.display = isCollapsed ? 'flex' : 'none';
             }
             setTimeout(resizeWorkspace, 310); 
         }
@@ -818,7 +1048,7 @@
                 div.onclick = () => switchA3Page(page.id);
                 
                 div.innerHTML = `
-                    <span>A3 - Página ${index + 1}</span>
+                    <span>Lienzo A3 - Página ${index + 1}</span>
                     ${pagesA3.length > 1 ? `<button class="del-page" onclick="deleteA3Page(event, ${page.id})">🗑️</button>` : ''}
                 `;
                 list.appendChild(div);
@@ -950,7 +1180,7 @@
                 div.innerHTML = `
                     <div class="preview-title">Pág. ${pageNum}</div>
                     <div class="btn-group" style="margin-top: 5px; width: 100%;">
-                        <button onclick="event.stopPropagation(); addPageToWorkspace(${pageNum})" style="background-color: #2ecc71; width: 100%;">➕ Insertar</button>
+                        <button onclick="event.stopPropagation(); addPageToWorkspace(${pageNum})" style="background-color: #2ecc71; border-color: #2ecc71; width: 100%;">➕ Insertar</button>
                     </div>
                 `;
                 div.insertBefore(canvas, div.querySelector('.preview-title'));
@@ -1301,6 +1531,9 @@
 
         // HERRAMIENTA: Añadir Texto
         function addTextElement() {
+            if (eraserActive) toggleEraser();
+            activateSelectTool();
+
             const textEl = document.createElement('div');
             textEl.className = 'text-element';
             textEl.contentEditable = "true";
@@ -1320,6 +1553,11 @@
             bindTextEvents(textEl);
             workspace.appendChild(textEl);
             saveState();
+            
+            deselectAll();
+            selectedElement = textEl;
+            textEl.style.border = "2px solid #00bcd4";
+            enableToolbar('text');
             renderLayersList();
         }
 
@@ -1332,7 +1570,7 @@
                 e.stopPropagation();
                 deselectAll();
                 selectedElement = textEl;
-                textEl.style.border = "2px solid #3498db";
+                textEl.style.border = "2px solid #00bcd4";
                 enableToolbar('text');
                 renderLayersList();
 
@@ -1402,23 +1640,34 @@
             selectedElement.focus();
         }
 
+        // Activación de la herramienta de Selección
+        function activateSelectTool() {
+            if (eraserActive) toggleEraser();
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('tool-select-btn').classList.add('active');
+        }
+
         // Habilitar Barra de Herramientas
         function enableToolbar(type) {
             document.getElementById('tool-rotate-slider').disabled = true;
             document.getElementById('tool-crop').disabled = true;
-            document.getElementById('text-tools').style.display = 'none';
             document.getElementById('tool-delete').disabled = false;
             
             document.getElementById('tool-duplicate').disabled = false;
             document.getElementById('tool-bring-front').disabled = false;
             document.getElementById('tool-send-back').disabled = false;
 
+            document.getElementById('properties-image').style.display = 'none';
+            document.getElementById('properties-eraser').style.display = 'none';
+            document.getElementById('properties-text').style.display = 'none';
+
             if (type === 'image') {
+                document.getElementById('properties-image').style.display = 'flex';
                 document.getElementById('tool-rotate-slider').disabled = false;
                 document.getElementById('tool-crop').disabled = false;
                 document.getElementById('edit-indicator').innerHTML = "<strong>Edición de Imagen:</strong> Rotación, borrador o recorte.";
             } else if (type === 'text') {
-                document.getElementById('text-tools').style.display = 'flex';
+                document.getElementById('properties-text').style.display = 'flex';
                 document.getElementById('tool-rotate-slider').disabled = false;
                 
                 let currentSize = parseInt(selectedElement.style.fontSize) || 24;
@@ -1442,7 +1691,7 @@
         }
 
         function deselectAll(e) {
-            if (e && e.target.closest('#text-tools, .text-style-btn, select, input')) return;
+            if (e && e.target.closest('#text-tools, .text-style-btn, select, input, .tool-btn, #photoshop-toolbox')) return;
             if (e && e.target.closest('.canvas-element, .text-element, #layers-list')) return;
             if (selectedElement) {
                 selectedElement.classList.remove('editing');
@@ -1451,8 +1700,11 @@
                 }
                 selectedElement = null;
                 enableToolbar('none');
-                document.getElementById('tool-delete').disabled = true;
                 
+                document.getElementById('properties-image').style.display = 'flex';
+                document.getElementById('properties-text').style.display = 'none';
+
+                document.getElementById('tool-delete').disabled = true;
                 document.getElementById('tool-duplicate').disabled = true;
                 document.getElementById('tool-bring-front').disabled = true;
                 document.getElementById('tool-send-back').disabled = true;
@@ -1529,22 +1781,29 @@
             const btn = document.getElementById('tool-eraser');
             const canvasElements = workspace.querySelectorAll('.canvas-element');
 
+            document.querySelectorAll('.tool-btn').forEach(tb => tb.classList.remove('active'));
+
             if (eraserActive) {
-                btn.innerText = "🧽 Borrador (On)";
-                btn.style.backgroundColor = "#e67e22";
+                btn.classList.add('active');
                 canvasElements.forEach(el => el.classList.add('erasing'));
                 
+                document.getElementById('properties-image').style.display = 'none';
+                document.getElementById('properties-text').style.display = 'none';
+                document.getElementById('properties-eraser').style.display = 'flex';
+
                 if (currentEraserMode === 'brush') {
                     brushPreview.style.display = 'block';
                     updateEraserIndicatorSize();
                 }
             } else {
-                btn.innerText = "🧽 Borrador (Off)";
-                btn.style.backgroundColor = "#7f8c8d";
+                document.getElementById('tool-select-btn').classList.add('active');
                 brushPreview.style.display = 'none';
                 canvasElements.forEach(el => el.classList.remove('erasing'));
                 if (eraserAreaBox) eraserAreaBox.style.display = 'none';
                 isDrawingEraser = false;
+
+                document.getElementById('properties-eraser').style.display = 'none';
+                document.getElementById('properties-image').style.display = 'flex';
             }
         }
 
@@ -1631,6 +1890,7 @@
             renderLayersList();
         }
 
+        // Enviar elemento al fondo del lienzo
         function sendToBack() {
             if (!selectedElement) return;
             const foldGuide = workspace.querySelector('.fold-guide');
@@ -1651,11 +1911,10 @@
 
             const elements = Array.from(workspace.querySelectorAll('.canvas-element, .text-element'));
             if (elements.length === 0) {
-                list.innerHTML = '<div style="color: #7f8c8d; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">Sin capas activas</div>';
+                list.innerHTML = '<div style="color: #666; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">Sin capas activas</div>';
                 return;
             }
 
-            // Mapeamos el DOM real a una lista de capas ordenada (de arriba a abajo)
             for (let i = elements.length - 1; i >= 0; i--) {
                 const el = elements[i];
                 const isSelected = (el === selectedElement);
@@ -1665,14 +1924,14 @@
                 div.setAttribute('draggable', 'true');
                 div.setAttribute('data-dom-index', i);
                 div.style.padding = '4px 6px';
-                div.style.border = '1px solid ' + (isSelected ? '#3498db' : '#ddd');
-                div.style.backgroundColor = isSelected ? '#ebf5fb' : '#ffffff';
-                div.style.borderRadius = '4px';
+                div.style.border = '1px solid ' + (isSelected ? '#00bcd4' : '#222');
+                div.style.backgroundColor = isSelected ? '#333' : '#2b2b2b';
+                div.style.borderRadius = '3px';
                 div.style.cursor = 'pointer';
                 div.style.display = 'flex';
                 div.style.justifyContent = 'space-between';
                 div.style.alignItems = 'center';
-                div.style.fontSize = '12px';
+                div.style.fontSize = '11px';
                 div.style.fontWeight = isSelected ? 'bold' : 'normal';
 
                 let label = el.getAttribute('data-layer-name');
@@ -1691,19 +1950,18 @@
 
                 div.innerHTML = `
                     <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1;">
-                        <span class="drag-handle" style="cursor: grab; color: #7f8c8d; font-weight: bold; font-size: 14px;">☰</span>
-                        <span class="layer-label-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; display: inline-block;" title="Doble clic para renombrar">${label}</span>
+                        <span class="drag-handle" style="cursor: grab; color: #666; font-weight: bold; font-size: 13px;">☰</span>
+                        <span class="layer-label-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; display: inline-block; color: ${isSelected ? '#fff' : '#b5b5b5'};" title="Doble clic para renombrar">${label}</span>
                     </div>
                     <div style="display: flex; gap: 3px; align-items: center; flex-shrink: 0;">
-                        <button onclick="event.stopPropagation(); toggleLayerVisibility(${i})" style="padding: 2px 4px; font-size: 10px; background-color: ${isHidden ? '#e74c3c' : '#3498db'}; color: white;" title="Mostrar/Ocultar">${eyeIcon}</button>
-                        <button onclick="event.stopPropagation(); selectLayerByIndex(${i})" style="padding: 2px 4px; font-size: 10px; background-color: #2ecc71; color: white;">✏️</button>
-                        <button onclick="event.stopPropagation(); deleteLayerByIndex(${i})" style="padding: 2px 4px; font-size: 10px; background-color: #e74c3c; color: white;">🗑️</button>
+                        <button onclick="event.stopPropagation(); toggleLayerVisibility(${i})" style="padding: 2px 4px; font-size: 9px; background-color: ${isHidden ? '#962d22' : '#444'}; color: white; border: none;" title="Mostrar/Ocultar">${eyeIcon}</button>
+                        <button onclick="event.stopPropagation(); selectLayerByIndex(${i})" style="padding: 2px 4px; font-size: 9px; background-color: #444; border:none; color: white;">✏️</button>
+                        <button onclick="event.stopPropagation(); deleteLayerByIndex(${i})" style="padding: 2px 4px; font-size: 9px; background-color: #962d22; border:none; color: white;">🗑️</button>
                     </div>
                 `;
 
                 div.onclick = () => selectLayerByIndex(i);
 
-                // Evento de renombrar con doble clic
                 const labelSpan = div.querySelector('.layer-label-text');
                 labelSpan.ondblclick = (e) => {
                     e.stopPropagation();
@@ -1716,7 +1974,6 @@
                     }
                 };
 
-                // EVENTOS DE DRAG AND DROP NATIVO EN LA LISTA DE CAPAS
                 div.addEventListener('dragstart', (e) => {
                     e.stopPropagation();
                     div.classList.add('dragging');
@@ -1803,7 +2060,7 @@
                 selectedElement = el;
                 el.classList.add('editing');
                 if (el.classList.contains('text-element')) {
-                    el.style.border = "2px solid #3498db";
+                    el.style.border = "2px solid #00bcd4";
                     enableToolbar('text');
                 } else {
                     enableToolbar('image');
@@ -1853,7 +2110,7 @@
             });
         }
 
-        // GUARDAR / CARGAR TRABAJO COMPLETO EN FORMATO JSON (EXTREMADAMENTE OPTIMIZADO)
+        // GUARDAR / CARGAR TRABAJO COMPLETO EN FORMATO JSON
         function saveProjectJSON() {
             deselectAll();
             
@@ -1971,7 +2228,7 @@
             event.target.value = '';
         }
 
-        // EXPORTACIÓN AVANZADA: Generar ZIP con carpetas A3 e individuales A4 unificadas en un único PDF cada una
+        // EXPORTACIÓN AVANZADA
         async function exportWholeProjectZIP() {
             deselectAll();
             
