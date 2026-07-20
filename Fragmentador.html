@@ -54,8 +54,24 @@
             flex: 1;
             height: calc(100vh - 104px);
             overflow: hidden;
+            position: relative;
         }
         
+        /* Botón de alternancia de barras laterales */
+        .toggle-sidebar-btn {
+            background-color: #34495e;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .toggle-sidebar-btn:hover {
+            background-color: #1a252f;
+        }
+
         /* Barra Izquierda */
         #sidebar-left {
             width: 260px;
@@ -67,6 +83,14 @@
             gap: 10px;
             overflow-y: auto;
             height: 100%;
+            transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+        }
+        #sidebar-left.collapsed {
+            width: 0px;
+            padding: 0px;
+            overflow: hidden;
+            opacity: 0;
+            border-right: none;
         }
         
         /* Barra Derecha */
@@ -80,6 +104,14 @@
             gap: 10px;
             overflow-y: auto;
             height: 100%;
+            transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+        }
+        #sidebar-right.collapsed {
+            width: 0px;
+            padding: 0px;
+            overflow: hidden;
+            opacity: 0;
+            border-left: none;
         }
 
         .upload-btn {
@@ -105,7 +137,7 @@
         #page-previews {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 15px;
         }
         .preview-item {
             border: 1px solid #ddd;
@@ -115,16 +147,29 @@
             text-align: center;
             cursor: pointer;
             transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .preview-item:hover {
             transform: scale(1.02);
             border-color: #3498db;
         }
         .preview-item canvas {
+            width: 100%;
             max-width: 100%;
             height: auto;
             border: 1px solid #eee;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .preview-title {
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #2c3e50;
+            width: 100%;
+            text-align: center;
         }
 
         /* Gestor de páginas A3 */
@@ -155,19 +200,21 @@
             color: white;
         }
 
-        /* Panel Central */
+        /* Panel Central con Soporte de Desplazamiento y Zoom Mejorado */
         #canvas-container {
             flex: 1;
             display: flex;
-            justify-content: center;
-            align-items: center;
+            justify-content: flex-start; /* Permite que el alineamiento empiece en top/left para evitar cortes al hacer scroll */
+            align-items: flex-start;
             background-color: #e9ecef;
-            overflow: hidden;
+            overflow: auto; /* Permite desplazamiento libre con scrollbars */
             position: relative;
+            padding: 150px; /* Margen para permitir scroll amplio al aplicar Zoom */
         }
         #workspace-scaler {
-            transform-origin: center center;
+            transform-origin: top left; /* Evita cortes del margen superior */
             transition: transform 0.05s ease;
+            display: inline-block;
         }
         #workspace {
             background-color: white;
@@ -325,13 +372,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            overflow: hidden; /* Ventana fija que no crece con el zoom */
+            overflow: hidden;
             position: relative;
         }
         .modal-canvas-container {
             flex: 1;
             width: 100%;
-            overflow: auto; /* Barra de scroll interna independiente de la ventana */
+            overflow: auto;
             border: 1px solid #ccc;
             position: relative;
             background-color: #7f8c8d;
@@ -405,21 +452,54 @@
             pointer-events: none;
             z-index: 9998;
         }
+
+        /* Estilos drag and drop para las Capas */
+        .layer-item {
+            transition: transform 0.15s ease, background-color 0.2s;
+            user-select: none;
+        }
+        .layer-item.dragging {
+            opacity: 0.5;
+            background-color: #eef2f7 !important;
+            border: 2px dashed #3498db !important;
+        }
     </style>
 </head>
 <body>
 
     <header>
-        <h2>Editor de Partituras - Libreto Continuo A3</h2>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button onclick="window.history.back()" style="background-color: #7f8c8d;">⬅️ Volver</button>
+            <button onclick="createNewProject()" style="background-color: #e74c3c;">🆕 Nuevo Proyecto</button>
+            <h2 style="margin: 0;">Editor de Partituras - Libreto Continuo A3</h2>
+        </div>
         <div style="display: flex; gap: 10px;">
             <button onclick="addTextElement()">✍️ Añadir Texto</button>
             <button onclick="undo()">Deshacer</button>
             <button onclick="redo()">Rehacer</button>
+            <button onclick="saveProjectJSON()" style="background-color: #f39c12;">💾 Guardar JSON</button>
+            <button onclick="document.getElementById('json-input').click()" style="background-color: #3498db;">📂 Abrir JSON</button>
+            <input type="file" id="json-input" accept=".json" style="display: none;" onchange="loadProjectJSON(event)">
             <button onclick="exportWholeProjectZIP()" style="background-color: #2ecc71;">💾 Guardar y Exportar Proyecto (ZIP)</button>
         </div>
     </header>
 
     <div class="toolbar">
+        <!-- Controles para Ocultar/Mostrar Menús Laterales -->
+        <div class="tool-control-group">
+            <button class="toggle-sidebar-btn" onclick="toggleSidebar('left')">◀ Off/On Barra Izq.</button>
+            <button class="toggle-sidebar-btn" onclick="toggleSidebar('right')">Off/On Barra Der. ▶</button>
+        </div>
+
+        <!-- Controles de Zoom del Editor Principal -->
+        <div class="tool-control-group">
+            <strong>Zoom Editor:</strong>
+            <button onclick="adjustEditorZoom(0.1)">➕ Zoom</button>
+            <button onclick="adjustEditorZoom(-0.1)">➖ Zoom</button>
+            <button onclick="resetEditorZoom()">Ajustar Pantalla</button>
+            <span id="editor-zoom-label" style="font-weight: bold;">100%</span>
+        </div>
+
         <div class="tool-control-group">
             <strong>Rotación:</strong>
             <input type="range" id="tool-rotate-slider" min="-180" max="180" value="0" disabled oninput="adjustRotation(this.value)">
@@ -483,6 +563,16 @@
             <div class="upload-btn" onclick="document.getElementById('pdf-input').click()">
                 📂 Abrir Archivo PDF
                 <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="handlePDFUpload(event)">
+            </div>
+
+            <!-- Inserción por rango de páginas -->
+            <div id="range-insert-container" style="display: none; border: 1px solid #ddd; padding: 10px; border-radius: 6px; background-color: #fdfefe; margin-top: 5px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 12px; color: #2c3e50;">Insertar Rango</h4>
+                <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                    <input type="number" id="range-start" placeholder="Desde" min="1" style="width: 50%; padding: 4px; font-size: 12px;">
+                    <input type="number" id="range-end" placeholder="Hasta" min="1" style="width: 50%; padding: 4px; font-size: 12px;">
+                </div>
+                <button onclick="insertPageRange()" style="width: 100%; padding: 6px; background-color: #9b59b6; font-size: 12px;">➕ Insertar Rango</button>
             </div>
 
             <h3>2. Partituras</h3>
@@ -562,7 +652,6 @@
         const canvasContainer = document.getElementById('canvas-container');
         const brushPreview = document.getElementById('eraser-brush-preview');
         
-        // El elemento borrador se define dinámicamente como let para resolver el fallo de referencias rotas al cambiar de página
         let eraserAreaBox = document.getElementById('eraser-area-box');
         
         let selectedElement = null;
@@ -578,6 +667,10 @@
         let previewZoom = 1.0;
         let activePreviewPageNum = null;
 
+        // Variables de Zoom del Editor Principal
+        let scaleFactor = 1.0;
+        let customEditorZoom = null; 
+
         // Contador para la distribución alterna
         let insertedPagesCount = 0;
 
@@ -591,7 +684,7 @@
         let history = [];
         let historyIndex = -1;
 
-        // Escucha de eventos de teclado para el visor PDF (Flechas para páginas y zoom)
+        // Atajos de Teclado (Deshacer, Rehacer, etc.)
         window.addEventListener('keydown', (e) => {
             const modal = document.getElementById('preview-modal');
             if (modal && modal.style.display === 'flex') {
@@ -608,9 +701,21 @@
                     e.preventDefault();
                     adjustPreviewZoom(-0.1);
                 }
+                return;
+            }
+
+            if (e.ctrlKey) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    undo();
+                } else if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    redo();
+                }
             }
         });
 
+        // Guardado de estado
         function saveState() {
             const activePage = pagesA3.find(p => p.id === activePageId);
             if (activePage) {
@@ -625,7 +730,15 @@
         }
 
         function resizeWorkspace() {
-            const containerWidth = canvasContainer.clientWidth - 40;
+            if (customEditorZoom !== null) {
+                workspaceScaler.style.transform = `scale(${customEditorZoom})`;
+                scaleFactor = customEditorZoom;
+                document.getElementById('editor-zoom-label').innerText = Math.round(customEditorZoom * 100) + '%';
+                return;
+            }
+
+            // Calculado óptimo con tolerancia sutil de 40px para que el lienzo aproveche la pantalla al completo
+            const containerWidth = canvasContainer.clientWidth - 40; 
             const containerHeight = canvasContainer.clientHeight - 40;
             const baseWidth = 1191;
             const baseHeight = 842;
@@ -635,9 +748,65 @@
             scaleFactor = Math.min(scaleX, scaleY, 1);
 
             workspaceScaler.style.transform = `scale(${scaleFactor})`;
+            document.getElementById('editor-zoom-label').innerText = Math.round(scaleFactor * 100) + '%';
         }
         window.addEventListener('resize', resizeWorkspace);
         setTimeout(resizeWorkspace, 100);
+
+        // Ajustar el zoom manual del editor principal
+        function adjustEditorZoom(val) {
+            if (customEditorZoom === null) {
+                customEditorZoom = scaleFactor;
+            }
+            customEditorZoom = Math.max(0.1, Math.min(5.0, customEditorZoom + val));
+            resizeWorkspace();
+        }
+
+        // Restablecer el zoom del editor (ajustar a pantalla)
+        function resetEditorZoom() {
+            customEditorZoom = null;
+            resizeWorkspace();
+        }
+
+        // Mostrar / Ocultar Barras Laterales
+        function toggleSidebar(side) {
+            if (side === 'left') {
+                const sidebar = document.getElementById('sidebar-left');
+                sidebar.classList.toggle('collapsed');
+            } else if (side === 'right') {
+                const sidebar = document.getElementById('sidebar-right');
+                sidebar.classList.toggle('collapsed');
+            }
+            setTimeout(resizeWorkspace, 310); 
+        }
+
+        // ACCIÓN: Nuevo Proyecto
+        function createNewProject() {
+            if (confirm("¿Estás seguro de que deseas iniciar un nuevo proyecto? Perderás todos los cambios que no hayas guardado.")) {
+                deselectAll();
+                currentPdf = null;
+                insertedPagesCount = 0;
+                
+                document.getElementById('pdf-input').value = "";
+                document.getElementById('page-info').style.display = 'none';
+                document.getElementById('total-pages').innerText = "0";
+                document.getElementById('range-insert-container').style.display = 'none';
+                document.getElementById('page-previews').innerHTML = "";
+                
+                pagesA3 = [
+                    { id: 1, htmlContent: '<div class="fold-guide"></div>' }
+                ];
+                activePageId = 1;
+                
+                history = [];
+                historyIndex = -1;
+                
+                renderA3PagesList();
+                loadPageContent();
+                saveState();
+                resetEditorZoom();
+            }
+        }
 
         // GESTIÓN DE PÁGINAS A3
         function renderA3PagesList() {
@@ -705,7 +874,6 @@
             if (activePage) {
                 workspace.innerHTML = activePage.htmlContent;
                 
-                // Asegurar que exista el elemento del borrador de área y actualizar su referencia activa
                 let box = workspace.querySelector('#eraser-area-box');
                 if (!box) {
                     box = document.createElement('div');
@@ -713,7 +881,7 @@
                     workspace.appendChild(box);
                 }
                 eraserAreaBox = box;
-                eraserAreaBox.style.display = 'none'; // Se inicializa oculto para evitar fallas visuales
+                eraserAreaBox.style.display = 'none';
                 
                 const elements = workspace.querySelectorAll('.canvas-element');
                 elements.forEach(el => {
@@ -736,7 +904,6 @@
                 const texts = workspace.querySelectorAll('.text-element');
                 texts.forEach(txt => bindTextEvents(txt));
 
-                // Recargar el panel de capas de la página actual
                 renderLayersList();
             }
         }
@@ -753,6 +920,7 @@
                     currentPdf = await pdfjsLib.getDocument(typedarray).promise;
                     document.getElementById('page-info').style.display = 'block';
                     document.getElementById('total-pages').innerText = currentPdf.numPages;
+                    document.getElementById('range-insert-container').style.display = 'block';
                     renderPreviews();
                 } catch (error) {
                     alert("Error al cargar PDF.");
@@ -780,13 +948,29 @@
                 div.className = 'preview-item';
                 div.onclick = () => showFullscreenPreview(pageNum);
                 div.innerHTML = `
-                    <strong>Pág. ${pageNum}</strong>
-                    <div class="btn-group" style="margin-top: 5px;">
+                    <div class="preview-title">Pág. ${pageNum}</div>
+                    <div class="btn-group" style="margin-top: 5px; width: 100%;">
                         <button onclick="event.stopPropagation(); addPageToWorkspace(${pageNum})" style="background-color: #2ecc71; width: 100%;">➕ Insertar</button>
                     </div>
                 `;
-                div.insertBefore(canvas, div.firstChild);
+                div.insertBefore(canvas, div.querySelector('.preview-title'));
                 previewsContainer.appendChild(div);
+            }
+        }
+
+        // Insertar por rango de páginas de forma masiva
+        async function insertPageRange() {
+            if (!currentPdf) return;
+            const startVal = parseInt(document.getElementById('range-start').value);
+            const endVal = parseInt(document.getElementById('range-end').value);
+
+            if (isNaN(startVal) || isNaN(endVal) || startVal < 1 || endVal < startVal || endVal > currentPdf.numPages) {
+                alert("Por favor introduce un rango de páginas válido.");
+                return;
+            }
+
+            for (let pageNum = startVal; pageNum <= endVal; pageNum++) {
+                await addPageToWorkspace(pageNum);
             }
         }
 
@@ -822,7 +1006,6 @@
             renderPreviewWithZoom();
         }
 
-        // Navegación secuencial de páginas dentro del visor sin cerrar
         function navigatePreview(direction) {
             if (!currentPdf) return;
             let targetPage = activePreviewPageNum + direction;
@@ -886,6 +1069,8 @@
             element.style.width = targetWidth + 'px';
             element.style.height = targetHeight + 'px';
             element.style.transform = 'rotate(0deg)';
+            
+            element.setAttribute('data-layer-name', `🖼️ Pág. ${pageNum}`);
 
             element.innerHTML = `
                 <div class="resize-handle handle-nw"></div>
@@ -910,7 +1095,6 @@
             const canvas = element.querySelector('canvas');
             const ctx = canvas.getContext('2d');
 
-            // Arrastrar y Selección en un único clic intuitivo
             element.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('resize-handle') || eraserActive) return;
                 e.stopPropagation();
@@ -1130,6 +1314,8 @@
             textEl.style.textDecoration = 'none';
             textEl.style.fontFamily = 'Arial';
             textEl.style.transform = 'rotate(0deg)';
+            
+            textEl.setAttribute('data-layer-name', '✍️ Texto...');
 
             bindTextEvents(textEl);
             workspace.appendChild(textEl);
@@ -1141,6 +1327,7 @@
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             
             textEl.addEventListener('mousedown', (e) => {
+                if (e.target.closest('#text-tools')) return;
                 if (textEl.classList.contains('editing') || eraserActive) return;
                 e.stopPropagation();
                 deselectAll();
@@ -1176,8 +1363,14 @@
                 textEl.focus();
             });
 
-            textEl.addEventListener('blur', () => {
+            textEl.addEventListener('blur', (e) => {
+                if (e.relatedTarget && e.relatedTarget.closest('#text-tools')) {
+                    textEl.focus();
+                    return;
+                }
                 textEl.classList.remove('editing');
+                const snippet = textEl.innerText.substring(0, 15) || 'Texto';
+                textEl.setAttribute('data-layer-name', `✍️ ${snippet}...`);
                 saveState();
                 renderLayersList();
             });
@@ -1206,6 +1399,7 @@
                 document.getElementById('btn-underline').classList.toggle('active', !isUnderline);
             }
             saveState();
+            selectedElement.focus();
         }
 
         // Habilitar Barra de Herramientas
@@ -1215,7 +1409,6 @@
             document.getElementById('text-tools').style.display = 'none';
             document.getElementById('tool-delete').disabled = false;
             
-            // Habilitar controles de capas adicionales
             document.getElementById('tool-duplicate').disabled = false;
             document.getElementById('tool-bring-front').disabled = false;
             document.getElementById('tool-send-back').disabled = false;
@@ -1249,7 +1442,8 @@
         }
 
         function deselectAll(e) {
-            if (e && e.target.closest('.canvas-element, .text-element')) return;
+            if (e && e.target.closest('#text-tools, .text-style-btn, select, input')) return;
+            if (e && e.target.closest('.canvas-element, .text-element, #layers-list')) return;
             if (selectedElement) {
                 selectedElement.classList.remove('editing');
                 if (selectedElement.classList.contains('text-element')) {
@@ -1259,7 +1453,6 @@
                 enableToolbar('none');
                 document.getElementById('tool-delete').disabled = true;
                 
-                // Deshabilitar controles de capas
                 document.getElementById('tool-duplicate').disabled = true;
                 document.getElementById('tool-bring-front').disabled = true;
                 document.getElementById('tool-send-back').disabled = true;
@@ -1450,25 +1643,28 @@
             renderLayersList();
         }
 
-        // PANEL VISUAL DE CAPAS (Photoshop Style)
+        // PANEL VISUAL DE CAPAS (Photoshop Style con soporte Drag and Drop de reordenación)
         function renderLayersList() {
             const list = document.getElementById('layers-list');
             if (!list) return;
             list.innerHTML = '';
 
-            const elements = workspace.querySelectorAll('.canvas-element, .text-element');
+            const elements = Array.from(workspace.querySelectorAll('.canvas-element, .text-element'));
             if (elements.length === 0) {
                 list.innerHTML = '<div style="color: #7f8c8d; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">Sin capas activas</div>';
                 return;
             }
 
-            // Renderizar de arriba hacia abajo (las de arriba están más al frente en el DOM)
+            // Mapeamos el DOM real a una lista de capas ordenada (de arriba a abajo)
             for (let i = elements.length - 1; i >= 0; i--) {
                 const el = elements[i];
                 const isSelected = (el === selectedElement);
                 
                 const div = document.createElement('div');
-                div.style.padding = '6px 8px';
+                div.className = 'layer-item';
+                div.setAttribute('draggable', 'true');
+                div.setAttribute('data-dom-index', i);
+                div.style.padding = '4px 6px';
                 div.style.border = '1px solid ' + (isSelected ? '#3498db' : '#ddd');
                 div.style.backgroundColor = isSelected ? '#ebf5fb' : '#ffffff';
                 div.style.borderRadius = '4px';
@@ -1479,24 +1675,114 @@
                 div.style.fontSize = '12px';
                 div.style.fontWeight = isSelected ? 'bold' : 'normal';
 
-                let label = '';
-                if (el.classList.contains('canvas-element')) {
-                    label = `🖼️ Capa Imagen (${i + 1})`;
-                } else {
-                    const textSnippet = el.innerText.substring(0, 15) || 'Texto';
-                    label = `✍️ Texto: "${textSnippet}..."`;
+                let label = el.getAttribute('data-layer-name');
+                if (!label) {
+                    if (el.classList.contains('canvas-element')) {
+                        label = `🖼️ Capa Imagen (${i + 1})`;
+                    } else {
+                        const textSnippet = el.innerText.substring(0, 15) || 'Texto';
+                        label = `✍️ Texto: "${textSnippet}..."`;
+                    }
+                    el.setAttribute('data-layer-name', label);
                 }
 
+                const isHidden = (el.style.display === 'none');
+                const eyeIcon = isHidden ? '❌' : '👁️';
+
                 div.innerHTML = `
-                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px;">${label}</span>
-                    <div style="display: flex; gap: 4px;">
-                        <button onclick="event.stopPropagation(); selectLayerByIndex(${i})" style="padding: 2px 5px; font-size: 10px; background-color: #3498db; color: white;">👁️</button>
-                        <button onclick="event.stopPropagation(); deleteLayerByIndex(${i})" style="padding: 2px 5px; font-size: 10px; background-color: #e74c3c; color: white;">🗑️</button>
+                    <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1;">
+                        <span class="drag-handle" style="cursor: grab; color: #7f8c8d; font-weight: bold; font-size: 14px;">☰</span>
+                        <span class="layer-label-text" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100px; display: inline-block;" title="Doble clic para renombrar">${label}</span>
+                    </div>
+                    <div style="display: flex; gap: 3px; align-items: center; flex-shrink: 0;">
+                        <button onclick="event.stopPropagation(); toggleLayerVisibility(${i})" style="padding: 2px 4px; font-size: 10px; background-color: ${isHidden ? '#e74c3c' : '#3498db'}; color: white;" title="Mostrar/Ocultar">${eyeIcon}</button>
+                        <button onclick="event.stopPropagation(); selectLayerByIndex(${i})" style="padding: 2px 4px; font-size: 10px; background-color: #2ecc71; color: white;">✏️</button>
+                        <button onclick="event.stopPropagation(); deleteLayerByIndex(${i})" style="padding: 2px 4px; font-size: 10px; background-color: #e74c3c; color: white;">🗑️</button>
                     </div>
                 `;
 
                 div.onclick = () => selectLayerByIndex(i);
+
+                // Evento de renombrar con doble clic
+                const labelSpan = div.querySelector('.layer-label-text');
+                labelSpan.ondblclick = (e) => {
+                    e.stopPropagation();
+                    const currentName = el.getAttribute('data-layer-name');
+                    const newName = prompt("Introduce el nuevo nombre para la capa:", currentName);
+                    if (newName !== null && newName.trim() !== "") {
+                        el.setAttribute('data-layer-name', newName.trim());
+                        saveState();
+                        renderLayersList();
+                    }
+                };
+
+                // EVENTOS DE DRAG AND DROP NATIVO EN LA LISTA DE CAPAS
+                div.addEventListener('dragstart', (e) => {
+                    e.stopPropagation();
+                    div.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', i);
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                div.addEventListener('dragend', () => {
+                    div.classList.remove('dragging');
+                });
+
+                div.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const draggingItem = list.querySelector('.dragging');
+                    if (draggingItem && draggingItem !== div) {
+                        const rect = div.getBoundingClientRect();
+                        const next = (e.clientY - rect.top) > (rect.height / 2);
+                        list.insertBefore(draggingItem, next ? div.nextSibling : div);
+                    }
+                });
+
+                div.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const items = Array.from(list.querySelectorAll('.layer-item'));
+                    items.reverse();
+
+                    const foldGuide = workspace.querySelector('.fold-guide');
+                    const eraserBox = workspace.querySelector('#eraser-area-box');
+
+                    items.forEach(item => {
+                        const domIdx = parseInt(item.getAttribute('data-dom-index'));
+                        const targetEl = elements[domIdx];
+                        if (targetEl) {
+                            workspace.appendChild(targetEl);
+                        }
+                    });
+
+                    if (foldGuide) workspace.appendChild(foldGuide);
+                    if (eraserBox) workspace.appendChild(eraserBox);
+
+                    saveState();
+                    renderLayersList();
+                });
+
                 list.appendChild(div);
+            }
+        }
+
+        // Alternar visibilidad de capa
+        function toggleLayerVisibility(index) {
+            const elements = workspace.querySelectorAll('.canvas-element, .text-element');
+            const el = elements[index];
+            if (el) {
+                if (el.style.display === 'none') {
+                    el.style.display = '';
+                } else {
+                    el.style.display = 'none';
+                    if (selectedElement === el) {
+                        deselectAll();
+                    }
+                }
+                saveState();
+                renderLayersList();
             }
         }
 
@@ -1504,6 +1790,10 @@
             const elements = workspace.querySelectorAll('.canvas-element, .text-element');
             const el = elements[index];
             if (el) {
+                if (el.style.display === 'none') {
+                    alert("Por favor muestra la capa pulsando en el icono del ojo antes de editarla.");
+                    return;
+                }
                 if (selectedElement && selectedElement !== el) {
                     selectedElement.classList.remove('editing');
                     if (selectedElement.classList.contains('text-element')) {
@@ -1563,6 +1853,124 @@
             });
         }
 
+        // GUARDAR / CARGAR TRABAJO COMPLETO EN FORMATO JSON (EXTREMADAMENTE OPTIMIZADO)
+        function saveProjectJSON() {
+            deselectAll();
+            
+            const activePage = pagesA3.find(p => p.id === activePageId);
+            if (activePage) {
+                activePage.htmlContent = workspace.innerHTML;
+            }
+
+            const imageLibrary = {};
+            let imageCounter = 0;
+
+            const optimizedPages = pagesA3.map(page => {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = page.htmlContent;
+
+                const canvases = tempDiv.querySelectorAll('.canvas-element canvas');
+                canvases.forEach(canvas => {
+                    const dataUrl = canvas.getAttribute('data-img-data');
+                    if (dataUrl) {
+                        let matchedKey = null;
+                        
+                        for (const [key, value] of Object.entries(imageLibrary)) {
+                            if (value === dataUrl) {
+                                matchedKey = key;
+                                break;
+                            }
+                        }
+
+                        if (!matchedKey) {
+                            imageCounter++;
+                            matchedKey = `img_asset_${imageCounter}`;
+                            imageLibrary[matchedKey] = dataUrl;
+                        }
+
+                        canvas.setAttribute('data-img-data', matchedKey);
+                    }
+                });
+
+                return {
+                    id: page.id,
+                    htmlContent: tempDiv.innerHTML
+                };
+            });
+
+            const projectData = {
+                pagesA3: optimizedPages,
+                activePageId: activePageId,
+                insertedPagesCount: insertedPagesCount,
+                imageLibrary: imageLibrary
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData));
+            
+            let projectTitle = "";
+            while (!projectTitle || projectTitle.trim() === "") {
+                projectTitle = prompt("Introduce el nombre con el que deseas guardar el proyecto (.JSON):", "Mi_Proyecto_Partituras");
+                if (projectTitle === null) return; 
+            }
+
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `${projectTitle.trim()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function loadProjectJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const projectData = JSON.parse(e.target.result);
+                    if (projectData.pagesA3 && Array.isArray(projectData.pagesA3)) {
+                        const library = projectData.imageLibrary || {};
+
+                        pagesA3 = projectData.pagesA3.map(page => {
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = page.htmlContent;
+
+                            const canvases = tempDiv.querySelectorAll('.canvas-element canvas');
+                            canvases.forEach(canvas => {
+                                const key = canvas.getAttribute('data-img-data');
+                                if (key && library[key]) {
+                                    canvas.setAttribute('data-img-data', library[key]);
+                                }
+                            });
+
+                            return {
+                                id: page.id,
+                                htmlContent: tempDiv.innerHTML
+                            };
+                        });
+
+                        activePageId = projectData.activePageId || pagesA3[0].id;
+                        insertedPagesCount = projectData.insertedPagesCount || 0;
+                        history = [];
+                        historyIndex = -1;
+
+                        loadPageContent();
+                        renderA3PagesList();
+                        saveState();
+                        alert("Proyecto cargado con éxito.");
+                    } else {
+                        alert("El archivo JSON no tiene un formato válido para el editor.");
+                    }
+                } catch (error) {
+                    console.error(error);
+                    alert("Error al leer el archivo JSON.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
         // EXPORTACIÓN AVANZADA: Generar ZIP con carpetas A3 e individuales A4 unificadas en un único PDF cada una
         async function exportWholeProjectZIP() {
             deselectAll();
@@ -1572,24 +1980,27 @@
                 activePage.htmlContent = workspace.innerHTML;
             }
 
+            let exportTitle = "";
+            while (!exportTitle || exportTitle.trim() === "") {
+                exportTitle = prompt("Por favor, introduce el título del proyecto para exportar los PDF y el ZIP:", "Libreto_Continuo");
+                if (exportTitle === null) return; 
+            }
+            exportTitle = exportTitle.trim();
+
             const { jsPDF } = window.jspdf;
 
-            // Inicializar jsPDF (Dimensiones reales a escala pt de impresión)
-            // A3 Landscape: 1190.55 pt x 841.89 pt (Equivalente al ratio 1191x842)
             const pdfA3 = new jsPDF({
                 orientation: 'landscape',
                 unit: 'pt',
                 format: 'a3'
             });
 
-            // A4 Portrait: 595.28 pt x 841.89 pt (Equivalente al ratio 595x842)
             const pdfA4 = new jsPDF({
                 orientation: 'portrait',
                 unit: 'pt',
                 format: 'a4'
             });
 
-            // Elemento auxiliar temporal oculto para renderizar los lienzos sin escalar
             const renderDiv = document.createElement('div');
             renderDiv.style.width = '1191px';
             renderDiv.style.height = '842px';
@@ -1599,14 +2010,12 @@
             renderDiv.style.backgroundColor = 'white';
             document.body.appendChild(renderDiv);
 
-            // Escala de resolución moderada para evitar archivos gigantescos
             const exportScale = 2.5;
 
             for (let index = 0; index < pagesA3.length; index++) {
                 const page = pagesA3[index];
                 renderDiv.innerHTML = page.htmlContent;
 
-                // Cargar asíncronamente los búferes de imagen y restaurarlos en cada canvas
                 const elList = renderDiv.querySelectorAll('.canvas-element');
                 for (let el of elList) {
                     const canvas = el.querySelector('canvas');
@@ -1622,11 +2031,16 @@
                     }
                 }
 
-                // Ocultar guías visuales y tiradores
                 const guides = renderDiv.querySelectorAll('.resize-handle, .fold-guide');
                 guides.forEach(g => g.style.setProperty('display', 'none', 'important'));
 
-                // Renderizar el lienzo completo en un Canvas de alta resolución
+                const hiddenElements = renderDiv.querySelectorAll('.canvas-element, .text-element');
+                hiddenElements.forEach(item => {
+                    if (item.style.display === 'none') {
+                        item.style.setProperty('visibility', 'hidden', 'important');
+                    }
+                });
+
                 const a3Canvas = document.createElement('canvas');
                 a3Canvas.width = 1191 * exportScale;
                 a3Canvas.height = 842 * exportScale;
@@ -1636,6 +2050,8 @@
 
                 const items = renderDiv.querySelectorAll('.canvas-element, .text-element');
                 for (let item of items) {
+                    if (item.style.visibility === 'hidden') continue; 
+
                     const left = parseFloat(item.style.left) || 0;
                     const top = parseFloat(item.style.top) || 0;
                     const width = parseFloat(item.style.width) || item.offsetWidth || 0;
@@ -1682,17 +2098,13 @@
                     a3Ctx.restore();
                 }
 
-                // Generar imagen para la página A3 utilizando JPEG optimizado para reducir enormemente el tamaño del archivo
                 const a3ImgData = a3Canvas.toDataURL("image/jpeg", 0.82);
 
-                // Añadir página al documento PDF A3 Único
                 if (index > 0) {
                     pdfA3.addPage('a3', 'landscape');
                 }
                 pdfA3.addImage(a3ImgData, 'JPEG', 0, 0, 1190.55, 841.89);
 
-                // SECCIONAR EN DOS PÁGINAS A4 INDIVIDUALES (Mitad izquierda y Mitad derecha) con compresión optimizada
-                // Página A4 Izquierda
                 const leftCanvas = document.createElement('canvas');
                 leftCanvas.width = 595 * exportScale;
                 leftCanvas.height = 842 * exportScale;
@@ -1705,7 +2117,6 @@
                 }
                 pdfA4.addImage(leftImgData, 'JPEG', 0, 0, 595.28, 841.89);
 
-                // Página A4 Derecha
                 const rightCanvas = document.createElement('canvas');
                 rightCanvas.width = 595 * exportScale;
                 rightCanvas.height = 842 * exportScale;
@@ -1719,7 +2130,6 @@
 
             document.body.removeChild(renderDiv);
 
-            // Generar los arrays de bytes para el ZIP
             const a3PdfOutput = pdfA3.output('arraybuffer');
             const a4PdfOutput = pdfA4.output('arraybuffer');
 
@@ -1727,14 +2137,12 @@
             const a3Folder = zip.folder("Partituras impresion en A3");
             const a4Folder = zip.folder("Partituras en A4");
 
-            // Guardar archivos PDF unificados dentro de sus carpetas
-            a3Folder.file("Libreto_Completo_A3.pdf", a3PdfOutput);
-            a4Folder.file("Partituras_Individuales_A4.pdf", a4PdfOutput);
+            a3Folder.file(`${exportTitle}_A3.pdf`, a3PdfOutput);
+            a4Folder.file(`${exportTitle}_A4.pdf`, a4PdfOutput);
 
-            // Generar y descargar el ZIP
             zip.generateAsync({ type: "blob" }).then(function(content) {
                 const link = document.createElement('a');
-                link.download = "Proyecto_Partituras_Completo.zip";
+                link.download = `${exportTitle}.zip`;
                 link.href = URL.createObjectURL(content);
                 link.click();
             });
