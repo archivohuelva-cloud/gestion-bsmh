@@ -392,23 +392,59 @@
         .handle-ne { right: -4px; top: -4px; cursor: ne-resize; }
         .handle-nw { left: -4px; top: -4px; cursor: nw-resize; }
 
-        /* Elementos de Texto */
+        /* Elementos de Texto autoajustables */
         .text-element {
             position: absolute;
             cursor: move;
             padding: 5px;
-            border: 1px dashed #999;
+            border: 2px solid transparent; /* Sin contorno de manera predeterminada */
             font-family: inherit;
-            min-width: 100px;
+            min-width: 20px;
+            width: auto;
+            height: auto;
+            display: inline-block;
             outline: none;
-            background: rgba(255, 255, 255, 0.85);
+            background: transparent; /* Fondo transparente por defecto */
             z-index: 50;
             box-sizing: border-box;
+            white-space: nowrap;
         }
         .text-element.editing {
-            border: 1px solid #2ecc71;
-            background: white;
+            border: 2px solid #00bcd4; /* Borde de edición visible al seleccionar */
+            background: transparent;
             cursor: text;
+        }
+
+        /* Barra de formato flotante para texto estilo Wondershare PDFelement */
+        #properties-text-floating {
+            display: none;
+            position: absolute;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 6px;
+            padding: 6px 10px;
+            z-index: 2100;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #333;
+        }
+        #properties-text-floating select,
+        #properties-text-floating input[type="range"] {
+            background-color: #f2f2f2;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        #properties-text-floating .text-style-btn {
+            background-color: #f2f2f2;
+            color: #555;
+            border: 1px solid #ccc;
+        }
+        #properties-text-floating .text-style-btn.active {
+            background-color: #00bcd4;
+            color: white;
+            border-color: #00bcd4;
         }
 
         /* Círculo indicador del borrador */
@@ -667,27 +703,6 @@
                 </div>
             </div>
 
-            <!-- Propiedades de Texto (se muestran al crear/seleccionar texto) -->
-            <div id="properties-text" style="display: none; align-items: center; gap: 15px;">
-                <div class="tool-control-group" id="text-tools">
-                    <strong>Formato de Texto:</strong>
-                    <select id="font-family-select" onchange="adjustFontFamily(this.value)">
-                        <option value="Arial">Arial</option>
-                        <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                        <option value="Georgia, serif">Georgia</option>
-                        <option value="'Courier New', Courier, monospace">Courier New</option>
-                        <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
-                    </select>
-                    <label for="font-size-slider">Tamaño:</label>
-                    <input type="range" id="font-size-slider" min="12" max="72" value="24" oninput="adjustTextSize(this.value)">
-                    <span id="font-size-val">24px</span>
-                    
-                    <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
-                    <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
-                    <button class="text-style-btn" id="btn-underline" onclick="toggleTextStyle('underline')"><u>U</u></button>
-                </div>
-            </div>
-
         </div>
 
         <span id="edit-indicator" style="margin-left: auto; color: #888; font-style: italic; font-size: 11px;">
@@ -799,6 +814,29 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Barra flotante dinámica estilo Wondershare PDFelement para edición de texto con botones A+ y A- -->
+    <div id="properties-text-floating" style="display: none;">
+        <strong style="margin-right: 4px; color: #222;">Formato:</strong>
+        <select id="font-family-select" onchange="adjustFontFamily(this.value)">
+            <option value="Arial">Arial</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+        </select>
+        
+        <input type="range" id="font-size-slider" min="12" max="72" value="24" oninput="adjustTextSize(this.value)" style="width: 70px;">
+        <span id="font-size-val" style="color: #333; font-weight: bold;">24px</span>
+        
+        <!-- Botones A+ y A- para modificar tamaño punto a punto -->
+        <button class="text-style-btn" onclick="stepTextSize(1)" title="Aumentar tamaño de texto (A+)">A<sup>+</sup></button>
+        <button class="text-style-btn" onclick="stepTextSize(-1)" title="Disminuir tamaño de texto (A-)">A<sup>-</sup></button>
+        
+        <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
+        <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
+        <button class="text-style-btn" id="btn-underline" onclick="toggleTextStyle('underline')"><u>U</u></button>
     </div>
 
     <!-- Indicador del círculo del borrador -->
@@ -955,6 +993,7 @@
                 workspaceScaler.style.transform = `scale(${customEditorZoom})`;
                 scaleFactor = customEditorZoom;
                 document.getElementById('editor-zoom-label').innerText = Math.round(customEditorZoom * 100) + '%';
+                updateTextToolbarPosition();
                 return;
             }
 
@@ -973,6 +1012,7 @@
 
             workspaceScaler.style.transform = `scale(${scaleFactor})`;
             document.getElementById('editor-zoom-label').innerText = Math.round(scaleFactor * 100) + '%';
+            updateTextToolbarPosition();
         }
         window.addEventListener('resize', resizeWorkspace);
         setTimeout(resizeWorkspace, 100);
@@ -1023,6 +1063,10 @@
                 document.getElementById('range-insert-container').style.display = 'none';
                 document.getElementById('page-previews').innerHTML = "";
                 
+                // Limpiar inputs del rango de páginas
+                document.getElementById('range-start').value = "";
+                document.getElementById('range-end').value = "";
+                
                 pagesA3 = [
                     { id: 1, htmlContent: '<div class="fold-guide"></div>' }
                 ];
@@ -1055,6 +1099,7 @@
             });
         }
 
+        // Añadir página A3
         function addA3Page() {
             const activePage = pagesA3.find(p => p.id === activePageId);
             if (activePage) {
@@ -1529,6 +1574,29 @@
             });
         }
 
+        // Posicionamiento de la barra de formato flotante Wondershare
+        function updateTextToolbarPosition() {
+            const floatingTb = document.getElementById('properties-text-floating');
+            if (!selectedElement || !selectedElement.classList.contains('text-element') || floatingTb.style.display === 'none') {
+                return;
+            }
+            
+            const elementRect = selectedElement.getBoundingClientRect();
+            const containerRect = canvasContainer.getBoundingClientRect();
+            
+            // Calculamos la posición superior izquierda restando el offset del contenedor principal
+            let topPos = elementRect.top - containerRect.top + canvasContainer.scrollTop - floatingTb.offsetHeight - 8;
+            let leftPos = elementRect.left - containerRect.left + canvasContainer.scrollLeft;
+            
+            // Limitamos que no se salga por arriba
+            if (topPos < canvasContainer.scrollTop) {
+                topPos = elementRect.bottom - containerRect.top + canvasContainer.scrollTop + 8;
+            }
+            
+            floatingTb.style.top = topPos + 'px';
+            floatingTb.style.left = leftPos + 'px';
+        }
+
         // HERRAMIENTA: Añadir Texto
         function addTextElement() {
             if (eraserActive) toggleEraser();
@@ -1537,7 +1605,7 @@
             const textEl = document.createElement('div');
             textEl.className = 'text-element';
             textEl.contentEditable = "true";
-            textEl.innerText = "Doble clic para escribir...";
+            textEl.innerText = "";
             textEl.style.left = '100px';
             textEl.style.top = '100px';
             textEl.style.fontSize = '24px';
@@ -1565,7 +1633,7 @@
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
             
             textEl.addEventListener('mousedown', (e) => {
-                if (e.target.closest('#text-tools')) return;
+                if (e.target.closest('#properties-text-floating')) return;
                 if (textEl.classList.contains('editing') || eraserActive) return;
                 e.stopPropagation();
                 deselectAll();
@@ -1591,6 +1659,7 @@
                     pos4 = ev.clientY;
                     textEl.style.top = (textEl.offsetTop - pos2) + "px";
                     textEl.style.left = (textEl.offsetLeft - pos1) + "px";
+                    updateTextToolbarPosition();
                 };
             });
 
@@ -1601,8 +1670,12 @@
                 textEl.focus();
             });
 
+            textEl.addEventListener('input', () => {
+                updateTextToolbarPosition();
+            });
+
             textEl.addEventListener('blur', (e) => {
-                if (e.relatedTarget && e.relatedTarget.closest('#text-tools')) {
+                if (e.relatedTarget && e.relatedTarget.closest('#properties-text-floating')) {
                     textEl.focus();
                     return;
                 }
@@ -1618,6 +1691,7 @@
             if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
             selectedElement.style.fontFamily = font;
             saveState();
+            updateTextToolbarPosition();
         }
 
         function toggleTextStyle(style) {
@@ -1638,6 +1712,17 @@
             }
             saveState();
             selectedElement.focus();
+            updateTextToolbarPosition();
+        }
+
+        // Modificar progresivamente el tamaño de fuente paso a paso (+1 o -1px)
+        function stepTextSize(direction) {
+            if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
+            let currentSize = parseInt(selectedElement.style.fontSize) || 24;
+            let newSize = Math.max(12, Math.min(72, currentSize + direction));
+            
+            adjustTextSize(newSize);
+            document.getElementById('font-size-slider').value = newSize;
         }
 
         // Activación de la herramienta de Selección
@@ -1659,7 +1744,7 @@
 
             document.getElementById('properties-image').style.display = 'none';
             document.getElementById('properties-eraser').style.display = 'none';
-            document.getElementById('properties-text').style.display = 'none';
+            document.getElementById('properties-text-floating').style.display = 'none';
 
             if (type === 'image') {
                 document.getElementById('properties-image').style.display = 'flex';
@@ -1667,7 +1752,8 @@
                 document.getElementById('tool-crop').disabled = false;
                 document.getElementById('edit-indicator').innerHTML = "<strong>Edición de Imagen:</strong> Rotación, borrador o recorte.";
             } else if (type === 'text') {
-                document.getElementById('properties-text').style.display = 'flex';
+                const floatingTb = document.getElementById('properties-text-floating');
+                floatingTb.style.display = 'flex';
                 document.getElementById('tool-rotate-slider').disabled = false;
                 
                 let currentSize = parseInt(selectedElement.style.fontSize) || 24;
@@ -1684,25 +1770,31 @@
                 let match = currentTransform.match(/rotate\(([^)]+)deg\)/);
                 let currentRotation = match ? parseInt(match[1]) : 0;
                 document.getElementById('tool-rotate-slider').value = currentRotation;
-                document.getElementById('rotate-val').innerText = currentRotation + '°';
                 
                 document.getElementById('edit-indicator').innerHTML = "<strong>Edición de Texto:</strong> Formato, rotación o arrastre.";
+                
+                // Mover barra de herramientas flotante al canvasContainer para evitar que se corte por overflow: hidden del workspace
+                if (floatingTb.parentElement !== canvasContainer) {
+                    canvasContainer.appendChild(floatingTb);
+                }
+                
+                updateTextToolbarPosition();
             }
         }
 
         function deselectAll(e) {
-            if (e && e.target.closest('#text-tools, .text-style-btn, select, input, .tool-btn, #photoshop-toolbox')) return;
+            if (e && e.target.closest('#properties-text-floating, .text-style-btn, select, input, .tool-btn, #photoshop-toolbox')) return;
             if (e && e.target.closest('.canvas-element, .text-element, #layers-list')) return;
             if (selectedElement) {
                 selectedElement.classList.remove('editing');
                 if (selectedElement.classList.contains('text-element')) {
-                    selectedElement.style.border = '1px dashed #7f8c8d';
+                    selectedElement.style.border = '2px solid transparent'; // Restablece a contorno invisible
                 }
                 selectedElement = null;
                 enableToolbar('none');
                 
                 document.getElementById('properties-image').style.display = 'flex';
-                document.getElementById('properties-text').style.display = 'none';
+                document.getElementById('properties-text-floating').style.display = 'none';
 
                 document.getElementById('tool-delete').disabled = true;
                 document.getElementById('tool-duplicate').disabled = true;
@@ -1719,6 +1811,7 @@
             selectedElement.style.fontSize = size + 'px';
             document.getElementById('font-size-val').innerText = size + 'px';
             saveState();
+            updateTextToolbarPosition();
         }
 
         function adjustRotation(val) {
@@ -1726,6 +1819,9 @@
             document.getElementById('rotate-val').innerText = val + '°';
             selectedElement.style.transform = `rotate(${val}deg)`;
             saveState();
+            if (selectedElement.classList.contains('text-element')) {
+                updateTextToolbarPosition();
+            }
         }
 
         // Recorte con Cropper
@@ -1788,7 +1884,7 @@
                 canvasElements.forEach(el => el.classList.add('erasing'));
                 
                 document.getElementById('properties-image').style.display = 'none';
-                document.getElementById('properties-text').style.display = 'none';
+                document.getElementById('properties-text-floating').style.display = 'none';
                 document.getElementById('properties-eraser').style.display = 'flex';
 
                 if (currentEraserMode === 'brush') {
@@ -1955,7 +2051,6 @@
                     </div>
                     <div style="display: flex; gap: 3px; align-items: center; flex-shrink: 0;">
                         <button onclick="event.stopPropagation(); toggleLayerVisibility(${i})" style="padding: 2px 4px; font-size: 9px; background-color: ${isHidden ? '#962d22' : '#444'}; color: white; border: none;" title="Mostrar/Ocultar">${eyeIcon}</button>
-                        <button onclick="event.stopPropagation(); selectLayerByIndex(${i})" style="padding: 2px 4px; font-size: 9px; background-color: #444; border:none; color: white;">✏️</button>
                         <button onclick="event.stopPropagation(); deleteLayerByIndex(${i})" style="padding: 2px 4px; font-size: 9px; background-color: #962d22; border:none; color: white;">🗑️</button>
                     </div>
                 `;
@@ -2054,7 +2149,7 @@
                 if (selectedElement && selectedElement !== el) {
                     selectedElement.classList.remove('editing');
                     if (selectedElement.classList.contains('text-element')) {
-                        selectedElement.style.border = '1px dashed #7f8c8d';
+                        selectedElement.style.border = '2px solid transparent';
                     }
                 }
                 selectedElement = el;
@@ -2110,10 +2205,8 @@
             });
         }
 
-        // GUARDAR / CARGAR TRABAJO COMPLETO EN FORMATO JSON
-        function saveProjectJSON() {
-            deselectAll();
-            
+        // GENERAR ESTRUCTURA JSON DEL PROYECTO
+        function getProjectJSONData() {
             const activePage = pagesA3.find(p => p.id === activePageId);
             if (activePage) {
                 activePage.htmlContent = workspace.innerHTML;
@@ -2155,13 +2248,19 @@
                 };
             });
 
-            const projectData = {
+            return {
                 pagesA3: optimizedPages,
                 activePageId: activePageId,
                 insertedPagesCount: insertedPagesCount,
                 imageLibrary: imageLibrary
             };
+        }
 
+        // GUARDAR TRABAJO COMPLETO EN FORMATO JSON
+        function saveProjectJSON() {
+            deselectAll();
+            
+            const projectData = getProjectJSONData();
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData));
             
             let projectTitle = "";
@@ -2239,7 +2338,7 @@
 
             let exportTitle = "";
             while (!exportTitle || exportTitle.trim() === "") {
-                exportTitle = prompt("Por favor, introduce el título del proyecto para exportar los PDF y el ZIP:", "Libreto_Continuo");
+                exportTitle = prompt("Por favor, introduce el título del proyecto para exportar los PDF y el ZIP:", "Libreto Continuo");
                 if (exportTitle === null) return; 
             }
             exportTitle = exportTitle.trim();
@@ -2341,7 +2440,8 @@
                         a3Ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}`;
                         a3Ctx.textBaseline = 'top';
 
-                        a3Ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                        // Mantiene el fondo transparente del lienzo en los textos exportados
+                        a3Ctx.fillStyle = 'rgba(255, 255, 255, 0)';
                         a3Ctx.fillRect(-width/2 * exportScale, -height/2 * exportScale, width * exportScale, height * exportScale);
 
                         a3Ctx.fillStyle = item.style.color || '#000';
@@ -2390,12 +2490,19 @@
             const a3PdfOutput = pdfA3.output('arraybuffer');
             const a4PdfOutput = pdfA4.output('arraybuffer');
 
+            // Generar los datos del JSON actual para la copia de seguridad sin añadir la palabra 'backup'
+            const projectBackupJSON = getProjectJSONData();
+            const jsonStringOutput = JSON.stringify(projectBackupJSON, null, 2);
+
             const zip = new JSZip();
             const a3Folder = zip.folder("Partituras impresion en A3");
             const a4Folder = zip.folder("Partituras en A4");
 
             a3Folder.file(`${exportTitle}_A3.pdf`, a3PdfOutput);
             a4Folder.file(`${exportTitle}_A4.pdf`, a4PdfOutput);
+            
+            // Inclusión de la copia de seguridad .json en la raíz utilizando únicamente el nombre escrito por el usuario
+            zip.file(`${exportTitle}.json`, jsonStringOutput);
 
             zip.generateAsync({ type: "blob" }).then(function(content) {
                 const link = document.createElement('a');
