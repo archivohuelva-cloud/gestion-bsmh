@@ -314,15 +314,15 @@
         #canvas-container {
             flex: 1;
             display: flex;
-            justify-content: flex-start; /* Alineación superior izquierda correcta para soportar scrollbars nativos */
+            justify-content: flex-start; /* Ajuste nativo para soporte de barras de desplazamiento */
             align-items: flex-start;
             background-color: #1e1e1e; /* Gris Photoshop oscuro */
-            overflow: auto; /* Habilita scrollbars cuando el lienzo rebasa la ventana */
+            overflow: auto;
             position: relative;
-            padding: 40px; /* Margen de respiro estándar para no aprisionar el lienzo */
+            padding: 40px;
         }
         #workspace-scaler {
-            transform-origin: top left; /* Evita desplazamientos indeseados al cambiar la escala */
+            transform-origin: top left;
             transition: transform 0.05s ease;
             display: inline-block;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
@@ -397,37 +397,37 @@
             position: absolute;
             cursor: move;
             padding: 5px;
-            border: 2px solid transparent; /* Sin contorno de manera predeterminada */
+            border: 2px solid transparent;
             font-family: inherit;
             min-width: 20px;
             width: auto;
             height: auto;
             display: inline-block;
             outline: none;
-            background: transparent; /* Fondo transparente por defecto */
+            background: transparent;
             z-index: 50;
             box-sizing: border-box;
             white-space: nowrap;
         }
         .text-element.editing {
-            border: 2px solid #00bcd4; /* Borde de edición visible al seleccionar */
+            border: 2px solid #00bcd4;
             background: transparent;
             cursor: text;
         }
 
-        /* Barra de formato flotante para texto estilo Wondershare PDFelement */
+        /* Barra de formato flotante para texto */
         #properties-text-floating {
             display: none;
             position: absolute;
             background-color: #ffffff;
-            border: 1px solid #ccc;
+            border: 2px solid #ccc;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             border-radius: 6px;
             padding: 6px 10px;
             z-index: 2100;
             align-items: center;
             gap: 8px;
-            font-size: 11px;
+            font-size: 12px;
             color: #333;
         }
         #properties-text-floating select,
@@ -644,6 +644,103 @@
             background-color: #3a3a3a !important;
             border: 1px dashed #00bcd4 !important;
         }
+
+        /* PALETA FLOTANTE DE SIGNOS MUSICALES */
+        #music-symbols-palette {
+            background-color: #2c2c2c;
+            border: 1px solid #1c1c1c;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            display: none;
+            position: absolute;
+            top: 130px;
+            left: 65px;
+            width: 290px;
+            z-index: 2100;
+            flex-direction: column;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        #music-palette-header {
+            background-color: #1a1a1a;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #bbb;
+            border-bottom: 1px solid #111;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+        }
+        .palette-tabs-container {
+            display: flex;
+            background-color: #222;
+            border-bottom: 1px solid #1c1c1c;
+        }
+        .palette-tabs-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            white-space: nowrap;
+            flex: 1;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Ocultar scrollbar en navegadores Chrome/Safari/Webkit */
+        .palette-tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Estilos para los botones flecha de navegación de pestañas */
+        .tab-nav-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0 8px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s, background-color 0.15s;
+            font-size: 10px;
+            user-select: none;
+        }
+        .tab-nav-btn:hover {
+            color: #00bcd4;
+            background-color: #222;
+        }
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #2c2c2c;
+        }
+        .symbol-grid-btn {
+            background-color: #383838;
+            border: 1px solid #484848;
+            color: #eee;
+            padding: 10px 4px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+            height: 42px;
+        }
+        .symbol-grid-btn:hover {
+            background-color: #4a4a4a;
+            border-color: #00bcd4;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -693,7 +790,7 @@
                 <div class="tool-control-group">
                     <strong>Borrador:</strong>
                     <select id="eraser-mode" onchange="changeEraserMode(this.value)">
-                        <option value="brush">🖌️ Modo Pincel</option>
+                        <option value="brush">🟠 Modo Pincel (Redondo)</option>
                         <option value="area">🟩 Modo Área (Cuadro)</option>
                     </select>
                     <span id="eraser-size-container">
@@ -706,7 +803,7 @@
         </div>
 
         <span id="edit-indicator" style="margin-left: auto; color: #888; font-style: italic; font-size: 11px;">
-            Haz un clic para seleccionar un elemento.
+            Banda Sinfónica Municipal de Huelva | Adrián Díaz Giráldez | 2026
         </span>
     </div>
 
@@ -714,31 +811,34 @@
         
         <!-- BARRA DE HERRAMIENTAS VERTICAL ESTILO PHOTOSHOP -->
         <div id="photoshop-toolbox">
-            <button class="tool-btn active" id="tool-select-btn" onclick="activateSelectTool()" title="Herramienta Selección / Mover (V)">
+            <button class="tool-btn active" id="tool-select-btn" onclick="activateSelectTool()" title="Selección">
                 ➤
             </button>
             <div class="tool-separator"></div>
-            <button class="tool-btn" id="tool-text-btn" onclick="addTextElement()" title="Herramienta Texto (T)">
+            <button class="tool-btn" id="tool-text-btn" onclick="addTextElement()" title="Texto">
                 𝐓
             </button>
-            <button class="tool-btn" id="tool-crop" onclick="startManualCrop()" disabled title="Recortar Selección (C)">
+            <button class="tool-btn" id="tool-eraser" onclick="toggleEraser()" title="Borrador">
+               ß
+            </button>
+            <button class="tool-btn" id="tool-crop" onclick="startManualCrop()" disabled title="Recortar">
                 ✂
             </button>
-            <button class="tool-btn" id="tool-eraser" onclick="toggleEraser()" title="Borrador (E)">
-                🟠
+            <button class="tool-btn" id="tool-music-symbols" onclick="toggleMusicSymbolsPalette()" title="Signos Musicales">
+                𝄞
             </button>
             <div class="tool-separator"></div>
-            <button class="tool-btn" id="tool-duplicate" onclick="duplicateSelected()" disabled title="Duplicar Selección">
+            <button class="tool-btn" id="tool-duplicate" onclick="duplicateSelected()" disabled title="Duplicar">
                 ⧉
             </button>
-            <button class="tool-btn" id="tool-bring-front" onclick="bringToFront()" disabled title="Traer Selección al Frente">
+            <button class="tool-btn" id="tool-bring-front" onclick="bringToFront()" disabled title="Al Frente">
                 🔺
             </button>
-            <button class="tool-btn" id="tool-send-back" onclick="sendToBack()" disabled title="Enviar Selección al Fondo">
+            <button class="tool-btn" id="tool-send-back" onclick="sendToBack()" disabled title="Al Fondo">
                 🔻
             </button>
             <div class="tool-separator"></div>
-            <button class="tool-btn" id="tool-delete" onclick="deleteSelected()" disabled style="color: #e74c3c;" title="Eliminar Selección (Supr)">
+            <button class="tool-btn" id="tool-delete" onclick="deleteSelected()" disabled style="color: #e74c3c;" title="Eliminar">
                 🗑️
             </button>
         </div>
@@ -746,12 +846,12 @@
         <!-- Panel Izquierdo: Gestión de PDFs -->
         <div id="sidebar-left" class="panel">
             <div class="panel-header">
-                <span>1. Cargar PDFs de Entrada</span>
+                <span>Herramientas</span>
                 <button onclick="toggleSidebar('left')" style="background:transparent; border:none; padding:0; font-size:10px; color: #aaa; cursor:pointer;">◀</button>
             </div>
             <div class="panel-content">
                 <div class="upload-btn" onclick="document.getElementById('pdf-input').click()">
-                    📂 Abrir Archivo PDF
+                    📂 Abrir Partitura PDF
                     <input type="file" id="pdf-input" accept="application/pdf" style="display: none;" onchange="handlePDFUpload(event)">
                 </div>
 
@@ -816,23 +916,183 @@
 
     </div>
 
-    <!-- Barra flotante dinámica estilo Wondershare PDFelement para edición de texto con botones A+ y A- -->
+    <!-- PALETA FLOTANTE DE SIGNOS MUSICALES (Estilo Finale) -->
+    <div id="music-symbols-palette">
+        <div id="music-symbols-palette-header">
+            <span>𝄞 Signos Musicales</span>
+            <button onclick="toggleMusicSymbolsPalette()" style="background:transparent; border:none; color:#aaa; font-weight:bold; cursor:pointer; font-size:11px;">✕</button>
+        </div>
+        <div class="palette-tabs-wrapper" style="display: flex; align-items: center; background-color: #222; border-bottom: 1px solid #1c1c1c; height: 32px; overflow: hidden; position: relative;">
+            <button type="button" class="tab-nav-btn" onclick="scrollTabs(-60)">◀</button>
+            
+            <div class="palette-tabs-container" id="music-tabs-scroll-container">
+                <button type="button" class="palette-tab active" onclick="switchPaletteTab('music-tab-dynamics')">Dinámicas</button>
+                <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-tempos')">Tiempos</button>
+                <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-articulations')">Articulaciones y Signos</button>
+                <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-clefs')">Claves y Alteraciones</button>
+                <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-figures')">Figuras y Silencios</button>
+            </div>
+            
+            <button type="button" class="tab-nav-btn" onclick="scrollTabs(60)">▶</button>
+        </div>
+        
+        <!-- Pestaña 1: Dinámicas -->
+        <div id="music-tab-dynamics" class="palette-grid">
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('p', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">p</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('pp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">pp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('ppp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">ppp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('pppp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">pppp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('f', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">f</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('ff', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">ff</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('fff', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">fff</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('ffff', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">ffff</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('mp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">mp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('mf', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">mf</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('fp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">fp</button>            
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('sfz', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfz</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('sffz', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sffz</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('sfzp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfzp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('sfpp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfpp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('sfp', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfp</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('fz', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">fz</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('rfz', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">rfz</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('sub. p', {fontStyle:'italic', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-size:14px; width:100%; grid-column: span 2;">sub. p</button>
+        </div>
+
+        <!-- Pestaña 2: Tiempos -->
+        <div id="music-tab-tempos" class="palette-grid" style="display:none;">
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Larghissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Larghissimo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Grave', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Grave</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Largo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Largo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Lento', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Lento</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Larghetto', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Larghetto</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Adagio', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Adagio</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Adagietto', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Adagietto</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Andante', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andante</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Andantino', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andantino</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegro moderato', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegro moderato</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Moderato', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Moderato</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegretto', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegretto</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Andante moderato', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andante moderato</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegro', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegro</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Vivace', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Vivace</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Vivacissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Vivacissimo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegrissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegrissimo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegro vivace', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegro vivace</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Presto', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Presto</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Prestissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Prestissimo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Spirito', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Spirito</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Agitato', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Agitato</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Maestoso', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Maestoso</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Dolce', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Dolce</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('A tempo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">A tempo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Tempo primo', {fontStyle:'normal', fontWeight:'bold', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Tempo primo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('a tempo', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">a tempo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('a piacere', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">a piacere</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('accel.', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">accel.</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('accelerando', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">accelerando</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('allargando', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">allargando</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('rall.', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rall.</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('rallentando', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rallentando</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('rit.', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rit.</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('ritardando', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">ritardando</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('poco rit.', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">poco rit.</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('poco rall.', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">poco rall.</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('molto rit.', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">molto rit.</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('stringendo', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">stringendo</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('rubato', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rubato</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('Andante ♩=80', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andante ♩=80</button>        
+        </div>
+
+        <!-- Pestaña 3: Articulaciones y Signos -->
+        <div id="music-tab-articulations" class="palette-grid" style="display:none;">
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('•', {fontSize:'16px', fontWeight:'normal'})" title="Staccato">•</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('>', {fontSize:'16px', fontWeight:'normal'})" title="Acento">&gt;</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('–', {fontSize:'16px', fontWeight:'normal'})" title="Tenuto">–</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄐', {fontSize:'16px'})" title="Calderón">𝄐</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('tr', {fontStyle:'italic', fontWeight:'normal', fontSize:'16px'})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;" title="Trino">tr</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆱', {fontSize:'16px'})" title="Mordente">𝆱</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('^', {fontSize:'16px', fontWeight:'normal'})" title="Marcato">^</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('⋁', {fontSize:'16px', fontWeight:'normal'})" title="Arriba Arco">⋁</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('⊓', {fontSize:'16px', fontWeight:'normal'})" title="Abajo Arco">⊓</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('⁀', {fontSize:'16px', fontWeight:'normal'})" title="Ligadura">⁀</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆒', {fontSize:'36px', fontWeight:'normal'})" title="Regulador Ascendente">𝆒</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆓', {fontSize:'36px', fontWeight:'normal'})" title="Regulador Descendente">𝆓</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄋', {fontSize:'36px', fontWeight:'normal'})" title="S">𝄋</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄌', {fontSize:'56px', fontWeight:'normal'})" title="Coda">𝄌</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄆', {fontSize:'56px', fontWeight:'normal'})" title="Repetición">𝄆</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄇', {fontSize:'56px', fontWeight:'normal'})" title="Repetición">𝄇</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆗', {fontSize:'36px', fontWeight:'normal'})" title="">𝆗</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆘', {fontSize:'36px', fontWeight:'normal'})" title="">𝆘</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆙', {fontSize:'36px', fontWeight:'normal'})" title="">𝆙</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆮', {fontSize:'36px', fontWeight:'normal'})" title="">𝆮</button>
+        </div>
+
+        <!-- Pestaña 4: Claves y alteraciones -->
+        <div id="music-tab-clefs" class="palette-grid" style="display:none;">
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄞', {fontSize:'48px'})" title="Clave de Sol">𝄞</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄟', {fontSize:'48px'})" title="Clave de Sol (8ᵃ alta)">𝄟</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄠', {fontSize:'48px'})" title="Clave de Sol (8ᵃ baja)">𝄠</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄢', {fontSize:'48px'})" title="Clave de Fa">𝄢</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄣', {fontSize:'48px'})" title="Clave de Fa (8ᵃ alta)">𝄣</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄤', {fontSize:'48px'})" title="Clave de Fa (8ᵃ baja)">𝄤</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄡', {fontSize:'48px'})" title="Clave de Do">𝄡</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄶', {fontSize:'48px'})" title="Octava Alta">𝄶</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄷', {fontSize:'48px'})" title="Octava Baja">𝄷</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('♯', {fontSize:'36px'})" title="Sostenido">♯</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('♭', {fontSize:'36px'})" title="Bemol">♭</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('♮', {fontSize:'36px'})" title="Becuadro">♮</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄪', {fontSize:'36px'})" title="Doble Sostenido">𝄪</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄫', {fontSize:'36px'})" title="Doble Bemol">𝄫</button>
+        </div>
+
+        <!-- Pestaña 5: Figuras y silencios-->
+        <div id="music-tab-figures" class="palette-grid" style="display:none;">
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅜', {fontSize:'42px'})" title="Figura de Cuadrada">𝅜</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅝', {fontSize:'42px'})" title="Figura de Redonda">𝅝</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅗𝅥', {fontSize:'42px'})" title="Figura de Blanca">𝅗𝅥</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥', {fontSize:'42px'})" title="Figura de Negra">𝅘𝅥</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅮', {fontSize:'42px'})" title="Figura de Corchea">𝅘𝅥𝅮</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅯', {fontSize:'42px'})" title="Figura de Semicorchea">𝅘𝅥𝅯</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅰', {fontSize:'42px'})" title="Figura de Fusa">𝅘𝅥𝅰</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅱', {fontSize:'42px'})" title="Figura de Semifusa">𝅘𝅥𝅱</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄺', {fontSize:'42px'})" title="Silencio de Cuadrada">𝄺</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄻', {fontSize:'42px'})" title="Silencio de Redonda">𝄻</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄼', {fontSize:'42px'})" title="Silencio de Blanca">𝄼</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄽', {fontSize:'42px'})" title="Silencio de Negra">𝄽</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄾', {fontSize:'42px'})" title="Silencio de Corchea">𝄾</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄿', {fontSize:'42px'})" title="Silencio de Semicorchea">𝄿</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅀', {fontSize:'42px'})" title="Silencio de Fusa">𝅀</button>
+            <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅁', {fontSize:'42px'})" title="Silencio de Semifusa">𝅁</button>
+        </div>
+    </div>
+
+    <!-- Barra flotante dinámica estilo Wondershare PDFelement para edición de texto -->
     <div id="properties-text-floating" style="display: none;">
-        <strong style="margin-right: 4px; color: #222;">Formato:</strong>
+        <strong style="margin-right: 4px; color: #222; font-family: sans-serif; font-size: 12px;">Fuente:</strong>
         <select id="font-family-select" onchange="adjustFontFamily(this.value)">
+            <!-- Fuentes originales -->
             <option value="Arial">Arial</option>
-            <option value="'Times New Roman', Times, serif">Times New Roman</option>
-            <option value="Georgia, serif">Georgia</option>
+            <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
             <option value="'Courier New', Courier, monospace">Courier New</option>
+            <option value="'Gabriola', sans-serif">Gabriola</option>
+            <option value="Garamond, serif">Garamond</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Impact, Charcoal, sans-serif">Impact</option>
+            <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+            <option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</option>
+            <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
             <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+            <option value="Verdana, Geneva, sans-serif">Verdana</option>  
         </select>
         
         <input type="range" id="font-size-slider" min="12" max="72" value="24" oninput="adjustTextSize(this.value)" style="width: 70px;">
-        <span id="font-size-val" style="color: #333; font-weight: bold;">24px</span>
+        <span id="font-size-val" style="color: #333; font-weight: bold; font-family: sans-serif; line-height: 34px;">24px</span>
         
         <!-- Botones A+ y A- para modificar tamaño punto a punto -->
-        <button class="text-style-btn" onclick="stepTextSize(1)" title="Aumentar tamaño de texto (A+)">A<sup>+</sup></button>
-        <button class="text-style-btn" onclick="stepTextSize(-1)" title="Disminuir tamaño de texto (A-)">A<sup>-</sup></button>
+        <button class="text-style-btn" onclick="stepTextSize(1)" title="Aumentar tamaño de texto (A+)">A+</button>
+        <button class="text-style-btn" onclick="stepTextSize(-1)" title="Disminuir tamaño de texto (A-)">A-</button>
         
         <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
         <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
@@ -1584,11 +1844,9 @@
             const elementRect = selectedElement.getBoundingClientRect();
             const containerRect = canvasContainer.getBoundingClientRect();
             
-            // Calculamos la posición superior izquierda restando el offset del contenedor principal
             let topPos = elementRect.top - containerRect.top + canvasContainer.scrollTop - floatingTb.offsetHeight - 8;
             let leftPos = elementRect.left - containerRect.left + canvasContainer.scrollLeft;
             
-            // Limitamos que no se salga por arriba
             if (topPos < canvasContainer.scrollTop) {
                 topPos = elementRect.bottom - containerRect.top + canvasContainer.scrollTop + 8;
             }
@@ -1715,7 +1973,6 @@
             updateTextToolbarPosition();
         }
 
-        // Modificar progresivamente el tamaño de fuente paso a paso (+1 o -1px)
         function stepTextSize(direction) {
             if (!selectedElement || !selectedElement.classList.contains('text-element')) return;
             let currentSize = parseInt(selectedElement.style.fontSize) || 24;
@@ -1754,6 +2011,7 @@
             } else if (type === 'text') {
                 const floatingTb = document.getElementById('properties-text-floating');
                 floatingTb.style.display = 'flex';
+                document.getElementById('properties-image').style.display = 'flex';
                 document.getElementById('tool-rotate-slider').disabled = false;
                 
                 let currentSize = parseInt(selectedElement.style.fontSize) || 24;
@@ -1770,10 +2028,10 @@
                 let match = currentTransform.match(/rotate\(([^)]+)deg\)/);
                 let currentRotation = match ? parseInt(match[1]) : 0;
                 document.getElementById('tool-rotate-slider').value = currentRotation;
+                document.getElementById('rotate-val').innerText = currentRotation + '°';
                 
                 document.getElementById('edit-indicator').innerHTML = "<strong>Edición de Texto:</strong> Formato, rotación o arrastre.";
                 
-                // Mover barra de herramientas flotante al canvasContainer para evitar que se corte por overflow: hidden del workspace
                 if (floatingTb.parentElement !== canvasContainer) {
                     canvasContainer.appendChild(floatingTb);
                 }
@@ -1783,12 +2041,12 @@
         }
 
         function deselectAll(e) {
-            if (e && e.target.closest('#properties-text-floating, .text-style-btn, select, input, .tool-btn, #photoshop-toolbox')) return;
+            if (e && e.target.closest('#properties-text-floating, .text-style-btn, select, input, .tool-btn, #photoshop-toolbox, #music-symbols-palette')) return;
             if (e && e.target.closest('.canvas-element, .text-element, #layers-list')) return;
             if (selectedElement) {
                 selectedElement.classList.remove('editing');
                 if (selectedElement.classList.contains('text-element')) {
-                    selectedElement.style.border = '2px solid transparent'; // Restablece a contorno invisible
+                    selectedElement.style.border = '2px solid transparent';
                 }
                 selectedElement = null;
                 enableToolbar('none');
@@ -1818,10 +2076,11 @@
             if (!selectedElement) return;
             document.getElementById('rotate-val').innerText = val + '°';
             selectedElement.style.transform = `rotate(${val}deg)`;
-            saveState();
+            
             if (selectedElement.classList.contains('text-element')) {
                 updateTextToolbarPosition();
             }
+            saveState();
         }
 
         // Recorte con Cropper
@@ -2440,7 +2699,6 @@
                         a3Ctx.font = `${fontStyle} ${fontWeight} ${scaledFontSize}px ${fontFamily}`;
                         a3Ctx.textBaseline = 'top';
 
-                        // Mantiene el fondo transparente del lienzo en los textos exportados
                         a3Ctx.fillStyle = 'rgba(255, 255, 255, 0)';
                         a3Ctx.fillRect(-width/2 * exportScale, -height/2 * exportScale, width * exportScale, height * exportScale);
 
@@ -2490,19 +2748,17 @@
             const a3PdfOutput = pdfA3.output('arraybuffer');
             const a4PdfOutput = pdfA4.output('arraybuffer');
 
-            // Generar los datos del JSON actual para la copia de seguridad sin añadir la palabra 'backup'
+            // Generar los datos del JSON actual para la copia de seguridad
             const projectBackupJSON = getProjectJSONData();
             const jsonStringOutput = JSON.stringify(projectBackupJSON, null, 2);
 
+            // Generación de estructura ZIP limpia
             const zip = new JSZip();
-            const a3Folder = zip.folder("Partituras impresion en A3");
-            const a4Folder = zip.folder("Partituras en A4");
+            const projectFolder = zip.folder(exportTitle);
 
-            a3Folder.file(`${exportTitle}_A3.pdf`, a3PdfOutput);
-            a4Folder.file(`${exportTitle}_A4.pdf`, a4PdfOutput);
-            
-            // Inclusión de la copia de seguridad .json en la raíz utilizando únicamente el nombre escrito por el usuario
-            zip.file(`${exportTitle}.json`, jsonStringOutput);
+            projectFolder.file(`${exportTitle} A3.pdf`, a3PdfOutput);
+            projectFolder.file(`${exportTitle} A4.pdf`, a4PdfOutput);
+            projectFolder.file(`${exportTitle}.json`, jsonStringOutput);
 
             zip.generateAsync({ type: "blob" }).then(function(content) {
                 const link = document.createElement('a');
@@ -2512,9 +2768,129 @@
             });
         }
 
-        // Inicio
+        // FUNCIONES DE LA NUEVA PALETA DE SÍMBOLOS MUSICALES
+
+        // Alternar visualización de la paleta flotante
+        function toggleMusicSymbolsPalette() {
+            const palette = document.getElementById('music-symbols-palette');
+            const btn = document.getElementById('tool-music-symbols');
+            
+            if (palette.style.display === 'none' || palette.style.display === '') {
+                if (eraserActive) toggleEraser();
+                palette.style.display = 'flex';
+                btn.classList.add('active');
+            } else {
+                palette.style.display = 'none';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Cambiar pestañas dentro de la paleta
+        function switchPaletteTab(tabId) {
+            document.querySelectorAll('#music-symbols-palette .palette-grid').forEach(grid => {
+                grid.style.display = 'none';
+            });
+            document.querySelectorAll('#music-symbols-palette .palette-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const targetGrid = document.getElementById(tabId);
+            if (targetGrid) {
+                targetGrid.style.display = 'grid';
+            } else {
+                console.warn("No se encontró la pestaña con ID: " + tabId);
+            }
+
+            if (typeof event !== 'undefined' && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        // Insertar símbolo musical seleccionado como un elemento de texto
+        function addMusicSymbol(character, settings = {}) {
+            if (eraserActive) toggleEraser();
+            activateSelectTool();
+
+            const textEl = document.createElement('div');
+            textEl.className = 'text-element';
+            textEl.contentEditable = "true";
+            textEl.innerText = character;
+            
+            textEl.style.left = '150px';
+            textEl.style.top = '150px';
+            textEl.style.fontSize = settings.fontSize || '32px';
+            textEl.style.color = '#000000';
+            textEl.style.fontWeight = settings.fontWeight || 'normal';
+            textEl.style.fontStyle = settings.fontStyle || 'normal';
+            textEl.style.textDecoration = 'none';
+            textEl.style.fontFamily = settings.fontFamily || "'Times New Roman', Times, serif";
+            textEl.style.transform = 'rotate(0deg)';
+            
+            textEl.setAttribute('data-layer-name', `🎵 Signo: ${character}`);
+
+            bindTextEvents(textEl);
+            workspace.appendChild(textEl);
+            saveState();
+            
+            deselectAll();
+            selectedElement = textEl;
+            textEl.style.border = "2px solid #00bcd4";
+            enableToolbar('text');
+            renderLayersList();
+        }
+
+        // Hacer que un elemento HTML sea arrastrable por su cabecera
+        function makeElementDraggable(elmnt) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            const header = document.getElementById(elmnt.id + "-header");
+            
+            if (header) {
+                header.onmousedown = dragMouseDown;
+            } else {
+                elmnt.onmousedown = dragMouseDown;
+            }
+
+            function dragMouseDown(e) {
+                if (e.target.closest('button')) return; 
+                e = e || window.event;
+                e.preventDefault();
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // Desplazar las pestañas horizontalmente
+        function scrollTabs(offset) {
+            const container = document.getElementById('music-tabs-scroll-container');
+            if (container) {
+                container.scrollLeft += offset;
+            }
+        }
+
+        // Inicialización al cargar la página
         renderA3PagesList();
         saveState();
+        
+        // Habilitar el arrastre de la paleta musical flotante
+        makeElementDraggable(document.getElementById('music-symbols-palette'));
     </script>
 </body>
 </html>
