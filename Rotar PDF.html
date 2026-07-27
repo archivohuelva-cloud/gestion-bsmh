@@ -78,7 +78,7 @@
 <body>
 
 <div class="container">
-    <h1>Editor PDF: Rotación y Selección Avanzada</h1>
+    <h1>Editor de partituras PDF: Rotación y Selección Avanzada</h1>
     
     <div id="drop-zone">Arrastra archivos o carpetas aquí <br><small>(Shift+Click: Rango | Ctrl+Z: Deshacer | Ctrl+Y: Rehacer)</small></div>
 
@@ -193,26 +193,63 @@
         document.addEventListener(n, e => { e.preventDefault(); e.stopPropagation(); });
     });
 
-    document.getElementById('drop-zone').addEventListener('drop', async (e) => {
-        const items = e.dataTransfer.items;
-        if (!items) return;
-        allPagesData = []; pdfFiles = []; pagesGrid.innerHTML = '';
-        history = []; historyStep = -1;
-        toolbar.style.display = 'none';
-        progressContainer.style.display = 'block';
-        updateProgressBar(0);
+document.getElementById('drop-zone').addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
+    allPagesData = [];
+    pdfFiles = [];
+    pagesGrid.innerHTML = '';
+
+    history = [];
+    historyStep = -1;
+
+    toolbar.style.display = 'none';
+    progressContainer.style.display = 'block';
+    updateProgressBar(0);
+
+    // 1) Capturar TODAS las entradas (archivos y carpetas) de forma SÍNCRONA,
+    // antes de cualquier "await". dataTransfer.items se invalida en cuanto
+    // el navegador cede el control, así que si no se capturan ya mismo,
+    // al arrastrar una carpeta junto con más elementos algunos se perdían.
+    const items = e.dataTransfer.items;
+    const droppedEntries = [];
+
+    if (items) {
         for (let i = 0; i < items.length; i++) {
-            const item = items[i].webkitGetAsEntry();
-            if (item) await traverse(item);
+            const entry = items[i].webkitGetAsEntry
+                ? items[i].webkitGetAsEntry()
+                : null;
+            if (entry) droppedEntries.push(entry);
         }
-        await loadAllPages();
-        
-        toolbar.style.display = 'flex';
-        progressContainer.style.display = 'none';
-        saveHistory(); // Estado inicial
-        updateCounter();
-    });
+    }
+
+    if (droppedEntries.length > 0) {
+        // 2) Recorrer cada entrada: si es una carpeta se explora de forma
+        // recursiva (incluidas las subcarpetas) y se añaden todos sus PDF;
+        // si es un archivo suelto, se añade directamente.
+        for (const entry of droppedEntries) {
+            await traverse(entry);
+        }
+    } else {
+        // Alternativa por si el navegador no soporta webkitGetAsEntry:
+        // se usan los archivos sueltos tal cual llegan en dataTransfer.files.
+        const files = [...e.dataTransfer.files];
+        for (const file of files) {
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                pdfFiles.push({ file, path: file.name });
+            }
+        }
+    }
+
+    await loadAllPages();
+
+    toolbar.style.display = 'flex';
+    progressContainer.style.display = 'none';
+
+    saveHistory();
+    updateCounter();
+});
 
     async function traverse(item, path = "") {
         if (item.isFile) {
@@ -220,7 +257,16 @@
             if (file.name.toLowerCase().endsWith('.pdf')) pdfFiles.push({ file, path: path + file.name });
         } else if (item.isDirectory) {
             const reader = item.createReader();
-            const entries = await new Promise(r => reader.readEntries(r));
+            // readEntries() solo devuelve un lote (hasta 100 elementos) por
+            // llamada, así que hay que seguir llamando hasta que devuelva un
+            // array vacío para leer TODO el contenido de la carpeta.
+            let entries = [];
+            let batch;
+            do {
+                batch = await new Promise(r => reader.readEntries(r));
+                entries = entries.concat(batch);
+            } while (batch.length > 0);
+
             for (const e of entries) await traverse(e, path + item.name + "/");
         }
     }
