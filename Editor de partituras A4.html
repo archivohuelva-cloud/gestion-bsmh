@@ -35,6 +35,7 @@
         
         canvas:active { cursor: grabbing; }
         canvas.mode-erase { cursor: none; } 
+        canvas.mode-erase-area { cursor: crosshair !important; }
         canvas.mode-transform { cursor: default; }
         canvas.mode-text { cursor: text; }
         canvas.text-selected { cursor: move !important; }
@@ -77,6 +78,168 @@
             font-size: 14px;
             font-family: Arial, sans-serif;
         }
+
+        /* Estilos del panel de formato flotante */
+        #properties-text-floating {
+            display: none;
+            position: absolute;
+            background-color: #ffffff;
+            border: 2px solid #ccc;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 6px;
+            padding: 6px 10px;
+            z-index: 2100;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #333;
+        }
+        #properties-text-floating select,
+        #properties-text-floating input[type="range"] {
+            background-color: #f2f2f2;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            outline: none;
+        }
+        #properties-text-floating .text-style-btn {
+            background-color: #f2f2f2;
+            color: #555;
+            border: 1px solid #ccc;
+            padding: 3px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        #properties-text-floating .text-style-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        /* Estilos para el visor o trazo visual de borrado por área */
+        #eraser-area-preview-box {
+            display: none;
+            position: fixed;
+            border: 2px dashed #e67e22;
+            background-color: rgba(230, 126, 34, 0.25);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* ESTILOS DE LA PALETA DE SIGNOS MUSICALES */
+        #music-symbols-palette-container {
+            background-color: #2c2c2c;
+            border: 1px solid #1c1c1c;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        #music-palette-header {
+            background-color: #1a1a1a;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #bbb;
+            border-bottom: 1px solid #111;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .palette-tabs-wrapper {
+            display: flex;
+            align-items: center;
+            background-color: #222;
+            border-bottom: 1px solid #1c1c1c;
+            height: 32px;
+            overflow: hidden;
+            position: relative;
+        }
+        .palette-tabs-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            white-space: nowrap;
+            flex: 1;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .palette-tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+        .palette-tab {
+            background: transparent;
+            border: none;
+            color: #888;
+            padding: 0 10px;
+            font-size: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 100%;
+            display: inline-flex;
+            align-items: center;
+            transition: color 0.15s, background-color 0.15s;
+        }
+        .palette-tab.active {
+            color: #3b82f6;
+            background-color: #2c2c2c;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .tab-nav-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 0 8px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s, background-color 0.15s;
+            font-size: 10px;
+            user-select: none;
+        }
+        .tab-nav-btn:hover {
+            color: #3b82f6;
+            background-color: #222;
+        }
+        .palette-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            padding: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            background-color: #2c2c2c;
+        }
+        .symbol-grid-btn {
+            background-color: #383838;
+            border: 1px solid #484848;
+            color: #eee;
+            padding: 8px 4px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+            height: 38px;
+        }
+        .symbol-grid-btn:hover {
+            background-color: #4a4a4a;
+            border-color: #3b82f6;
+            color: #fff;
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 h-screen flex flex-col overflow-hidden font-sans">
@@ -106,7 +269,6 @@
             </label>
             <input type="file" id="pdf-upload" accept="application/pdf,image/*" class="hidden" multiple>
             
-            <!-- Corregido el cierre anidado de botones del código original -->
             <button id="export-btn" class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-500 text-white px-4 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium" disabled>
                 <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
             </button>
@@ -128,18 +290,33 @@
     </div>
 
     <div class="flex flex-1 overflow-hidden">
+        <!-- MENÚ LATERAL IZQUIERDO -->
         <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shadow-sm overflow-y-auto">
             <div class="p-4 border-b bg-slate-50 flex items-center justify-between">
                 <button id="prev-page" class="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition" disabled><i data-lucide="chevron-left"></i></button>
-                <span class="text-sm font-bold">Pág. <span id="page-num">0</span> / <span id="page-count">0</span></span>
+                <div class="flex flex-col items-center">
+                    <span class="text-sm font-bold">Pág. <span id="page-num">0</span> / <span id="page-count">0</span></span>
+                    <button id="delete-page-btn" class="text-[10px] text-rose-600 font-bold flex items-center gap-1 hover:text-rose-800 transition mt-1" title="Eliminar esta página (Supr)">
+                        <i data-lucide="trash-2" class="w-3 h-3"></i> Eliminar PDF
+                    </button>
+                </div>
                 <button id="next-page" class="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition" disabled><i data-lucide="chevron-right"></i></button>
+            </div>
+            
+            <div class="p-3 border-b bg-slate-100 flex items-center justify-between text-xs">
+                <span class="font-bold text-slate-700">Copias a exportar:</span>
+                <div class="flex items-center gap-1">
+                    <button id="copy-minus" class="p-1 bg-slate-300 hover:bg-slate-400 rounded transition"><i data-lucide="minus" class="w-3 h-3 text-slate-800"></i></button>
+                    <input type="number" id="page-copies" class="w-12 text-center text-[12px] font-bold border border-slate-300 rounded p-1 bg-white" value="1" min="1">
+                    <button id="copy-plus" class="p-1 bg-slate-300 hover:bg-slate-400 rounded transition"><i data-lucide="plus" class="w-3 h-3 text-slate-800"></i></button>
+                </div>
             </div>
 
             <div class="p-4 flex flex-col gap-6" id="tools-container" style="opacity: 0.5; pointer-events: none;">
                 <div>
                     <h3 class="text-[10px] font-black text-slate-400 uppercase mb-2">Herramientas</h3>
                     <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-md">
-                        <button id="mode-pan" class="py-2 text-[10px] font-bold rounded bg-white shadow-sm text-blue-700 flex flex-col items-center gap-1">
+                        <button id="mode-pan" class="py-2 text-[10px] font-bold rounded bg-blue-600 text-white shadow-sm flex flex-col items-center gap-1">
                             <i data-lucide="move" class="w-4 h-4"></i>Mover
                         </button>
                         <button id="mode-erase" class="py-2 text-[10px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
@@ -151,34 +328,229 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3">
+                <!-- Opciones de Mover (Transform) -->
+                <div id="options-pan" class="flex flex-col gap-3">
                     <h3 class="text-[10px] font-black text-slate-400 uppercase">Ajustes Rápidos</h3>
+                    
+                    <div class="flex items-center gap-2 mb-1 bg-blue-50 p-2 rounded border border-blue-100">
+                        <input type="checkbox" id="apply-all-checkbox" class="w-4 h-4 cursor-pointer text-blue-600 rounded">
+                        <label for="apply-all-checkbox" class="text-[11px] font-bold text-blue-900 cursor-pointer select-none">Aplicar a todas las páginas</label>
+                    </div>
+
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-[11px] font-bold text-slate-600">Escala Partitura</label>
-                            <input type="number" id="scale-num-input" class="w-16 text-[10px] font-mono text-blue-600 bg-blue-50 px-1 rounded border border-blue-200 text-center" value="1.00" step="0.01">
+                            <div class="flex items-center gap-1">
+                                <button id="scale-minus" class="p-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition"><i data-lucide="minus" class="w-3 h-3"></i></button>
+                                <input type="number" id="scale-num-input" class="w-20 text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 text-center" value="1.00" step="0.01">
+                                <button id="scale-plus" class="p-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition"><i data-lucide="plus" class="w-3 h-3"></i></button>
+                            </div>
                         </div>
                         <input type="range" id="scale-slider" min="0.1" max="3" step="0.01" value="1">
                     </div>
                     <div>
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-[11px] font-bold text-slate-600">Rotación</label>
-                            <input type="number" id="rot-num-input" class="w-16 text-[10px] font-mono text-blue-600 bg-blue-50 px-1 rounded border border-blue-200 text-center" value="0" step="0.5">
+                            <div class="flex items-center gap-1">
+                                <button id="rot-minus" class="p-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition"><i data-lucide="minus" class="w-3 h-3"></i></button>
+                                <input type="number" id="rot-num-input" class="w-20 text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 text-center" value="0" step="0.5">
+                                <button id="rot-plus" class="p-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition"><i data-lucide="plus" class="w-3 h-3"></i></button>
+                            </div>
                         </div>
                         <input type="range" id="rot-slider" min="-180" max="180" step="0.5" value="0">
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3">
+                <!-- Opciones de Goma (Modos Pincel / Área) -->
+                <div id="options-erase" class="flex flex-col gap-3 hidden">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase">Ajustes Borrador</h3>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-600 block mb-1">Modo de Borrado</label>
+                        <select id="eraser-mode" class="w-full bg-slate-100 text-slate-800 border border-slate-300 p-2 rounded text-xs mb-3 outline-none cursor-pointer" onchange="changeEraserMode(this.value)">
+                            <option value="brush">🟠 Modo Pincel (Redondo)</option>
+                            <option value="area">🟩 Modo Área (Cuadrada)</option>
+                        </select>
+                        <div id="eraser-size-container">
+                            <label class="text-[11px] font-bold text-slate-600">Tamaño Borrador</label>
+                            <input type="range" id="erase-size-slider" min="10" max="600" value="150">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opciones de Texto -->
+                <div id="options-text" class="flex flex-col gap-3 hidden">
                     <h3 class="text-[10px] font-black text-slate-400 uppercase">Edición Texto</h3>
-                    <div id="text-settings" class="mb-2 hidden bg-blue-50 p-3 rounded border border-blue-100 shadow-sm">
+                    <div id="text-settings" class="mb-2 bg-blue-50 p-3 rounded border border-blue-100 shadow-sm">
+                         
+                         <div class="flex items-center gap-2 mb-3 bg-white p-2 rounded border border-blue-200">
+                            <input type="checkbox" id="apply-texts-all-checkbox" class="w-4 h-4 cursor-pointer text-blue-600 rounded">
+                            <label for="apply-texts-all-checkbox" class="text-[10px] font-bold text-blue-900 cursor-pointer select-none">Sincronizar textos de pág. 1</label>
+                         </div>
+
                          <label class="text-[10px] font-bold text-blue-800 block mb-1">Tamaño Fuente</label>
-                         <input type="range" id="text-size-slider" min="10" max="100" value="30" class="mb-3">
+                         <input type="range" id="text-size-slider" min="10" max="300" value="30" class="mb-3 w-full">
+                         
+                         <label class="text-[10px] font-bold text-blue-800 block mb-1">Rotación Texto</label>
+                         <div class="flex justify-between items-center mb-3">
+                             <input type="range" id="text-rot-slider" min="-180" max="180" value="0" class="w-2/3">
+                             <input type="number" id="text-rot-num" class="w-12 text-[10px] font-mono text-blue-600 bg-white px-1 rounded border border-blue-200 text-center" value="0">
+                         </div>
+
                          <button id="delete-text" class="w-full py-1.5 text-[10px] bg-rose-100 text-rose-700 rounded font-bold hover:bg-rose-200 transition">
                             Eliminar Texto Seleccionado
-                         </button>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PALETA FLOTANTE DE SIGNOS MUSICALES -->
+                <div id="music-symbols-palette-container">
+                    <div id="music-palette-header">
+                        <span>𝄞 Signos Musicales</span>
+                    </div>
+                    <div class="palette-tabs-wrapper">
+                        <button type="button" class="tab-nav-btn" onclick="scrollTabs(-60)">◀</button>
+                        <div class="palette-tabs-container" id="music-tabs-scroll-container">
+                            <button type="button" class="palette-tab active" onclick="switchPaletteTab('music-tab-dynamics')">Dinámicas</button>
+                            <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-tempos')">Tiempos</button>
+                            <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-articulations')">Articulaciones y Signos</button>
+                            <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-clefs')">Claves y Alteraciones</button>
+                            <button type="button" class="palette-tab" onclick="switchPaletteTab('music-tab-figures')">Figuras y Silencios</button>
+                        </div>
+                        <button type="button" class="tab-nav-btn" onclick="scrollTabs(60)">▶</button>
+                    </div>
+                    
+                    <!-- Pestaña 1: Dinámicas -->
+                    <div id="music-tab-dynamics" class="palette-grid">
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('p', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">p</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('pp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">pp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('ppp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">ppp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('pppp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">pppp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('f', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">f</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('ff', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">ff</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('fff', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">fff</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('ffff', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">ffff</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('mp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">mp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('mf', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">mf</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('fp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">fp</button>            
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('sfz', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfz</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('sffz', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sffz</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('sfzp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfzp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('sfpp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfpp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('sfp', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">sfp</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('fz', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">fz</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('rfz', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;">rfz</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('sub. p', {fontStyle:'italic', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-size:14px; width:100%; grid-column: span 2;">sub. p</button>
                     </div>
 
+                    <!-- Pestaña 2: Tiempos -->
+                    <div id="music-tab-tempos" class="palette-grid" style="display:none;">
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Larghissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Larghissimo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Grave', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Grave</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Largo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Largo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Lento', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Lento</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Larghetto', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Larghetto</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Adagio', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Adagio</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Adagietto', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Adagietto</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Andante', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andante</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Andantino', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andantino</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegro moderato', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegro moderato</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Moderato', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Moderato</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegretto', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegretto</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Andante moderato', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andante moderato</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegro', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegro</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Vivace', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Vivace</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Vivacissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Vivacissimo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegrissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegrissimo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Allegro vivace', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Allegro vivace</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Presto', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Presto</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Prestissimo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Prestissimo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Spirito', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Spirito</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Agitato', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Agitato</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Maestoso', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Maestoso</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Dolce', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Dolce</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('A tempo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">A tempo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Tempo primo', {fontStyle:'normal', fontWeight:'bold', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Tempo primo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('a tempo', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">a tempo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('a piacere', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">a piacere</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('accel.', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">accel.</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('accelerando', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">accelerando</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('allargando', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">allargando</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('rall.', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rall.</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('rallentando', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rallentando</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('rit.', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rit.</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('ritardando', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">ritardando</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('poco rit.', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">poco rit.</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('poco rall.', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">poco rall.</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('molto rit.', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">molto rit.</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('stringendo', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">stringendo</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('rubato', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">rubato</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('Andante ♩=80', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:normal; font-size:14px; width:100%; grid-column: span 2;">Andante ♩=80</button>        
+                    </div>
+
+                    <!-- Pestaña 3: Articulaciones y Signos -->
+                    <div id="music-tab-articulations" class="palette-grid" style="display:none;">
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('•', {fontSize:40, fontWeight:'normal'})" title="Staccato">•</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('>', {fontSize:40, fontWeight:'normal'})" title="Acento">&gt;</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('–', {fontSize:40, fontWeight:'normal'})" title="Tenuto">–</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄐', {fontSize:40})" title="Calderón">𝄐</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('tr', {fontStyle:'italic', fontWeight:'normal', fontSize:40})" style="font-family:'Times New Roman', serif; font-style:italic; font-weight:bold;" title="Trino">tr</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆱', {fontSize:40})" title="Mordente">𝆱</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('^', {fontSize:40, fontWeight:'normal'})" title="Marcato">^</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('⋁', {fontSize:40, fontWeight:'normal'})" title="Arriba Arco">⋁</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('⊓', {fontSize:40, fontWeight:'normal'})" title="Abajo Arco">⊓</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('⁀', {fontSize:40, fontWeight:'normal'})" title="Ligadura">⁀</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆒', {fontSize:40, fontWeight:'normal'})" title="Regulador Ascendente">𝆒</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆓', {fontSize:40, fontWeight:'normal'})" title="Regulador Descendente">𝆓</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄋', {fontSize:40, fontWeight:'normal'})" title="S">𝄋</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄌', {fontSize:56, fontWeight:'normal'})" title="Coda">𝄌</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄆', {fontSize:56, fontWeight:'normal'})" title="Repetición">𝄆</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄇', {fontSize:56, fontWeight:'normal'})" title="Repetición">𝄇</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆗', {fontSize:40, fontWeight:'normal'})" title="">𝆗</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆘', {fontSize:40, fontWeight:'normal'})" title="">𝆘</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆙', {fontSize:40, fontWeight:'normal'})" title="">𝆙</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝆮', {fontSize:40, fontWeight:'normal'})" title="">𝆮</button>
+                    </div>
+
+                    <!-- Pestaña 4: Claves y alteraciones -->
+                    <div id="music-tab-clefs" class="palette-grid" style="display:none;">
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄞', {fontSize:48})" title="Clave de Sol">𝄞</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄟', {fontSize:48})" title="Clave de Sol (8ᵃ alta)">𝄟</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄠', {fontSize:48})" title="Clave de Sol (8ᵃ baja)">𝄠</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄢', {fontSize:48})" title="Clave de Fa">𝄢</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄣', {fontSize:48})" title="Clave de Fa (8ᵃ alta)">𝄣</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄤', {fontSize:48})" title="Clave de Fa (8ᵃ baja)">𝄤</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄡', {fontSize:48})" title="Clave de Do">𝄡</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄶', {fontSize:48})" title="Octava Alta">𝄶</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄷', {fontSize:48})" title="Octava Baja">𝄷</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('♯', {fontSize:36})" title="Sostenido">♯</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('♭', {fontSize:36})" title="Bemol">♭</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('♮', {fontSize:36})" title="Becuadro">♮</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄪', {fontSize:36})" title="Doble Sostenido">𝄪</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄫', {fontSize:36})" title="Doble Bemol">𝄫</button>
+                    </div>
+
+                    <!-- Pestaña 5: Figuras y silencios-->
+                    <div id="music-tab-figures" class="palette-grid" style="display:none;">
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅜', {fontSize:42})" title="Figura de Cuadrada">𝅜</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅝', {fontSize:42})" title="Figura de Redonda">𝅝</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅗𝅥', {fontSize:42})" title="Figura de Blanca">𝅗𝅥</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥', {fontSize:42})" title="Figura de Negra">𝅘𝅥</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅮', {fontSize:42})" title="Figura de Corchea">𝅘𝅥𝅮</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅯', {fontSize:42})" title="Figura de Semicorchea">𝅘𝅥𝅯</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅰', {fontSize:42})" title="Figura de Fusa">𝅘𝅥𝅰</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅘𝅥𝅱', {fontSize:42})" title="Figura de Semifusa">𝅘𝅥𝅱</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄺', {fontSize:42})" title="Silencio de Cuadrada">𝄺</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄻', {fontSize:42})" title="Silencio de Redonda">𝄻</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄼', {fontSize:42})" title="Silencio de Blanca">𝄼</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄽', {fontSize:42})" title="Silencio de Negra">𝄽</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄾', {fontSize:42})" title="Silencio de Corchea">𝄾</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝄿', {fontSize:42})" title="Silencio de Semicorchea">𝄿</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅀', {fontSize:42})" title="Silencio de Fusa">𝅀</button>
+                        <button class="symbol-grid-btn" onclick="addMusicSymbol('𝅁', {fontSize:42})" title="Silencio de Semifusa">𝅁</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
                     <div class="grid grid-cols-2 gap-2">
                         <button id="undo-stroke" class="text-xs bg-slate-100 py-2 rounded font-bold hover:bg-slate-200 transition flex items-center justify-center gap-1">
                             <i data-lucide="undo-2" class="w-3 h-3"></i> Deshacer
@@ -187,10 +559,6 @@
                             <i data-lucide="redo-2" class="w-3 h-3"></i> Rehacer
                         </button>
                     </div>
-                    <div>
-                        <label class="text-[11px] font-bold text-slate-600">Tamaño Borrador</label>
-                        <input type="range" id="erase-size-slider" min="5" max="150" value="40">
-                    </div>
                     <button id="reset-page" class="w-full mt-2 py-2 text-xs font-bold bg-rose-50 text-rose-700 border border-rose-100 rounded hover:bg-rose-100 transition">
                         Restablecer Página
                     </button>
@@ -198,7 +566,7 @@
             </div>
         </aside>
 
-        <main id="viewport" class="flex-1 bg-slate-300 p-8 flex justify-center items-start canvas-container overflow-auto relative">
+        <main id="viewport" class="flex-1 bg-slate-300 p-8 flex justify-center items-start canvas-container overflow-auto relative" onclick="deselectAll(event)">
             <div id="loading-overlay" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
                 <div class="bg-white p-6 rounded-lg shadow-2xl flex flex-col items-center">
                     <i data-lucide="loader-2" class="w-8 h-8 text-blue-600 animate-spin mb-2"></i>
@@ -211,6 +579,45 @@
                 <input type="text" id="inline-text-editor">
             </div>
         </main>
+    </div>
+
+    <!-- Caja visual flotante de arrastre para borrado por Área -->
+    <div id="eraser-area-preview-box"></div>
+
+    <!-- PANEL FLOTANTE DINÁMICO DE FORMATO DE TEXTO -->
+    <div id="properties-text-floating">
+        <strong style="margin-right: 4px; color: #222; font-family: sans-serif; font-size: 12px;">Fuente:</strong>
+        <select id="font-family-select" onchange="adjustFontFamily(this.value)">
+            <option value="Arial">Arial</option>
+            <option value="'Comic Sans MS', cursive, sans-serif">Comic Sans</option>
+            <option value="'Courier New', Courier, monospace">Courier New</option>
+            <option value="'Gabriola', sans-serif">Gabriola</option>
+            <option value="Garamond, serif">Garamond</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Impact, Charcoal, sans-serif">Impact</option>
+            <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+            <option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</option>
+            <option value="Tahoma, Geneva, sans-serif">Tahoma</option>
+            <option value="'Times New Roman', Times, serif">Times New Roman</option>
+            <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+            <option value="Verdana, Geneva, sans-serif">Verdana</option>  
+        </select>
+        
+        <input type="range" id="font-size-slider" min="10" max="300" value="30" oninput="adjustTextSize(this.value)" style="width: 70px;">
+        <span id="font-size-val" style="color: #333; font-weight: bold; font-family: sans-serif;">30px</span>
+        
+        <button class="text-style-btn" onclick="stepTextSize(1)" title="Aumentar tamaño de texto (A+)">A+</button>
+        <button class="text-style-btn" onclick="stepTextSize(-1)" title="Disminuir tamaño de texto (A-)">A-</button>
+        
+        <button class="text-style-btn" id="btn-bold" onclick="toggleTextStyle('bold')"><b>B</b></button>
+        <button class="text-style-btn" id="btn-italic" onclick="toggleTextStyle('italic')"><i>I</i></button>
+        <button class="text-style-btn" id="btn-underline" onclick="toggleTextStyle('underline')"><u>U</u></button>
+    </div>
+
+    <div id="drag-overlay" class="fixed inset-0 bg-blue-600/90 z-[100] hidden flex-col items-center justify-center text-white backdrop-blur-sm">
+        <i data-lucide="upload-cloud" class="w-24 h-24 mb-4 animate-bounce"></i>
+        <h2 class="text-3xl font-bold mb-2">Suelta tu partitura PDF o carpeta aquí</h2>
+        <p class="text-blue-100">Los archivos se cargarán automáticamente en el sistema</p>
     </div>
 
     <script>
@@ -232,11 +639,16 @@
         const newProcessBtn = document.getElementById('new-process-btn');
         const prevPageBtn = document.getElementById('prev-page');
         const nextPageBtn = document.getElementById('next-page');
+        const deletePageBtn = document.getElementById('delete-page-btn');
         const pageNumEl = document.getElementById('page-num');
         const pageCountEl = document.getElementById('page-count');
         const toolsContainer = document.getElementById('tools-container');
         const loadingOverlay = document.getElementById('loading-overlay');
         const loadingText = document.getElementById('loading-text');
+
+        const pageCopiesInput = document.getElementById('page-copies');
+        const applyAllCheckbox = document.getElementById('apply-all-checkbox');
+        const applyTextsAllCheckbox = document.getElementById('apply-texts-all-checkbox');
 
         let currentZoom = 0.4;
         const ZOOM_STEP = 0.05;
@@ -250,6 +662,11 @@
         let activeHandle = null;
         let activeText = null;
         let isCtrlPressed = false;
+
+        // Variables específicas del Borrador por Área / Pincel
+        let currentEraserMode = 'brush';
+        let eraserStartCoords = { x: 0, y: 0, screenX: 0, screenY: 0 };
+        const eraserAreaBox = document.getElementById('eraser-area-preview-box');
 
         // MANEJO DE ORIENTACION DE PÁGINA
         orientationSelect.addEventListener('change', (e) => {
@@ -275,7 +692,29 @@
 
         // MANEJO DE TECLADO
         window.addEventListener('keydown', (e) => { 
+            const isInput = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === "true";
+
             if (e.key === 'Control') isCtrlPressed = true; 
+
+            // Teclas Flecha Arriba y Abajo para ZOOM (Si no se está editando texto o campos)
+            if (!isInput) {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    document.getElementById('zoom-in').click();
+                    return;
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    document.getElementById('zoom-out').click();
+                    return;
+                }
+            }
+
+            // Tecla Suprimir para eliminar página
+            if (e.key === 'Delete' && !isInput) {
+                e.preventDefault();
+                deletePageBtn.click();
+            }
+
             // Ctrl + P personalizado
             if (isCtrlPressed && e.key.toLowerCase() === 'p') {
                 e.preventDefault();
@@ -283,7 +722,7 @@
             }
             
             // Confirmar cambios con Enter en modo Transformar/Mover
-            if (e.key === 'Enter' && currentMode === 'transform' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            if (e.key === 'Enter' && currentMode === 'transform' && !isInput) {
                 e.preventDefault();
                 saveHistory();
                 currentMode = 'pan';
@@ -294,7 +733,7 @@
             if (isCtrlPressed && e.key.toLowerCase() === 'z') { e.preventDefault(); undoAction(); }
             if (isCtrlPressed && e.key.toLowerCase() === 'y') { e.preventDefault(); redoAction(); }
 
-            if (pagesData.length > 0 && document.activeElement.tagName !== 'INPUT') {
+            if (pagesData.length > 0 && !isInput) {
                 if (e.key === 'ArrowRight') {
                     e.preventDefault();
                     if (currentIndex < pagesData.length - 1) { currentIndex++; updateUI(); render(); }
@@ -332,6 +771,7 @@
             canvas.style.transform = `scale(${currentZoom})`;
             document.getElementById('zoom-percent').innerText = `${Math.round(currentZoom * 100)}%`;
             if (inlineEditor.style.display === 'block') finishInlineEditing();
+            updateTextToolbarPosition();
         }
 
         document.getElementById('zoom-in').onclick = () => { currentZoom = Math.min(2, currentZoom + ZOOM_STEP); updateZoomUI(); };
@@ -355,30 +795,66 @@
                 strokes: JSON.parse(JSON.stringify(p.strokes)),
                 texts: JSON.parse(JSON.stringify(p.texts))
             };
+
+            if (p.history.length > 0) {
+                const lastState = p.history[p.history.length - 1];
+                const isSame = lastState.x === state.x && 
+                               lastState.y === state.y && 
+                               lastState.w === state.w && 
+                               lastState.h === state.h && 
+                               lastState.rotation === state.rotation && 
+                               JSON.stringify(lastState.strokes) === JSON.stringify(state.strokes) &&
+                               JSON.stringify(lastState.texts) === JSON.stringify(state.texts);
+                if (isSame) return;
+            }
+
             p.history.push(state);
             p.redoStack = [];
             if (p.history.length > 50) p.history.shift();
         }
 
         newProcessBtn.onclick = () => {
+            if (pagesData.length > 0) {
+                const confirmacion = confirm("¿Está seguro de que desea iniciar un nuevo proceso? Se perderán todos los cambios no guardados.");
+                if (!confirmacion) return;
+            }
             pagesData = []; currentIndex = 0; uploadInput.value = "";
             toolsContainer.style.opacity = '0.5'; toolsContainer.style.pointerEvents = 'none';
             exportBtn.disabled = true; pageNumEl.innerText = "0"; pageCountEl.innerText = "0";
             prevPageBtn.disabled = true; nextPageBtn.disabled = true;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            deselectAll();
         };
 
-        uploadInput.addEventListener('change', async (e) => {
-            const files = e.target.files;
+        deletePageBtn.onclick = () => {
+            if (pagesData.length === 0) return;
+            pagesData.splice(currentIndex, 1);
+            if (currentIndex >= pagesData.length) {
+                currentIndex = Math.max(0, pagesData.length - 1);
+            }
+            if (pagesData.length === 0) {
+                pagesData = []; currentIndex = 0; uploadInput.value = "";
+                toolsContainer.style.opacity = '0.5'; toolsContainer.style.pointerEvents = 'none';
+                exportBtn.disabled = true; pageNumEl.innerText = "0"; pageCountEl.innerText = "0";
+                prevPageBtn.disabled = true; nextPageBtn.disabled = true;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                updateUI();
+                render();
+            }
+            deselectAll();
+        };
+
+        async function processFiles(files) {
             if (!files || files.length === 0) return;
             showLoading("Procesando archivos...");
             try {
                 for (let f = 0; f < files.length; f++) {
                     const file = files[f];
                     
-                    if (file.type === 'application/pdf') {
-                        // LÓGICA PARA PDF
+                    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
                         const arrayBuffer = await file.arrayBuffer();
                         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                         for(let i=1; i<=pdf.numPages; i++) {
@@ -390,8 +866,7 @@
                             await page.render({ canvasContext: offCanvas.getContext('2d'), viewport }).promise;
                             crearNuevaPagina(offCanvas, viewport.width, viewport.height);
                         }
-                    } else if (file.type.startsWith('image/')) {
-                        // LÓGICA PARA IMÁGENES (JPG, PNG, GIF, TIFF, etc.)
+                    } else if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|tiff|bmp)$/i.test(file.name)) {
                         await new Promise((resolve, reject) => {
                             const reader = new FileReader();
                             reader.onload = (event) => {
@@ -411,20 +886,23 @@
                         });
                     }
                 }
-                currentIndex = 0;
-                toolsContainer.style.opacity = '1'; 
-                toolsContainer.style.pointerEvents = 'auto'; 
-                exportBtn.disabled = false; 
-                document.getElementById('zoom-fit').click();
-                updateUI(); render(); hideLoading();
+                if (pagesData.length > 0) {
+                    toolsContainer.style.opacity = '1'; 
+                    toolsContainer.style.pointerEvents = 'auto'; 
+                    exportBtn.disabled = false; 
+                    document.getElementById('zoom-fit').click();
+                    updateUI(); render();
+                }
+                hideLoading();
             } catch (err) { 
                 console.error(err);
                 alert("Error al cargar los archivos."); 
                 hideLoading(); 
             }
-        });
+        }
 
-        // Función auxiliar para evitar repetir código
+        uploadInput.addEventListener('change', (e) => processFiles(e.target.files));
+
         function crearNuevaPagina(sourceCanvas, width, height) {
             let scale = Math.min(canvas.width / width, canvas.height / height);
             const newPage = {
@@ -432,7 +910,7 @@
                 x: canvas.width / 2, y: canvas.height / 2,
                 w: width * scale, h: height * scale,
                 origW: width, origH: height,
-                rotation: 0, strokes: [], texts: [], history: [], redoStack: []
+                rotation: 0, copies: 1, strokes: [], texts: [], history: [], redoStack: []
             };
             newPage.history.push({ x: newPage.x, y: newPage.y, w: newPage.w, h: newPage.h, rotation: 0, strokes: [], texts: [] });
             pagesData.push(newPage);
@@ -444,7 +922,6 @@
             const rad = -p.rotation * Math.PI / 180;
             const cos = Math.cos(rad);
             const sin = Math.sin(rad);
-            // Calculamos coordenadas relativas al centro de la imagen escalada y rotada
             return {
                 x: (dx * cos - dy * sin) / (p.w / p.img.width),
                 y: (dx * sin + dy * cos) / (p.h / p.img.height)
@@ -459,50 +936,70 @@
             
             const p = pagesData[currentIndex];
             
-            // Proporción de escala actual de la imagen respecto a su original
             const scaleX = p.w / p.img.width;
             const scaleY = p.h / p.img.height;
             
             ctx.save(); 
-            // Posicionamos el contexto en el centro del elemento que movemos
             ctx.translate(p.x, p.y); 
             ctx.rotate(p.rotation * Math.PI / 180);
             
-            // Dibujamos la imagen centrada
             ctx.drawImage(p.img, -p.w/2, -p.h/2, p.w, p.h); 
             
-            // Dibujamos los trazos de borrado DENTRO del sistema de coordenadas de la partitura
             ctx.save();
-            // Escalamos el contexto para que las coordenadas de los trazos coincidan con el tamaño actual
             ctx.scale(scaleX, scaleY);
             ctx.lineCap = 'round'; 
             ctx.lineJoin = 'round'; 
             ctx.strokeStyle = 'white';
             
             p.strokes.forEach(s => { 
-                ctx.lineWidth = s.size / scaleX; 
-                ctx.beginPath(); 
-                ctx.moveTo(s.pts[0].x, s.pts[0].y); 
-                s.pts.forEach(pt => ctx.lineTo(pt.x, pt.y)); 
-                ctx.stroke(); 
+                if (s.type === 'area') {
+                    // Trazado de borrado por tipo área/recuadro
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(s.x, s.y, s.w, s.h);
+                } else {
+                    // Trazo clásico redondo de pincel
+                    ctx.lineWidth = s.size / scaleX; 
+                    ctx.beginPath(); 
+                    ctx.moveTo(s.pts[0].x, s.pts[0].y); 
+                    s.pts.forEach(pt => ctx.lineTo(pt.x, pt.y)); 
+                    ctx.stroke(); 
+                }
             });
-            ctx.restore(); // Salir del escalado de trazos
-            ctx.restore(); // Salir de la transformación de la partitura (translate/rotate)
+            ctx.restore(); 
+            ctx.restore(); 
 
             // DIBUJAR TEXTOS SOBRE TODO LO DEMÁS
             p.texts.forEach(t => {
                 ctx.save();
-                ctx.font = `bold ${t.size}px Arial`;
+                ctx.translate(t.x, t.y);
+                ctx.rotate((t.rotation || 0) * Math.PI / 180);
+                
+                let fontStyleString = "";
+                if (t.italic) fontStyleString += "italic ";
+                if (t.bold) fontStyleString += "bold ";
+                
+                ctx.font = `${fontStyleString}${t.size}px ${t.fontFamily || 'Arial'}`;
                 ctx.fillStyle = 'black';
                 ctx.textBaseline = 'middle';
                 ctx.textAlign = 'center';
+                
                 if (!(inlineEditor.style.display === 'block' && activeText === t)) {
-                    ctx.fillText(t.content, t.x, t.y);
+                    ctx.fillText(t.content, 0, 0);
+                    if (t.underline) {
+                        const metrics = ctx.measureText(t.content);
+                        ctx.strokeStyle = 'black';
+                        ctx.lineWidth = Math.max(1, t.size / 15);
+                        ctx.beginPath();
+                        ctx.moveTo(-metrics.width/2, t.size/2);
+                        ctx.lineTo(metrics.width/2, t.size/2);
+                        ctx.stroke();
+                    }
                 }
+                
                 if (!isExport && activeText === t) {
                     const metrics = ctx.measureText(t.content);
                     ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
-                    ctx.strokeRect(t.x - metrics.width/2 - 10, t.y - t.size/2 - 10, metrics.width + 20, t.size + 20);
+                    ctx.strokeRect(-metrics.width/2 - 10, -t.size/2 - 10, metrics.width + 20, t.size + 20);
                 }
                 ctx.restore();
             });
@@ -511,7 +1008,7 @@
             if (!isExport) {
                 if (currentMode === 'transform') drawTransformBox(p);
                 
-                if (currentMode === 'erase') {
+                if (currentMode === 'erase' && currentEraserMode === 'brush') {
                     const eraseSize = document.getElementById('erase-size-slider').value;
                     ctx.save();
                     ctx.beginPath();
@@ -519,6 +1016,19 @@
                     ctx.strokeStyle = "rgba(0,0,0,0.6)";
                     ctx.lineWidth = 2 / currentZoom;
                     ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    ctx.restore();
+                } else if (currentMode === 'erase' && currentEraserMode === 'area' && !isDragging) {
+                    // Muestra unas guías cruzadas naranjas en Modo Área antes de hacer clic para saber dónde empezará el contorno
+                    ctx.save();
+                    ctx.strokeStyle = "#e67e22";
+                    ctx.lineWidth = 1.5 / currentZoom;
+                    ctx.setLineDash([6, 6]);
+                    ctx.beginPath();
+                    ctx.moveTo(mousePos.x, 0);
+                    ctx.lineTo(mousePos.x, canvas.height);
+                    ctx.moveTo(0, mousePos.y);
+                    ctx.lineTo(canvas.width, mousePos.y);
                     ctx.stroke();
                     ctx.restore();
                 }
@@ -539,13 +1049,21 @@
 
         canvas.addEventListener('dblclick', (e) => {
             if (pagesData.length === 0) return;
+
             const coords = getCoords(e);
             const p = pagesData[currentIndex];
+            
             const foundText = p.texts.slice().reverse().find(t => {
                 ctx.font = `bold ${t.size}px Arial`;
                 const w = ctx.measureText(t.content).width;
-                return Math.abs(coords.x - t.x) < w/2 + 20 && Math.abs(coords.y - t.y) < t.size/2 + 20;
+                const dx = coords.x - t.x;
+                const dy = coords.y - t.y;
+                const rad = -(t.rotation || 0) * Math.PI / 180;
+                const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+                return Math.abs(rx) < w/2 + 20 && Math.abs(ry) < t.size/2 + 20;
             });
+
             if (foundText) { currentMode = 'text'; activeText = foundText; updateModeButtons(); startInlineEditing(); return; }
             if (currentMode === 'transform') saveHistory();
             currentMode = (currentMode === 'transform') ? 'pan' : 'transform';
@@ -559,7 +1077,7 @@
             const screenX = canvasRect.left + (activeText.x * currentZoom);
             const screenY = canvasRect.top + (activeText.y * currentZoom);
             inlineEditor.style.left = `${screenX}px`; inlineEditor.style.top = `${screenY}px`;
-            inlineEditor.style.transform = `translate(-50%, -50%)`;
+            inlineEditor.style.transform = `translate(-50%, -50%) rotate(${activeText.rotation || 0}deg)`;
             inlineEditor.focus(); inlineEditor.select(); render();
         }
 
@@ -571,12 +1089,17 @@
 
         function finishInlineEditing() {
             if (inlineEditor.style.display === 'none') return;
-            if (activeText && activeText.content !== inlineEditor.value) { activeText.content = inlineEditor.value; saveHistory(); }
+            if (activeText && activeText.content !== inlineEditor.value) { 
+                activeText.content = inlineEditor.value; 
+                syncGlobalTexts(); 
+                saveHistory(); 
+            }
             inlineEditor.style.display = 'none'; render();
         }
 
         canvas.addEventListener('pointerdown', (e) => {
             if (pagesData.length === 0 || inlineEditor.style.display === 'block') return;
+            if (e.target.closest('#properties-text-floating')) return;
             const coords = getCoords(e); isDragging = true; lastX = coords.x; lastY = coords.y;
             const p = pagesData[currentIndex];
 
@@ -584,18 +1107,44 @@
                 const foundText = p.texts.slice().reverse().find(t => {
                     ctx.font = `bold ${t.size}px Arial`;
                     const w = ctx.measureText(t.content).width;
-                    return Math.abs(coords.x - t.x) < w/2 + 15 && Math.abs(coords.y - t.y) < t.size/2 + 15;
+                    const dx = coords.x - t.x;
+                    const dy = coords.y - t.y;
+                    const rad = -(t.rotation || 0) * Math.PI / 180;
+                    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+                    return Math.abs(rx) < w/2 + 15 && Math.abs(ry) < t.size/2 + 15;
                 });
                 if (foundText) { activeText = foundText; showTextSettings(); render(); } 
-                else { const newText = { x: coords.x, y: coords.y, content: "Nuevo Texto", size: 30 }; p.texts.push(newText); activeText = newText; showTextSettings(); saveHistory(); render(); }
+                else { 
+                    const newText = { 
+                        x: coords.x, y: coords.y, 
+                        content: "Nuevo Texto", size: 80, rotation: 0,
+                        fontFamily: 'Arial', bold: false, italic: false, underline: false
+                    }; 
+                    p.texts.push(newText); activeText = newText; 
+                    showTextSettings(); 
+                    syncGlobalTexts(); 
+                    saveHistory(); 
+                    render(); 
+                }
             } else if (currentMode === 'transform') {
                 const handles = getHandleCoords(p.w, p.h);
                 const s = Math.sin(-p.rotation * Math.PI / 180), c = Math.cos(-p.rotation * Math.PI / 180);
                 let lx = (coords.x - p.x) * c - (coords.y - p.y) * s, ly = (coords.x - p.x) * s + (coords.y - p.y) * c;
                 activeHandle = handles.find(h => Math.abs(lx - h.x) < 40 && Math.abs(ly - h.y) < 40);
             } else if (currentMode === 'erase') {
-                const localPos = worldToLocal(coords.x, coords.y, p);
-                p.strokes.push({ size: document.getElementById('erase-size-slider').value * 1, pts: [localPos] });
+                if (currentEraserMode === 'brush') {
+                    const localPos = worldToLocal(coords.x, coords.y, p);
+                    p.strokes.push({ type: 'brush', size: document.getElementById('erase-size-slider').value * 1, pts: [localPos] });
+                } else if (currentEraserMode === 'area') {
+                    eraserStartCoords = { x: coords.x, y: coords.y, screenX: e.clientX, screenY: e.clientY };
+                    
+                    eraserAreaBox.style.left = e.clientX + 'px';
+                    eraserAreaBox.style.top = e.clientY + 'px';
+                    eraserAreaBox.style.width = '0px';
+                    eraserAreaBox.style.height = '0px';
+                    eraserAreaBox.style.display = 'block';
+                }
             }
         });
 
@@ -605,18 +1154,27 @@
             if (pagesData.length === 0 || inlineEditor.style.display === 'block') { render(); return; }
             
             const p = pagesData[currentIndex];
-            if (currentMode === 'text' && activeText) {
-                ctx.font = `bold ${activeText.size}px Arial`;
-                const w = ctx.measureText(activeText.content).width;
-                const isOverText = Math.abs(coords.x - activeText.x) < w/2 + 15 && Math.abs(coords.y - activeText.y) < activeText.size/2 + 15;
-                canvas.classList.toggle('text-selected', isOverText);
-            } else { canvas.classList.remove('text-selected'); }
+            
+            canvas.classList.remove('text-selected');
+            const foundText = p.texts.slice().reverse().find(t => {
+                ctx.font = `bold ${t.size}px Arial`;
+                const w = ctx.measureText(t.content).width;
+                const dx = coords.x - t.x;
+                const dy = coords.y - t.y;
+                const rad = -(t.rotation || 0) * Math.PI / 180;
+                const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+                return Math.abs(rx) < w/2 + 15 && Math.abs(ry) < t.size/2 + 15;
+            });
+            if (foundText) canvas.classList.add('text-selected');
 
             if (!isDragging) { render(); return; }
             const dx = coords.x - lastX, dy = coords.y - lastY;
             
             if (currentMode === 'text' && activeText) {
                 activeText.x += dx; activeText.y += dy;
+                syncGlobalTexts();
+                updateTextToolbarPosition();
             } else if (currentMode === 'transform' && activeHandle) {
                 const s = Math.sin(-p.rotation * Math.PI / 180), c = Math.cos(-p.rotation * Math.PI / 180);
                 let ldx = dx * c + dy * s, ldy = -dx * s + dy * c;
@@ -630,16 +1188,61 @@
                     if (Math.abs(p.w - oldW) / oldW > Math.abs(p.h - oldH) / oldH) p.h = p.w / aspect; else p.w = p.h * aspect;
                 }
                 p.w = Math.max(50, p.w); p.h = Math.max(50, p.h);
+                syncGlobalSettings();
             } else if (currentMode === 'pan' || (currentMode === 'transform' && !activeHandle)) {
                 p.x += dx; p.y += dy;
             } else if (currentMode === 'erase') {
-                const localPos = worldToLocal(coords.x, coords.y, p);
-                p.strokes[p.strokes.length - 1].pts.push(localPos);
+                if (currentEraserMode === 'brush') {
+                    const localPos = worldToLocal(coords.x, coords.y, p);
+                    p.strokes[p.strokes.length - 1].pts.push(localPos);
+                } else if (currentEraserMode === 'area') {
+                    const startX = eraserStartCoords.screenX;
+                    const startY = eraserStartCoords.screenY;
+                    const currentX = e.clientX;
+                    const currentY = e.clientY;
+
+                    const width = currentX - startX;
+                    const height = currentY - startY;
+
+                    eraserAreaBox.style.left = (width < 0 ? currentX : startX) + 'px';
+                    eraserAreaBox.style.top = (height < 0 ? currentY : startY) + 'px';
+                    eraserAreaBox.style.width = Math.abs(width) + 'px';
+                    eraserAreaBox.style.height = Math.abs(height) + 'px';
+                }
             }
             lastX = coords.x; lastY = coords.y; render();
         });
 
-        window.addEventListener('pointerup', () => { if (isDragging) saveHistory(); isDragging = false; activeHandle = null; });
+        window.addEventListener('pointerup', (e) => { 
+            if (isDragging) {
+                if (currentMode === 'erase' && currentEraserMode === 'area' && pagesData[currentIndex]) {
+                    eraserAreaBox.style.display = 'none';
+                    const p = pagesData[currentIndex];
+                    const upCoords = getCoords(e);
+                    
+                    const localStart = worldToLocal(eraserStartCoords.x, eraserStartCoords.y, p);
+                    const localEnd = worldToLocal(upCoords.x, upCoords.y, p);
+
+                    const lx = Math.min(localStart.x, localEnd.x);
+                    const ly = Math.min(localStart.y, localEnd.y);
+                    const lw = Math.abs(localEnd.x - localStart.x);
+                    const lh = Math.abs(localEnd.y - localStart.y);
+
+                    if (lw > 2 && lh > 2) {
+                        p.strokes.push({
+                            type: 'area',
+                            x: lx,
+                            y: ly,
+                            w: lw,
+                            h: lh
+                        });
+                    }
+                }
+                saveHistory(); 
+            } 
+            isDragging = false; 
+            activeHandle = null; 
+        });
 
         function getCoords(e) {
             const rect = canvas.getBoundingClientRect();
@@ -648,11 +1251,62 @@
             return { x, y };
         }
 
+        const updateCopiesInput = (val) => {
+            if (pagesData[currentIndex]) {
+                const parsedVal = Math.max(1, parseInt(val) || 1);
+                pagesData[currentIndex].copies = parsedVal;
+                pageCopiesInput.value = parsedVal;
+            }
+        };
+
+        pageCopiesInput.addEventListener('change', (e) => updateCopiesInput(e.target.value));
+        document.getElementById('copy-minus').addEventListener('click', () => updateCopiesInput(parseInt(pageCopiesInput.value) - 1));
+        document.getElementById('copy-plus').addEventListener('click', () => updateCopiesInput(parseInt(pageCopiesInput.value) + 1));
+
+        function syncGlobalSettings() {
+            if (applyAllCheckbox.checked && currentIndex === 0) {
+                const firstPage = pagesData[0];
+                const scale = firstPage.w / firstPage.img.width;
+                const rot = firstPage.rotation;
+                for (let i = 1; i < pagesData.length; i++) {
+                    pagesData[i].w = pagesData[i].img.width * scale;
+                    pagesData[i].h = pagesData[i].img.height * scale;
+                    pagesData[i].rotation = rot;
+                }
+            }
+        }
+
+        function syncGlobalTexts() {
+            if (applyTextsAllCheckbox.checked && currentIndex === 0) {
+                const firstPageTexts = JSON.stringify(pagesData[0].texts);
+                for (let i = 1; i < pagesData.length; i++) {
+                    pagesData[i].texts = JSON.parse(firstPageTexts);
+                }
+            }
+        }
+
+        applyAllCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked && pagesData.length > 0) {
+                syncGlobalSettings();
+                render();
+            }
+        });
+
+        applyTextsAllCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked && pagesData.length > 0) {
+                syncGlobalTexts();
+                render();
+            }
+        });
+
         function updateUI() {
             if (pagesData.length === 0) return;
             const p = pagesData[currentIndex];
             pageNumEl.innerText = currentIndex + 1; pageCountEl.innerText = pagesData.length;
             prevPageBtn.disabled = currentIndex === 0; nextPageBtn.disabled = currentIndex === pagesData.length - 1;
+            
+            pageCopiesInput.value = p.copies || 1;
+
             document.getElementById('rot-slider').value = p.rotation;
             document.getElementById('rot-num-input').value = p.rotation;
             const currentScale = (p.w / p.img.width).toFixed(2);
@@ -663,13 +1317,26 @@
 
         function updateModeButtons() {
             const modes = ['pan', 'erase', 'text', 'transform'];
+            
             modes.forEach(m => {
                 const el = document.getElementById(`mode-${m === 'transform' ? 'pan' : m}`);
                 if (!el) return;
                 const active = currentMode === m || (m === 'pan' && currentMode === 'transform');
-                el.className = active ? "py-2 text-[10px] font-bold rounded bg-white shadow-sm text-blue-700 flex flex-col items-center gap-1" : "py-2 text-[10px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1";
+                el.className = active 
+                    ? "py-2 text-[10px] font-bold rounded bg-blue-600 text-white shadow-sm flex flex-col items-center gap-1" 
+                    : "py-2 text-[10px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1";
             });
-            canvas.className = `mode-${currentMode}`;
+
+            document.getElementById('options-pan').classList.toggle('hidden', currentMode !== 'pan' && currentMode !== 'transform');
+            document.getElementById('options-erase').classList.toggle('hidden', currentMode !== 'erase');
+            document.getElementById('options-text').classList.toggle('hidden', currentMode !== 'text');
+
+            if (currentMode === 'erase' && currentEraserMode === 'area') {
+                canvas.className = 'mode-erase-area';
+            } else {
+                canvas.className = `mode-${currentMode}`;
+            }
+
             if (currentMode !== 'text') hideTextSettings();
         }
 
@@ -677,13 +1344,65 @@
         document.getElementById('mode-erase').onclick = () => { currentMode = 'erase'; updateModeButtons(); render(); };
         document.getElementById('mode-text').onclick = () => { currentMode = 'text'; updateModeButtons(); render(); };
 
+        // LÓGICA DE CONTROL DE MODOS DE BORRADOR
+        function changeEraserMode(mode) {
+            currentEraserMode = mode;
+            const sizeContainer = document.getElementById('eraser-size-container');
+            if (mode === 'area') {
+                sizeContainer.style.display = 'none';
+                canvas.className = 'mode-erase-area';
+            } else {
+                sizeContainer.style.display = 'block';
+                canvas.className = 'mode-erase';
+            }
+            render();
+        }
+
+        // Botones +/- para Escala
+        document.getElementById('scale-minus').onclick = () => {
+            const input = document.getElementById('scale-num-input');
+            input.value = Math.max(0.1, (parseFloat(input.value) - 0.01)).toFixed(2);
+            input.dispatchEvent(new Event('input'));
+            saveHistory();
+        };
+        document.getElementById('scale-plus').onclick = () => {
+            const input = document.getElementById('scale-num-input');
+            input.value = Math.min(3, (parseFloat(input.value) + 0.01)).toFixed(2);
+            input.dispatchEvent(new Event('input'));
+            saveHistory();
+        };
+
+        // Botones +/- para Rotación
+        document.getElementById('rot-minus').onclick = () => {
+            const input = document.getElementById('rot-num-input');
+            input.value = Math.max(-180, (parseFloat(input.value) - 0.5)).toFixed(1);
+            input.dispatchEvent(new Event('input'));
+            saveHistory();
+        };
+        document.getElementById('rot-plus').onclick = () => {
+            const input = document.getElementById('rot-num-input');
+            input.value = Math.min(180, (parseFloat(input.value) + 0.5)).toFixed(1);
+            input.dispatchEvent(new Event('input'));
+            saveHistory();
+        };
+
         document.getElementById('rot-slider').oninput = (e) => { 
             const val = parseFloat(e.target.value);
-            if(pagesData[currentIndex]) { pagesData[currentIndex].rotation = val; document.getElementById('rot-num-input').value = val; render(); }
+            if(pagesData[currentIndex]) { 
+                pagesData[currentIndex].rotation = val; 
+                document.getElementById('rot-num-input').value = val; 
+                syncGlobalSettings();
+                render(); 
+            }
         };
         document.getElementById('rot-num-input').oninput = (e) => {
             const val = parseFloat(e.target.value) || 0;
-            if(pagesData[currentIndex]) { pagesData[currentIndex].rotation = val; document.getElementById('rot-slider').value = val; render(); }
+            if(pagesData[currentIndex]) { 
+                pagesData[currentIndex].rotation = val; 
+                document.getElementById('rot-slider').value = val; 
+                syncGlobalSettings();
+                render(); 
+            }
         };
         document.getElementById('rot-slider').onchange = () => saveHistory();
 
@@ -692,6 +1411,7 @@
             const newScale = e.target.value * 1; 
             p.w = p.img.width * newScale; p.h = p.img.height * newScale; 
             document.getElementById('scale-num-input').value = newScale.toFixed(2);
+            syncGlobalSettings();
             render(); 
         };
         document.getElementById('scale-slider').onchange = () => saveHistory();
@@ -701,6 +1421,7 @@
             const newScale = parseFloat(e.target.value) || 0.1;
             p.w = p.img.width * newScale; p.h = p.img.height * newScale;
             document.getElementById('scale-slider').value = newScale;
+            syncGlobalSettings();
             render();
         };
         document.getElementById('scale-num-input').onchange = () => saveHistory();
@@ -709,14 +1430,157 @@
             if (!activeText) return;
             document.getElementById('text-settings').classList.remove('hidden');
             document.getElementById('text-size-slider').value = activeText.size;
-        }
-        function hideTextSettings() { document.getElementById('text-settings').classList.add('hidden'); activeText = null; render(); }
+            document.getElementById('text-rot-slider').value = activeText.rotation || 0;
+            document.getElementById('text-rot-num').value = activeText.rotation || 0;
 
-        document.getElementById('text-size-slider').oninput = (e) => { if (activeText) { activeText.size = parseInt(e.target.value); render(); } };
+            const floatingTb = document.getElementById('properties-text-floating');
+            floatingTb.style.display = 'flex';
+            
+            document.getElementById('font-size-slider').value = activeText.size;
+            document.getElementById('font-size-val').innerText = activeText.size + 'px';
+            document.getElementById('font-family-select').value = activeText.fontFamily || 'Arial';
+            
+            document.getElementById('btn-bold').classList.toggle('active', !!activeText.bold);
+            document.getElementById('btn-italic').classList.toggle('active', !!activeText.italic);
+            document.getElementById('btn-underline').classList.toggle('active', !!activeText.underline);
+            
+            if (floatingTb.parentElement !== viewportContainer) {
+                viewportContainer.appendChild(floatingTb);
+            }
+            updateTextToolbarPosition();
+        }
+
+        function hideTextSettings() { 
+            activeText = null; 
+            document.getElementById('properties-text-floating').style.display = 'none';
+            document.getElementById('text-settings').classList.add('hidden');
+            render(); 
+        }
+
+        function updateTextToolbarPosition() {
+            const floatingTb = document.getElementById('properties-text-floating');
+            if (!activeText || floatingTb.style.display === 'none') {
+                return;
+            }
+            const canvasRect = canvas.getBoundingClientRect();
+            const containerRect = viewportContainer.getBoundingClientRect();
+
+            const screenX = canvasRect.left + (activeText.x * currentZoom);
+            const screenY = canvasRect.top + (activeText.y * currentZoom);
+
+            let topPos = screenY - containerRect.top + viewportContainer.scrollTop - floatingTb.offsetHeight - 25;
+            let leftPos = screenX - containerRect.left + viewportContainer.scrollLeft - (floatingTb.offsetWidth / 2);
+
+            if (topPos < viewportContainer.scrollTop) {
+                topPos = screenY - containerRect.top + viewportContainer.scrollTop + activeText.size * currentZoom + 25;
+            }
+
+            floatingTb.style.top = topPos + 'px';
+            floatingTb.style.left = leftPos + 'px';
+        }
+
+        function adjustFontFamily(font) {
+            if (!activeText) return;
+            activeText.fontFamily = font;
+            syncGlobalTexts();
+            saveHistory();
+            render();
+            updateTextToolbarPosition();
+        }
+
+        function adjustTextSize(size) {
+            if (!activeText) return;
+            activeText.size = parseInt(size);
+            document.getElementById('font-size-val').innerText = size + 'px';
+            document.getElementById('text-size-slider').value = size;
+            syncGlobalTexts();
+            saveHistory();
+            render();
+            updateTextToolbarPosition();
+        }
+
+        function stepTextSize(direction) {
+            if (!activeText) return;
+            let currentSize = parseInt(activeText.size) || 30;
+            let newSize = Math.max(10, Math.min(300, currentSize + direction));
+            adjustTextSize(newSize);
+            document.getElementById('font-size-slider').value = newSize;
+        }
+
+        function toggleTextStyle(style) {
+            if (!activeText) return;
+            if (style === 'bold') {
+                activeText.bold = !activeText.bold;
+                document.getElementById('btn-bold').classList.toggle('active', activeText.bold);
+            } else if (style === 'italic') {
+                activeText.italic = !activeText.italic;
+                document.getElementById('btn-italic').classList.toggle('active', activeText.italic);
+            } else if (style === 'underline') {
+                activeText.underline = !activeText.underline;
+                document.getElementById('btn-underline').classList.toggle('active', activeText.underline);
+            }
+            syncGlobalTexts();
+            saveHistory();
+            render();
+            updateTextToolbarPosition();
+        }
+
+        document.getElementById('properties-text-floating').addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+        });
+
+        function deselectAll(e) {
+            if (e && e.target.closest('#properties-text-floating, .text-style-btn, select, input, aside')) return;
+            if (currentMode === 'text' && activeText) {
+                const coords = getCoords(e);
+                ctx.font = `bold ${activeText.size}px Arial`;
+                const w = ctx.measureText(activeText.content).width;
+                const dx = coords.x - activeText.x;
+                const dy = coords.y - activeText.y;
+                const rad = -(activeText.rotation || 0) * Math.PI / 180;
+                const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+                const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+                const clickEnTextoActivo = Math.abs(rx) < w/2 + 20 && Math.abs(ry) < activeText.size/2 + 20;
+                
+                if (!clickEnTextoActivo) {
+                    hideTextSettings();
+                }
+            }
+        }
+
+        document.getElementById('text-size-slider').oninput = (e) => { 
+            if (activeText) { 
+                adjustTextSize(e.target.value);
+            } 
+        };
         document.getElementById('text-size-slider').onchange = () => saveHistory();
+        
+        document.getElementById('text-rot-slider').oninput = (e) => { 
+            if (activeText) { 
+                activeText.rotation = parseInt(e.target.value); 
+                document.getElementById('text-rot-num').value = activeText.rotation;
+                syncGlobalTexts(); 
+                render(); 
+                updateTextToolbarPosition();
+            } 
+        };
+        document.getElementById('text-rot-slider').onchange = () => saveHistory();
+
+        document.getElementById('text-rot-num').oninput = (e) => { 
+            if (activeText) { 
+                activeText.rotation = parseInt(e.target.value) || 0; 
+                document.getElementById('text-rot-slider').value = activeText.rotation;
+                syncGlobalTexts(); 
+                render(); 
+                updateTextToolbarPosition();
+            } 
+        };
+        document.getElementById('text-rot-num').onchange = () => saveHistory();
+
         document.getElementById('delete-text').onclick = () => {
             if (activeText && pagesData[currentIndex]) {
                 pagesData[currentIndex].texts = pagesData[currentIndex].texts.filter(t => t !== activeText);
+                syncGlobalTexts(); 
                 hideTextSettings(); saveHistory(); render();
             }
         };
@@ -738,8 +1602,8 @@
             page.texts = JSON.parse(JSON.stringify(s.texts || []));
         }
 
-        prevPageBtn.onclick = () => { currentIndex--; updateUI(); render(); };
-        nextPageBtn.onclick = () => { currentIndex++; updateUI(); render(); };
+        prevPageBtn.onclick = () => { currentIndex--; updateUI(); render(); deselectAll(); };
+        nextPageBtn.onclick = () => { currentIndex++; updateUI(); render(); deselectAll(); };
 
         exportBtn.onclick = async () => {
             showLoading("Generando PDF...");
@@ -749,16 +1613,21 @@
                 const doc = new jsPDF(pdfFormat, 'mm', 'a4');
                 
                 const originalIdx = currentIndex;
+                let firstPage = true;
                 
                 pagesData.forEach((p, i) => {
                     currentIndex = i; render(true);
                     const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                    if (i > 0) doc.addPage();
+                    const numCopies = p.copies || 1;
                     
                     const widthA4 = orientation === 'landscape' ? 297 : 210;
                     const heightA4 = orientation === 'landscape' ? 210 : 297;
-                    
-                    doc.addImage(imgData, 'JPEG', 0, 0, widthA4, heightA4);
+
+                    for (let c = 0; c < numCopies; c++) {
+                        if (!firstPage) doc.addPage();
+                        doc.addImage(imgData, 'JPEG', 0, 0, widthA4, heightA4);
+                        firstPage = false;
+                    }
                 });
                 
                 currentIndex = originalIdx; render();
@@ -791,24 +1660,26 @@
                 `;
 
                 const originalIdx = currentIndex;
+                const pagesToPrint = [];
 
                 pagesData.forEach((p, i) => {
                     currentIndex = i;
                     render(true);
 
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                    html += `<img src="${imgData}">`;
+                    const numCopies = p.copies || 1;
+                    for (let c = 0; c < numCopies; c++) { pagesToPrint.push(imgData); }
+                });
 
-                    if (i < pagesData.length - 1) {
-                        html += `<div style="page-break-after: always;"></div>`;
-                    }
+                pagesToPrint.forEach((img, idx) => {
+                    html += `<img src="${img}">`;
+                    if (idx < pagesToPrint.length - 1) html += `<div style="page-break-after: always;"></div>`;
                 });
 
                 currentIndex = originalIdx;
                 render();
 
                 html += `
-
                     <script>
                         window.onload = function() {
                             window.print();
@@ -832,13 +1703,9 @@
         function showLoading(t) { loadingText.innerText = t; loadingOverlay.classList.remove('hidden'); }
         function hideLoading() { loadingOverlay.classList.add('hidden'); }
 
-// --- INICIO LÓGICA DRAG & DROP MEJORADA ---
+        // --- INICIO LÓGICA DRAG & DROP MULTICARPETAS Y ARCHIVOS RECURSIVO MEJORADA ---
         const dragOverlay = document.getElementById('drag-overlay');
-        
-        // Localizamos automáticamente el input de carga de archivos de la partitura
-        const fileInput = document.querySelector('input[type="file"]'); 
 
-        // Bloqueamos el comportamiento predeterminado del navegador de abrir el PDF
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             document.addEventListener(eventName, preventDefaults, false);
         });
@@ -866,37 +1733,139 @@
             }
         });
 
-        document.addEventListener('drop', (e) => {
+        // Función recursiva para obtener archivos de carpetas arrastradas
+        async function getAllFiles(items) {
+            let files = [];
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i].webkitGetAsEntry();
+                if (item) {
+                    files = files.concat(await traverseFileTree(item));
+                }
+            }
+            return files;
+        }
+
+        function traverseFileTree(item, path = "") {
+            return new Promise((resolve) => {
+                if (item.isFile) {
+                    item.file((file) => {
+                        resolve([file]);
+                    });
+                } else if (item.isDirectory) {
+                    let dirReader = item.createReader();
+                    let entries = [];
+                    let readEntries = () => {
+                        dirReader.readEntries(async (results) => {
+                            if (results.length) {
+                                entries = entries.concat(results);
+                                readEntries();
+                            } else {
+                                let files = [];
+                                for (let entry of entries) {
+                                    files = files.concat(await traverseFileTree(entry, path + item.name + "/"));
+                                }
+                                resolve(files);
+                            }
+                        });
+                    };
+                    readEntries();
+                }
+            });
+        }
+
+        document.addEventListener('drop', async (e) => {
             dragCounter = 0;
             if (dragOverlay) {
                 dragOverlay.classList.add('hidden');
                 dragOverlay.classList.remove('flex');
             }
 
-            const files = e.dataTransfer.files;
-            if (files && files.length > 0) {
-                const isValid = Array.from(files).some(file => file.type === 'application/pdf' || file.type.startsWith('image/'));
-if (!isValid) {
-    alert('Por favor, arrastre archivos PDF o imágenes (JPG, PNG, etc.).');
-    return;
-}
-
-                if (fileInput) {
-                    // Transferimos el archivo al sistema y forzamos el evento de actualización
-                    fileInput.files = files;
-                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-                } else {
-                    console.error('Error de lectura: No se ha detectado el sistema de carga principal.');
+            const items = e.dataTransfer.items;
+            if (items) {
+                const allFiles = await getAllFiles(items);
+                const validFiles = allFiles.filter(file => 
+                    file.type === 'application/pdf' || 
+                    file.type.startsWith('image/') || 
+                    /\.(pdf|jpg|jpeg|png|gif|tiff|bmp)$/i.test(file.name)
+                );
+                
+                if (validFiles.length === 0) {
+                    alert('Por favor, arrastre archivos PDF, imágenes o carpetas que los contengan.');
+                    return;
                 }
+                
+                // Ordenar alfabéticamente los archivos leídos de las carpetas
+                validFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                
+                processFiles(validFiles);
             }
         });
         // --- FIN LÓGICA DRAG & DROP MEJORADA ---
 
+        // --- INICIO LÓGICA DE CONTROL DE LA PALETA DE SIGNOS MUSICALES ---
+        function switchPaletteTab(tabId) {
+            document.querySelectorAll('#music-symbols-palette-container .palette-grid').forEach(grid => {
+                grid.style.display = 'none';
+            });
+            document.querySelectorAll('#music-symbols-palette-container .palette-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            const targetGrid = document.getElementById(tabId);
+            if (targetGrid) {
+                targetGrid.style.display = 'grid';
+            }
+
+            if (typeof event !== 'undefined' && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+
+        function scrollTabs(offset) {
+            const container = document.getElementById('music-tabs-scroll-container');
+            if (container) {
+                container.scrollLeft += offset;
+            }
+        }
+
+        function addMusicSymbol(character, settings = {}) {
+            if (!pagesData[currentIndex]) {
+                alert("Por favor, cargue un archivo PDF o una imagen primero.");
+                return;
+            }
+            
+            currentMode = 'text';
+            updateModeButtons();
+
+            const p = pagesData[currentIndex];
+            const middleX = canvas.width / 2;
+            const middleY = canvas.height / 2;
+
+            const newText = {
+                x: middleX,
+                y: middleY,
+                content: character,
+                size: settings.fontSize || 80,
+                rotation: 0,
+                fontFamily: settings.fontFamily || "'Times New Roman', Times, serif",
+                bold: settings.fontWeight === 'bold',
+                italic: settings.fontStyle === 'italic',
+                underline: false
+            };
+
+            p.texts.push(newText);
+            activeText = newText;
+            showTextSettings();
+            syncGlobalTexts();
+            saveHistory();
+            render();
+        }
+        // --- FIN LÓGICA DE CONTROL DE LA PALETA DE SIGNOS MUSICALES ---
+
         window.onload = () => { 
-            updateZoomUI();
+            document.getElementById('zoom-fit').click();
             ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         };
     </script>
 </body>
 </html>
-
