@@ -12,6 +12,18 @@
         body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
         .container { max-width: 1300px; margin: auto; }
         
+        /* Estilo para la cabecera con el botón Volver siempre visible */
+        .header-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .header-container h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
         #drop-zone { 
             border: 3px dashed var(--primary); background: white; padding: 30px; 
             border-radius: 15px; text-align: center; cursor: pointer; margin-bottom: 20px;
@@ -78,7 +90,10 @@
 <body>
 
 <div class="container">
-    <h1>Editor de partituras PDF: Rotación y Selección Avanzada</h1>
+    <div class="header-container">
+        <button class="btn-dark" onclick="window.history.back()" title="Volver a la página anterior" style="font-size: 14px; padding: 8px 16px;">← Volver</button>
+        <h1>Editor de partituras PDF: Rotación y Selección Avanzada</h1>
+    </div>
     
     <div id="drop-zone">Arrastra archivos o carpetas aquí <br><small>(Shift+Click: Rango | Ctrl+Z: Deshacer | Ctrl+Y: Rehacer)</small></div>
 
