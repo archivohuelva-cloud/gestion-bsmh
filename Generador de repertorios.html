@@ -15,6 +15,9 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- SortableJS para Drag & Drop -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- JSZip y FileSaver para la descarga comprimida -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -56,6 +59,7 @@
                 <button onclick="nuevoRepertorio()" class="p-2 bg-rose-600 rounded-md" title="Nuevo Repertorio"><i data-lucide="file-plus" class="w-4 h-4"></i></button>
                 <button onclick="exportarJSON()" class="p-2 bg-amber-500 rounded-md" title="Guardar Repertorio"><i data-lucide="download" class="w-4 h-4"></i></button>
                 <button onclick="document.getElementById('inputFile').click()" class="p-2 bg-slate-600 rounded-md" title="Abrir Repertorio"><i data-lucide="upload" class="w-4 h-4"></i></button>
+                <button onclick="exportarZIP()" class="p-2 bg-indigo-600 rounded-md" title="Exportar ZIP"><i data-lucide="archive" class="w-4 h-4"></i></button>
             </div>
         </div>
 
@@ -69,6 +73,9 @@
             </button>
             <button onclick="document.getElementById('inputFile').click()" class="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition-colors">
                 <i data-lucide="upload" class="w-4 h-4"></i> Abrir Repertorio
+            </button>
+            <button onclick="exportarZIP()" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md text-sm font-semibold transition-colors">
+                <i data-lucide="archive" class="w-4 h-4"></i> Exportar ZIP
             </button>
             <input type="file" id="inputFile" accept=".json" class="hidden" onchange="importarJSON(event)">
         </div>
@@ -493,7 +500,8 @@
             lucide.createIcons();
         }
 
-window.generarPDF = function(tipo) {
+// Función auxiliar interna para construir el objeto jsPDF según el tipo
+function construirDocumentoPDF(tipo) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const tituloBruto = document.getElementById('conciertoTitulo').value.trim() || 'CONCIERTO';
@@ -505,7 +513,7 @@ window.generarPDF = function(tipo) {
 
     let diaSemanaStr = '-';
     let fechaStr = '-';
-    let fechaParaNombre = ''; // Variable para almacenar la fecha formateada para el nombre del archivo
+    let fechaParaNombre = '';
 
     if (fechaVal) {
         const [yyyy, mm, dd] = fechaVal.split('-');
@@ -513,8 +521,6 @@ window.generarPDF = function(tipo) {
         let diaSemana = d.toLocaleDateString('es-ES', { weekday: 'long' });
         diaSemanaStr = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
         fechaStr = `${dd}/${mm}/${yyyy}`;
-        
-        // Formato para el nombre del archivo: " - DD-MM-AAAA"
         fechaParaNombre = ` - ${dd}-${mm}-${yyyy}`;
     }
 
@@ -567,7 +573,6 @@ window.generarPDF = function(tipo) {
 
     const finalYTabla = doc.lastAutoTable.finalY || (finalYInfo + 40);
 
-    // Bloque para añadir la sección de Notas si contiene texto
     if (notasVal) {
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
@@ -578,7 +583,6 @@ window.generarPDF = function(tipo) {
         doc.text(splitNotas, 14, finalYTabla + 21);
     }
 
-    // Pie de página: Fecha de generación y número de página
     const ahora = new Date();
     let diaNom = ahora.toLocaleDateString('es-ES', { weekday: 'long' });
     diaNom = diaNom.charAt(0).toUpperCase() + diaNom.slice(1);
@@ -599,17 +603,59 @@ window.generarPDF = function(tipo) {
         doc.setFontSize(10);
         doc.setTextColor(120, 120, 120);
 
-        // Frase central
         doc.text(textoActualizacion, pageWidth / 2, pageHeight - 10, { align: 'center' });
-
-        // Número de página a la derecha
         doc.text(`${i}/${totalPages}`, pageWidth - 14, pageHeight - 10, { align: 'right' });
     }
 
     const labelTipo = tipo === 'archivo' ? 'Archivo' : 'Banda';
-    
-    // Genera el nombre del archivo incluyendo la fecha si existe (Ej: "CONCIERTO DE PRIMAVERA - Archivo - 25-03-2025.pdf")
-    doc.save(`${tituloBruto} - ${labelTipo}${fechaParaNombre}.pdf`);
+    const nombreArchivo = `${tituloBruto} - ${labelTipo}${fechaParaNombre}.pdf`;
+
+    return { doc, nombreArchivo };
+}
+
+window.generarPDF = function(tipo) {
+    const { doc, nombreArchivo } = construirDocumentoPDF(tipo);
+    doc.save(nombreArchivo);
+};
+
+// Nueva función para exportar todo el paquete en un ZIP
+window.exportarZIP = function() {
+    const tituloBruto = document.getElementById('conciertoTitulo').value.trim() || 'CONCIERTO';
+    const fecha = document.getElementById('conciertoFecha').value;
+    let fechaParaNombre = "";
+    if (fecha) {
+        const [y, m, d] = fecha.split('-');
+        fechaParaNombre = ` - ${d}-${m}-${y}`;
+    }
+
+    const zip = new JSZip();
+
+    // 1. PDF Archivo
+    const pdfArchivoObj = construirDocumentoPDF('archivo');
+    const pdfArchivoBlob = pdfArchivoObj.doc.output('blob');
+    zip.file(pdfArchivoObj.nombreArchivo, pdfArchivoBlob);
+
+    // 2. PDF Banda
+    const pdfBandaObj = construirDocumentoPDF('banda');
+    const pdfBandaBlob = pdfBandaObj.doc.output('blob');
+    zip.file(pdfBandaObj.nombreArchivo, pdfBandaBlob);
+
+    // 3. Archivo JSON
+    const datosJSON = {
+        titulo: document.getElementById('conciertoTitulo').value,
+        lugar: document.getElementById('conciertoLugar').value,
+        fecha: document.getElementById('conciertoFecha').value,
+        hora: document.getElementById('conciertoHora').value,
+        notas: document.getElementById('conciertoNotas').value,
+        repertorio: repertorioSeleccionado
+    };
+    const nombreJSON = `Repertorio ${tituloBruto}${fechaParaNombre}.json`;
+    zip.file(nombreJSON, JSON.stringify(datosJSON, null, 2));
+
+    // Descargar el archivo comprimido
+    zip.generateAsync({ type: "blob" }).then(function(content) {
+        saveAs(content, `Repertorio ${tituloBruto}${fechaParaNombre}.zip`);
+    });
 };
     </script>
 </body>
