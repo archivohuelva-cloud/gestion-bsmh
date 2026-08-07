@@ -17,6 +17,9 @@
         #drop-zone.hover { border-color: var(--primary); background: #ebf4ff; }
         .btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.2s; }
         .btn:disabled { background: #cbd5e0; cursor: not-allowed; }
+        .btn-secondary { background: #e53e3e; }
+        .btn-secondary:hover { background: #c53030; }
+        .button-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
         #file-list { margin-top: 20px; text-align: left; max-height: 200px; overflow-y: auto; font-size: 14px; color: #4a5568; }
         .status { margin-top: 10px; font-weight: bold; color: var(--primary); }
     </style>
@@ -24,18 +27,21 @@
 <body>
 
 <div class="container">
-    <h1>Convertir archivos de imagen a partituras PDF</h1>
-    <p>Arrastra imágenes o <b>carpetas completas</b> aquí</p>
+    <h1>Convertir partituras de imagen a PDF</h1>
+    <p>Arrastra las partituras o <b>carpetas completas</b> aquí:</p>
     
     <div id="drop-zone">
-        <p>Suelta tus archivos aquí o haz clic para seleccionar</p>
+        <p>Suelta tus partituras en formato de <b>imagen</b> aquí o haz clic para seleccionar</p>
         <input type="file" id="file-input" multiple accept="image/*,.tiff,.tif" style="display: none;">
     </div>
 
     <div id="status" class="status"></div>
     <div id="file-list"></div>
     
-<button id="convert-btn" class="btn" disabled>Convertir y Descargar ZIP</button>
+    <div class="button-group">
+        <button id="convert-btn" class="btn" disabled>Convertir y Descargar ZIP</button>
+        <button id="clear-btn" class="btn btn-secondary" disabled>Limpiar</button>
+    </div>
 
     <div style="margin-top: 35px;">
         <button onclick="window.history.back()" class="btn" style="background-color: #4a5568; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
@@ -50,6 +56,7 @@
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
     const convertBtn = document.getElementById('convert-btn');
+    const clearBtn = document.getElementById('clear-btn');
     const statusDiv = document.getElementById('status');
     const fileListDiv = document.getElementById('file-list');
 
@@ -64,16 +71,25 @@
     dropZone.ondrop = async (e) => {
         e.preventDefault();
         dropZone.classList.remove('hover');
-        const items = e.dataTransfer.items;
-        for (let item of items) {
-            const entry = item.webkitGetAsEntry();
-            if (entry) await traverseFileTree(entry);
+        
+        const items = Array.from(e.dataTransfer.items);
+        const entries = items.map(item => item.webkitGetAsEntry()).filter(entry => entry !== null);
+        
+        for (let entry of entries) {
+            await traverseFileTree(entry);
         }
+        
         updateUI();
     };
 
     fileInput.onchange = (e) => {
         filesToProcess = [...filesToProcess, ...Array.from(e.target.files)];
+        updateUI();
+    };
+
+    clearBtn.onclick = () => {
+        filesToProcess = [];
+        fileInput.value = '';
         updateUI();
     };
 
@@ -86,7 +102,20 @@
             }
         } else if (entry.isDirectory) {
             const reader = entry.createReader();
-            const entries = await new Promise(resolve => reader.readEntries(resolve));
+            const entries = await new Promise(resolve => {
+                let allEntries = [];
+                const readBatch = () => {
+                    reader.readEntries(async (batch) => {
+                        if (batch.length === 0) {
+                            resolve(allEntries);
+                        } else {
+                            allEntries = allEntries.concat(batch);
+                            readBatch();
+                        }
+                    });
+                };
+                readBatch();
+            });
             for (let childEntry of entries) {
                 await traverseFileTree(childEntry);
             }
@@ -94,14 +123,18 @@
     }
 
     function updateUI() {
-        convertBtn.disabled = filesToProcess.length === 0;
+        const isEmpty = filesToProcess.length === 0;
+        convertBtn.disabled = isEmpty;
+        clearBtn.disabled = isEmpty;
+        
         fileListDiv.innerHTML = filesToProcess.map(f => `<div>📄 ${f.name}</div>`).join('');
-        statusDiv.innerText = `${filesToProcess.length} archivos listos.`;
+        statusDiv.innerText = isEmpty ? '' : `${filesToProcess.length} archivos listos.`;
     }
 
     // --- Conversión y Generación de ZIP ---
     convertBtn.onclick = async () => {
         convertBtn.disabled = true;
+        clearBtn.disabled = true;
         const zip = new JSZip();
         statusDiv.innerText = "Procesando...";
 
@@ -124,11 +157,12 @@
         // Descargar el ZIP
         const link = document.createElement("a");
         link.href = URL.createObjectURL(zipContent);
-        link.download = "imagenes_convertidas.zip";
+        link.download = "Partituras de imagen a PDF.zip";
         link.click();
 
         statusDiv.innerText = "¡Completado!";
         filesToProcess = [];
+        fileInput.value = '';
         updateUI();
     };
 
