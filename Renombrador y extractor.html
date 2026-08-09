@@ -50,24 +50,19 @@
 </head>
 <body class="text-gray-800 antialiased font-sans flex h-screen overflow-hidden">
 
-    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-col flex z-20">
-        <div class="p-6">
-            <h2 class="text-xl font-bold text-gray-800" id="sb-user">👤 Usuario</h2>
-            <p class="text-xs text-gray-500 mb-2 font-mono" id="sb-logic">Lógica: Nombre_BSMH</p>
-            <div class="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded inline-block font-medium">Versión 5.0 (2026)</div>
-        </div>
-        <hr class="border-gray-100">
+<aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-col flex z-20">
         <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
             <button onclick="navigate('menu')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-home w-6"></i> Inicio</button>
-            <button onclick="navigate('renombrador')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-tags w-6"></i> Renombrador</button>
+            <button onclick="navigate('renombrador')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-edit w-6"></i> Renombrador</button>
             <button onclick="navigate('extractor')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-file-export w-6"></i> Extractor</button>
             <hr class="border-gray-100 my-2">
-            <button onclick="navigate('editorLB')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fas fa-cog w-6"></i> Gestionar Lista Base</button>
+            <button onclick="navigate('editorLB')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition"><i class="fa-solid fa-list w-6"></i> Gestionar Lista Base</button>
             <button id="btn-gestionar-patrones" onclick="navigate('editorPatrones')" class="w-full text-left px-4 py-2 rounded text-gray-700 hover:bg-gray-100 transition hidden"><i class="fas fa-puzzle-piece w-6"></i> Gestionar Patrones</button>
-            <button onclick="window.history.back()" class="w-full text-left px-4 py-2 rounded text-blue-600 hover:bg-blue-50 transition font-bold border border-blue-100 mb-2"><i class="fas fa-arrow-left w-6"></i> Volver atrás</button>
         </nav>
         <div class="p-4 border-t border-gray-200">
-            <button onclick="logout()" class="w-full bg-red-50 text-red-600 px-4 py-2 rounded hover:bg-red-100 font-medium transition"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
+            <button onclick="window.history.back()" class="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 font-medium transition flex items-center justify-center gap-2">
+                <i class="fas fa-arrow-left"></i> Volver atrás
+            </button>
         </div>
     </aside>
 
@@ -75,15 +70,15 @@
         
         <div id="view-menu" class="p-8 max-w-5xl mx-auto mt-10">
             <div class="text-center mb-12">
-                <h1 class="text-4xl font-bold text-gray-800">Selecciona una herramienta <span class="text-sm text-gray-500 align-middle">Versión 5.0</span></h1>
+                <h1 class="text-4xl font-bold text-gray-800">Selecciona una herramienta:<span class="text-sm text-gray-500 align-middle"></span></h1>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <button onclick="navigate('renombrador')" class="big-button bg-blue-600 text-white rounded-2xl h-48 flex flex-col items-center justify-center text-2xl font-bold">
-                    <i class="fas fa-tags text-4xl mb-4"></i>
+                    <i class="fas fa-edit text-4xl mb-4"></i>
                     RENOMBRADOR
                 </button>
                 <button onclick="navigate('extractor')" class="big-button bg-blue-600 text-white rounded-2xl h-48 flex flex-col items-center justify-center text-2xl font-bold">
-                    <i class="fas fa-folder-open text-4xl mb-4"></i>
+                    <i class="fas fa-file-export text-4xl mb-4"></i>
                     EXTRACTOR
                 </button>
             </div>
@@ -341,9 +336,7 @@
             pat_data: []
         };
 
-        window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('sb-user').innerText = `👤 ${state.user}`;
-            document.getElementById('sb-logic').innerText = `Lógica: ${state.logicMode}`;
+            window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('btn-gestionar-patrones').classList.remove('hidden');
             preloadData(); 
             initKeyboardEvents();
@@ -1311,7 +1304,6 @@
             state.df_patrones = []; hideLoading(); toast("Patrones guardados");
         }
 
-        function logout() { location.reload(); }
     </script>
 </body>
 </html>
