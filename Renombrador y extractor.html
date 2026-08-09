@@ -1168,7 +1168,7 @@
                 const content = await zip.generateAsync({type: "blob"});
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(content);
-                a.download = `${cod} extraída.zip`;
+                a.download = `${cod} Partitura extraída.zip`;
                 a.click();
                 toast("¡ZIP generado con éxito!");
                 closeExtractorWorkspace();
