@@ -810,7 +810,7 @@
                     zip.file(`${name}.pdf`, await arc.arrayBuffer());
                 }
                 const content = await zip.generateAsync({type:"blob"});
-                const a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = "renombrados.zip"; a.click();
+                const a = document.createElement("a"); a.href = URL.createObjectURL(content); a.download = "Partituras renombradas.zip"; a.click();
                 toast("Completado y Base de Datos actualizada");
             } catch (e) { console.error(e); } hideLoading();
         }
