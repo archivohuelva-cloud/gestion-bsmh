@@ -220,7 +220,7 @@
 
      <!-- SECCIÓN RECORDATORIOS -->
                         <div class="relative">
-                            <button onclick="toggleReminders()" class="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+                            <button onclick="toggleReminders()" class="flex items-center gap-2 text-sm font-semibold text-yellow-600 hover:text-blue-600 transition-colors bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-600">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                                 Recordatorios
                             </button>
@@ -277,7 +277,7 @@
                         <p id="clock" class="text-3xl font-black text-[#0000bd] tabular-nums tracking-tighter leading-none"></p>
                         <p id="current-date" class="text-xs text-slate-500 font-medium capitalize mt-1"></p>
                     </div>
-                    <button onclick="handleLogout()" class="mt-1 text-slate-300 hover:text-red-500 transition-colors" title="Cerrar Sesión">
+                    <button onclick="handleLogout()" class="mt-1 text-red-700 hover:text-red-500 transition-colors" title="Cerrar Sesión">
                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                     </button>
                 </div>
@@ -315,28 +315,6 @@
 
     </div>
 </div>  
-
-  <div class="relative group/sub">
-    <div class="flex justify-between items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd] cursor-pointer select-none">
-        <div class="flex items-center gap-1.5">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20" class="text-slate-400"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
-            Herramientas para PDF
-        </div>
-        <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-    </div>
-    
-    <div class="invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute left-full top-0 ml-0 w-56 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-[60] transition-all duration-200">			
-		<a href="Renombrador y extractor.html" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Renombrador & Extractor</a>
-          <a href="Unir partituras.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Unificador de Partituras</a>
-					<a href="Divisor A3 a A4.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Dividir PDF en: A3 => A4</a>
-					<a href="Rotar PDF.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Rotar partituras</a>
-          <a href="Comprimir pdf.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Comprimir PDF</a>
-					<a href="De imagen a PDF.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Convertir imagen a PDF</a>
-          <a href="De PDF a JPG.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Portadas de los guiones</a>
-          <a href="Generador de TXT.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Instrumentación .TXT</a>
-					<a href="Crear libros en A3.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Crear libretos en A3</a>
-    </div>
-</div>  
 						
 	<div class="relative group/sub">
     <div class="flex justify-between items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd] cursor-pointer select-none">
@@ -368,7 +346,29 @@
 		    <a href="Etiquetas de instrumentos.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Etiquetas instrumentos</a>
 		    <a href="Etiquetas para inventario.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Etiquetas inventario</a>
     </div>
-</div>     
+</div> 
+
+  <div class="relative group/sub">
+    <div class="flex justify-between items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd] cursor-pointer select-none">
+        <div class="flex items-center gap-1.5">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20" class="text-slate-400"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+            Herramientas para PDF
+        </div>
+        <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+    </div>
+    
+    <div class="invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute left-full top-0 ml-0 w-56 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-[60] transition-all duration-200">			
+		<a href="Renombrador y extractor.html" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Renombrador & Extractor</a>
+          <a href="Unir partituras.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Unificador de Partituras</a>
+					<a href="Divisor A3 a A4.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Dividir PDF en: A3 => A4</a>
+					<a href="Rotar PDF.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Rotar partituras</a>
+          <a href="Comprimir pdf.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Comprimir Partituras</a>
+					<a href="De imagen a PDF.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Convertir imagen a PDF</a>
+          <a href="De PDF a JPG.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Convertir PDF a imagen</a>
+          <a href="Generador de TXT.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Instrumentación .TXT</a>
+					<a href="Crear libros en A3.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Crear libretos en A3</a>
+    </div>
+</div>  
 
 <div class="relative group/sub">
     <div class="flex justify-between items-center px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd] cursor-pointer select-none">
@@ -382,8 +382,8 @@
     <div class="invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute left-full top-0 ml-0 w-56 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-[60] transition-all duration-200">
       <a href="Generador de repertorios.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Generar Repertorios</a>
       <a href="https://drive.google.com/drive/folders/1polrHmhqrV_SK-Q8s_oQe7QiesPKoTu-?usp=sharing" target="_blank" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Repertorios .JSON</a>	
-			<a href="Carteles Camerinos.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Carteles camerinos</a> 
-      <a href="Plantilla y refuerzos.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Plantilla y Refuerzos</a>
+			<a href="Plantilla y refuerzos.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Plantilla y Refuerzos</a>
+      <a href="Carteles Camerinos.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Carteles camerinos</a> 
 			<a href="Rider BSMH.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Rider Escenario</a>
     </div>
 </div>
@@ -399,7 +399,7 @@
     
     <div class="invisible group-hover/sub:visible opacity-0 group-hover/sub:opacity-100 absolute left-full top-0 ml-0 w-56 bg-white border border-slate-200 rounded-md shadow-xl py-1 z-[60] transition-all duration-200">
             <a href="Editor de audio.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Editor de Audio</a>
-			      <a href="Piano virtual.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Piano Virtual</a>
+			      <a href="Piano virtual.html" class="block px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-[#0000bd]">● Piano Virtual Online</a>
     </div>
 </div>  
 
@@ -637,7 +637,7 @@
             <div class="text-purple-600 mb-1.5 group-hover:scale-110 transition-transform">
                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
             </div>
-            <span class="text-[11px] font-extrabold uppercase tracking-tight text-purple-950 text-center leading-tight">Portadas de los guiones</span>
+            <span class="text-[11px] font-extrabold uppercase tracking-tight text-purple-950 text-center leading-tight">Convertir PDF a imagen</span>
         </a>
 
         <!-- 10. Instrumentos en .TXT -->
