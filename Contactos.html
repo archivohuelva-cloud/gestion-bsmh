@@ -456,10 +456,19 @@
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-title-row">
-                <h1 class="sidebar-title">Contactos</h1>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- BOTÓN VOLVER -->
+                    <button onclick="window.history.back()" title="Volver" style="background-color: #4a5568; color: white; border: none; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+                        <span>Volver</span>
+                    </button>
+                    
+                    <h1 class="sidebar-title">Contactos</h1>
+                </div>
+                
                 <button class="add-btn" onclick="prepareNewContact()" title="Añadir contacto">+</button>
             </div>
-            <input type="text" id="searchField" class="search-bar" placeholder="Buscar">
+            <input type="text" id="searchField" class="search-bar" placeholder="Buscar...">
             
             <div class="group-selector">
                 <button id="groupByNameBtn" class="group-btn active" onclick="setGrouping('name')">Nombre</button>
