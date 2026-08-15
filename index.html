@@ -230,6 +230,7 @@
     <div class="flex items-center gap-2">
         <button onclick="toggleAllReminders(true)" class="text-xs text-blue-600">Marcar Todos</button>
         <button onclick="toggleAllReminders(false)" class="text-xs text-slate-600">Limpiar</button>
+        <button onclick="deleteAllReminders()" class="text-xs text-red-500 hover:text-red-700 font-semibold">Eliminar todos</button>
         <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" id="reminders-count">0</span>
     </div>
 </div>
@@ -1163,6 +1164,18 @@
             renderReminders();
             document.getElementById('reminders-dropdown').classList.add('show');
         }
+
+        function deleteAllReminders() {
+          if (reminders.length === 0) return;
+
+          const confirmed = confirm("¿Está seguro de eliminar todos los recordatorios de una vez?");
+          if (confirmed) {
+              reminders = [];
+              saveReminders();
+              renderReminders();
+          }
+    document.getElementById('reminders-dropdown').classList.add('show');
+}
 
         // Guarda localmente y sincroniza en segundo plano con Google Sheets
         function saveReminders() {
