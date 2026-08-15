@@ -226,16 +226,16 @@
                             </button>
                             <div id="reminders-dropdown" class="reminders-dropdown">
                                 <div class="flex justify-between items-center mb-3 border-b pb-2">
-    <span class="font-bold text-slate-800">Tareas</span>
+    <span class="font-bold text-slate-800">Recordatorios:</span>
     <div class="flex items-center gap-2">
-        <button onclick="toggleAllReminders(true)" class="text-xs text-blue-600">Todo</button>
-        <button onclick="toggleAllReminders(false)" class="text-xs text-slate-500">Nada</button>
+        <button onclick="toggleAllReminders(true)" class="text-xs text-blue-600">Marcar Todos</button>
+        <button onclick="toggleAllReminders(false)" class="text-xs text-slate-600">Limpiar</button>
         <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" id="reminders-count">0</span>
     </div>
 </div>
                                 <div id="reminders-list" class="max-h-60 overflow-y-auto mb-3"></div>
                                 <div class="flex gap-2">
-                                    <input type="text" id="reminder-input" placeholder="Nuevo..." class="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400" onkeypress="if(event.key === 'Enter') addReminder()">
+                                    <input type="text" id="reminder-input" placeholder="Nuevo recordatorio..." class="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400" onkeypress="if(event.key === 'Enter') addReminder()">
                                     <button onclick="addReminder()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">+</button>
                                 </div>
                             </div>
