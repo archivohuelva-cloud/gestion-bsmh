@@ -1006,111 +1006,117 @@
             }
         };
 
-        // --- LÓGICA DE RECORDATORIOS (AÑADIDA) ---
+// --- LÓGICA DE RECORDATORIOS CON GOOGLE SHEETS ---
+        const REMINDERS_API_URL = "https://script.google.com/macros/s/AKfycbxrAZ3-Gw275iTv_sqYxfQntDyJKmrQHRvRpo-Milhb9zKfm50EOGfuKBw8guNCaxtT/exec";
+
         let reminders = JSON.parse(localStorage.getItem('bsmh_reminders')) || [];
 
-function renderTicker() {
-    const ticker = document.getElementById('ticker');
-    if (!ticker) return;
+        // Cargar datos en la nube al abrir
+        async function fetchReminders() {
+            try {
+                const res = await fetch(REMINDERS_API_URL);
+                if (res.ok) {
+                    const cloudData = await res.json();
+                    reminders = cloudData;
+                    localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
+                    renderReminders();
+                    renderTicker();
+                }
+            } catch (err) {
+                console.warn("Modo offline o error al conectar con Google Sheets:", err);
+            }
+        }
 
-    const activeReminders = reminders.filter(r => !r.completed);
+        function renderTicker() {
+            const ticker = document.getElementById('ticker');
+            if (!ticker) return;
 
-    if (activeReminders.length === 0) {
-        ticker.innerHTML = "Sin recordatorios activos";
-        return;
-    }
+            const activeReminders = reminders.filter(r => !r.completed);
 
-    // SOLO una vez (sin duplicar)
-    ticker.innerHTML = activeReminders.map(r => `• ${r.text}`).join('          ');
-}
+            if (activeReminders.length === 0) {
+                ticker.innerHTML = "Sin recordatorios activos";
+                return;
+            }
+
+            ticker.innerHTML = activeReminders.map(r => `• ${r.text}`).join('          ');
+        }
 
         function toggleReminders() {
             document.getElementById('reminders-dropdown').classList.toggle('show');
         }
 
         function renderReminders() {
-    const list = document.getElementById('reminders-list');
-    list.innerHTML = '';
-    let count = 0;
-    
-    reminders.forEach((r, i) => {
-        if(!r.completed) count++;
-        const div = document.createElement('div');
-        div.className = 'reminder-item';
-        div.draggable = true;
-        div.dataset.index = i;
+            const list = document.getElementById('reminders-list');
+            list.innerHTML = '';
+            let count = 0;
+            
+            reminders.forEach((r, i) => {
+                if(!r.completed) count++;
+                const div = document.createElement('div');
+                div.className = 'reminder-item';
+                div.draggable = true;
+                div.dataset.index = i;
 
-        // Asignación de eventos para Drag & Drop
-        div.addEventListener('dragstart', handleDragStart);
-        div.addEventListener('dragover', handleDragOver);
-        div.addEventListener('drop', handleDrop);
-        div.addEventListener('dragenter', handleDragEnter);
-        div.addEventListener('dragleave', handleDragLeave);
-        div.addEventListener('dragend', handleDragEnd);
+                div.addEventListener('dragstart', handleDragStart);
+                div.addEventListener('dragover', handleDragOver);
+                div.addEventListener('drop', handleDrop);
+                div.addEventListener('dragenter', handleDragEnter);
+                div.addEventListener('dragleave', handleDragLeave);
+                div.addEventListener('dragend', handleDragEnd);
 
-        div.innerHTML = `
-            <div class="drag-handle" title="Arrastrar para reordenar">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                </svg>
-            </div>
-            <input type="checkbox" class="reminder-checkbox" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
-            <span class="reminder-text ${r.completed ? 'completed' : ''}">${r.text}</span>
-            <span class="reminder-edit" onclick="editReminder(${i}, event)" style="color: #f59e0b; font-size: 16px; margin-left: 8px; cursor: pointer;" title="Editar">✎</span>
-            <span class="reminder-delete" onclick="deleteReminder(${i}, event)" title="Eliminar">&times;</span>
-        `;
-        list.appendChild(div);
-    });
-    
-    document.getElementById('reminders-count').innerText = count;
-}
+                div.innerHTML = `
+                    <div class="drag-handle" title="Arrastrar para reordenar">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                        </svg>
+                    </div>
+                    <input type="checkbox" class="reminder-checkbox" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
+                    <span class="reminder-text ${r.completed ? 'completed' : ''}">${r.text}</span>
+                    <span class="reminder-edit" onclick="editReminder(${i}, event)" style="color: #f59e0b; font-size: 16px; margin-left: 8px; cursor: pointer;" title="Editar">✎</span>
+                    <span class="reminder-delete" onclick="deleteReminder(${i}, event)" title="Eliminar">&times;</span>
+                `;
+                list.appendChild(div);
+            });
+            
+            document.getElementById('reminders-count').innerText = count;
+        }
 
-// --- LÓGICA DE EVENTOS DRAG & DROP ---
-let dragStartIndex;
+        let dragStartIndex;
 
-function handleDragStart(e) {
-    dragStartIndex = +this.dataset.index;
-    this.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', dragStartIndex);
-}
+        function handleDragStart(e) {
+            dragStartIndex = +this.dataset.index;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragStartIndex);
+        }
 
-function handleDragOver(e) {
-    e.preventDefault(); // Necesario para permitir el "drop"
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-}
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
 
-function handleDragEnter(e) {
-    this.classList.add('drag-over');
-}
+        function handleDragEnter(e) { this.classList.add('drag-over'); }
+        function handleDragLeave(e) { this.classList.remove('drag-over'); }
 
-function handleDragLeave(e) {
-    this.classList.remove('drag-over');
-}
+        function handleDrop(e) {
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            const dragEndIndex = +this.dataset.index;
+            
+            if (dragStartIndex !== dragEndIndex) {
+                const itemToMove = reminders.splice(dragStartIndex, 1)[0];
+                reminders.splice(dragEndIndex, 0, itemToMove);
+                saveReminders();
+                renderReminders();
+            }
+            return false;
+        }
 
-function handleDrop(e) {
-    e.stopPropagation();
-    this.classList.remove('drag-over');
-    
-    const dragEndIndex = +this.dataset.index;
-    
-    if (dragStartIndex !== dragEndIndex) {
-        // Extraemos el elemento movido y lo insertamos en su nueva posición
-        const itemToMove = reminders.splice(dragStartIndex, 1)[0];
-        reminders.splice(dragEndIndex, 0, itemToMove);
-        
-        saveReminders(); // Esto actualiza el localStorage y el Ticker horizontal
-        renderReminders();
-    }
-    return false;
-}
-
-function handleDragEnd(e) {
-    this.classList.remove('dragging');
-    const items = document.querySelectorAll('.reminder-item');
-    items.forEach(item => item.classList.remove('drag-over'));
-}
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.reminder-item').forEach(item => item.classList.remove('drag-over'));
+        }
 
         function addReminder() {
             const input = document.getElementById('reminder-input');
@@ -1128,62 +1134,53 @@ function handleDragEnd(e) {
             renderReminders();
         }
 
-function deleteReminder(i, event) {
-    // Evita que el clic llegue al contenedor del menú y lo cierre
-    if (event) event.stopPropagation();
+        function deleteReminder(i, event) {
+            if (event) event.stopPropagation();
+            reminders.splice(i, 1);
+            saveReminders();
+            renderReminders();
+            const dropdown = document.getElementById('reminders-dropdown');
+            if (dropdown) dropdown.classList.add('show');
+        }
 
-    reminders.splice(i, 1);
-    saveReminders();
-    renderReminders();
+        function editReminder(i, event) {
+            if (event) event.stopPropagation();
+            const currentText = reminders[i].text;
+            const newText = prompt("Editar recordatorio:", currentText);
+            if (newText !== null && newText.trim() !== "") {
+                reminders[i].text = newText.trim();
+                saveReminders();
+                renderReminders();
+            }
+            const dropdown = document.getElementById('reminders-dropdown');
+            if (dropdown) dropdown.classList.add('show');
+        }
 
-    // Forzamos que el menú se mantenga abierto añadiendo la clase 'show'
-    const dropdown = document.getElementById('reminders-dropdown');
-    if (dropdown) {
-        dropdown.classList.add('show');
-    }
-}
+        function toggleAllReminders(state) {
+            reminders.forEach(r => r.completed = state);
+            saveReminders();
+            renderReminders();
+            document.getElementById('reminders-dropdown').classList.add('show');
+        }
 
-function editReminder(i, event) {
-    // Evita que el clic llegue al contenedor del menú y lo cierre
-    if (event) event.stopPropagation();
-
-    const currentText = reminders[i].text;
-    const newText = prompt("Editar recordatorio:", currentText);
-
-    // Si el usuario no cancela y el texto no está vacío, se actualiza
-    if (newText !== null && newText.trim() !== "") {
-        reminders[i].text = newText.trim();
-        saveReminders();
-        renderReminders();
-    }
-
-    // Forzamos que el menú se mantenga abierto
-    const dropdown = document.getElementById('reminders-dropdown');
-    if (dropdown) {
-        dropdown.classList.add('show');
-    }
-}
-
-	function toggleAllReminders(state) {
-    reminders.forEach(r => r.completed = state);
-    saveReminders();
-    renderReminders();
-
-    // Mantener abierto el desplegable
-    document.getElementById('reminders-dropdown').classList.add('show');
-}
-
-function saveReminders() {
-    localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
-    renderTicker();
-}
+        // Guarda localmente y sincroniza en segundo plano con Google Sheets
+        function saveReminders() {
+            localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
+            renderTicker();
+            fetch(REMINDERS_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(reminders)
+            }).catch(e => console.error("Error al sincronizar con Google Sheets:", e));
+        }
 
         window.onload = function() {
             checkSession();
             setInterval(updateUI, 1000);
             updateUI();
             renderReminders();
-	    renderTicker();
+            renderTicker();
+            fetchReminders(); // <--- Descarga los recordatorios de Sheets al iniciar
             const userAgent = window.navigator.userAgent;
             if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
                 document.body.classList.add('ios-device');
