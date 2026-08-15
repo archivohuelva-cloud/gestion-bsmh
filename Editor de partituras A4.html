@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adaptador de Partituras A4 - BSMH</title>
+    <title>Editor de Partituras A4 - BSMH</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
@@ -36,6 +37,7 @@
         canvas:active { cursor: grabbing; }
         canvas.mode-erase { cursor: none; } 
         canvas.mode-erase-area { cursor: crosshair !important; }
+        canvas.mode-crop { cursor: crosshair !important; }
         canvas.mode-transform { cursor: default; }
         canvas.mode-text { cursor: text; }
         canvas.text-selected { cursor: move !important; }
@@ -251,8 +253,8 @@
             </button>
             <i data-lucide="music" class="w-6 h-6 text-blue-400"></i>
             <div>
-                <h1 class="text-lg font-bold leading-tight">Editor A4 de Partituras</h1>
-                <p class="text-xs text-slate-400">Edita y genera un archivo PDF ajustando las partituras libremente al tamaño completo del folio A4</p>
+                <h1 class="text-lg font-bold leading-tight">Editor de Partituras en formato A4</h1>
+                <p class="text-xs text-slate-400"></p>
             </div>
         </div>
         <div class="flex items-center gap-2">
@@ -265,12 +267,12 @@
                 <i data-lucide="file-plus" class="w-4 h-4"></i> Nuevo proceso
             </button>
             <label for="pdf-upload" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md cursor-pointer transition flex items-center gap-2 text-sm font-medium">
-                <i data-lucide="upload" class="w-4 h-4"></i> Cargar PDF(s)
+                <i data-lucide="upload" class="w-4 h-4"></i> Abrir PDF
             </label>
             <input type="file" id="pdf-upload" accept="application/pdf,image/*" class="hidden" multiple>
             
             <button id="export-btn" class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-500 text-white px-4 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium" disabled>
-                <i data-lucide="download" class="w-4 h-4"></i> Exportar PDF
+                <i data-lucide="download" class="w-4 h-4"></i> Exportar
             </button>
             <button id="print-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition flex items-center gap-2 text-sm font-medium">
                 <i data-lucide="printer" class="w-4 h-4"></i> Imprimir
@@ -315,15 +317,21 @@
             <div class="p-4 flex flex-col gap-6" id="tools-container" style="opacity: 0.5; pointer-events: none;">
                 <div>
                     <h3 class="text-[10px] font-black text-slate-400 uppercase mb-2">Herramientas</h3>
-                    <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-md">
-                        <button id="mode-pan" class="py-2 text-[10px] font-bold rounded bg-blue-600 text-white shadow-sm flex flex-col items-center gap-1">
-                            <i data-lucide="move" class="w-4 h-4"></i>Mover
+                    <div class="grid grid-cols-5 gap-1 bg-slate-100 p-1 rounded-md">
+                        <button id="mode-pan" class="py-2 text-[9px] font-bold rounded bg-blue-600 text-white shadow-sm flex flex-col items-center gap-1">
+                            <i data-lucide="move" class="w-3.5 h-3.5"></i>Mover
                         </button>
-                        <button id="mode-erase" class="py-2 text-[10px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
-                            <i data-lucide="eraser" class="w-4 h-4"></i>Goma
+                        <button id="mode-erase" class="py-2 text-[9px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
+                            <i data-lucide="eraser" class="w-3.5 h-3.5"></i>Goma
                         </button>
-                        <button id="mode-text" class="py-2 text-[10px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
-                            <i data-lucide="type" class="w-4 h-4"></i>Texto
+                        <button id="mode-text" class="py-2 text-[9px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
+                            <i data-lucide="type" class="w-3.5 h-3.5"></i>Texto
+                        </button>
+                        <button id="mode-enhance" class="py-2 text-[9px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
+                            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>Mejorar
+                        </button>
+                        <button id="mode-crop" class="py-2 text-[9px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1">
+                            <i data-lucide="crop" class="w-3.5 h-3.5"></i>Recorte
                         </button>
                     </div>
                 </div>
@@ -398,6 +406,72 @@
 
                          <button id="delete-text" class="w-full py-1.5 text-[10px] bg-rose-100 text-rose-700 rounded font-bold hover:bg-rose-200 transition">
                             Eliminar Texto Seleccionado
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Opciones de Mejorar (Filtros e Imagen) -->
+                <div id="options-enhance" class="flex flex-col gap-3 hidden">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase">Mejora de Imagen</h3>
+
+                    <div class="flex items-center gap-2 mb-1 bg-blue-50 p-2 rounded border border-blue-100">
+                            <input type="checkbox" id="apply-filters-all-checkbox" class="w-4 h-4 cursor-pointer text-blue-600 rounded">
+                            <label for="apply-filters-all-checkbox" class="text-[11px] font-bold text-blue-900 cursor-pointer select-none">Aplicar a todas las páginas</label>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[11px] font-bold text-slate-600">Contraste</label>
+                            <span id="contrast-val" class="text-xs font-mono text-blue-600 font-bold">100%</span>
+                        </div>
+                        <input type="range" id="contrast-slider" min="0" max="250" value="100">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[11px] font-bold text-slate-600">Brillo</label>
+                            <span id="brightness-val" class="text-xs font-mono text-blue-600 font-bold">0</span>
+                        </div>
+                        <input type="range" id="brightness-slider" min="-100" max="100" value="0">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-[11px] font-bold text-slate-600">Nitidez</label>
+                            <span id="sharpness-val" class="text-xs font-mono text-blue-600 font-bold">0</span>
+                        </div>
+                        <input type="range" id="sharpness-slider" min="0" max="100" value="0">
+                    </div>
+
+                    <div class="border-t pt-2 mt-1">
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="bw-threshold-checkbox" class="text-[11px] font-bold text-slate-700 cursor-pointer">Modo Blanco y Negro (Binarizar)</label>
+                            <input type="checkbox" id="bw-threshold-checkbox" class="w-4 h-4 text-blue-600 rounded cursor-pointer">
+                        </div>
+                        <div id="threshold-container" class="opacity-50 pointer-events-none transition-all">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-[10px] font-bold text-slate-600">Umbral (Threshold)</label>
+                                <span id="threshold-val" class="text-xs font-mono text-blue-600 font-bold">128</span>
+                            </div>
+                            <input type="range" id="threshold-slider" min="0" max="255" value="128">
+                        </div>
+                    </div>
+
+                    <button id="reset-filters-btn" class="w-full mt-2 py-1.5 text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 rounded hover:bg-slate-200 transition">
+                        Restablecer Filtros
+                    </button>
+                </div>
+
+                <!-- Opciones de Recorte (Crop) -->
+                <div id="options-crop" class="flex flex-col gap-3 hidden">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase">Recortar Márgenes / Sombras</h3>
+                    <p class="text-[11px] text-slate-500 leading-tight">Haz clic y arrastra sobre la partitura para seleccionar la zona limpia a conservar.</p>
+                    <div class="flex gap-2">
+                        <button id="apply-crop-btn" class="flex-1 py-2 text-xs font-bold bg-emerald-600 text-white rounded hover:bg-emerald-700 transition flex items-center justify-center gap-1">
+                            <i data-lucide="check" class="w-4 h-4"></i> Recortar
+                        </button>
+                        <button id="cancel-crop-btn" class="flex-1 py-2 text-xs font-bold bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition flex items-center justify-center gap-1">
+                            <i data-lucide="x" class="w-4 h-4"></i> Cancelar
                         </button>
                     </div>
                 </div>
@@ -668,9 +742,18 @@
         let eraserStartCoords = { x: 0, y: 0, screenX: 0, screenY: 0 };
         const eraserAreaBox = document.getElementById('eraser-area-preview-box');
 
+        // Variables específicas para Recorte (Crop)
+        let cropStart = null;
+        let cropEnd = null;
+
         // MANEJO DE ORIENTACION DE PÁGINA
         orientationSelect.addEventListener('change', (e) => {
-            orientation = e.target.value;
+            setPageOrientation(e.target.value);
+        });
+
+        function setPageOrientation(newOrientation) {
+            orientation = newOrientation;
+            orientationSelect.value = orientation;
             
             if (orientation === 'landscape') {
                 canvas.width = 297 * DPI; // 2970
@@ -688,13 +771,26 @@
 
             document.getElementById('zoom-fit').click();
             render();
-        });
+        }
 
         // MANEJO DE TECLADO
         window.addEventListener('keydown', (e) => { 
             const isInput = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === "true";
 
-            if (e.key === 'Control') isCtrlPressed = true; 
+            if (e.key === 'Control' || e.key === 'Meta') isCtrlPressed = true; 
+
+            // Atajos teclado para Deshacer (Ctrl + Z) y Rehacer (Ctrl + Y)
+            if ((e.ctrlKey || e.metaKey) && !isInput) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    undoAction();
+                    return;
+                } else if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    redoAction();
+                    return;
+                }
+            }
 
             // Teclas Flecha Arriba y Abajo para ZOOM (Si no se está editando texto o campos)
             if (!isInput) {
@@ -730,9 +826,6 @@
                 render();
             }
 
-            if (isCtrlPressed && e.key.toLowerCase() === 'z') { e.preventDefault(); undoAction(); }
-            if (isCtrlPressed && e.key.toLowerCase() === 'y') { e.preventDefault(); redoAction(); }
-
             if (pagesData.length > 0 && !isInput) {
                 if (e.key === 'ArrowRight') {
                     e.preventDefault();
@@ -744,7 +837,7 @@
             }
         });
         
-        window.addEventListener('keyup', (e) => { if (e.key === 'Control') isCtrlPressed = false; });
+        window.addEventListener('keyup', (e) => { if (e.key === 'Control' || e.key === 'Meta') isCtrlPressed = false; });
 
         function undoAction() {
             const p = pagesData[currentIndex];
@@ -792,6 +885,7 @@
             const state = {
                 x: p.x, y: p.y, w: p.w, h: p.h,
                 rotation: p.rotation,
+                filters: { ...p.filters },
                 strokes: JSON.parse(JSON.stringify(p.strokes)),
                 texts: JSON.parse(JSON.stringify(p.texts))
             };
@@ -803,6 +897,7 @@
                                lastState.w === state.w && 
                                lastState.h === state.h && 
                                lastState.rotation === state.rotation && 
+                               JSON.stringify(lastState.filters) === JSON.stringify(state.filters) &&
                                JSON.stringify(lastState.strokes) === JSON.stringify(state.strokes) &&
                                JSON.stringify(lastState.texts) === JSON.stringify(state.texts);
                 if (isSame) return;
@@ -851,6 +946,7 @@
             if (!files || files.length === 0) return;
             showLoading("Procesando archivos...");
             try {
+                let firstPageDetected = false;
                 for (let f = 0; f < files.length; f++) {
                     const file = files[f];
                     
@@ -860,11 +956,19 @@
                         for(let i=1; i<=pdf.numPages; i++) {
                             const page = await pdf.getPage(i);
                             const viewport = page.getViewport({ scale: 2.5 });
+                            
+                            // Detectar orientación de la primera página del primer archivo
+                            if (!firstPageDetected && pagesData.length === 0) {
+                                const detectedOrientation = viewport.width > viewport.height ? 'landscape' : 'portrait';
+                                setPageOrientation(detectedOrientation);
+                                firstPageDetected = true;
+                            }
+
                             const offCanvas = document.createElement('canvas');
                             offCanvas.width = viewport.width; 
                             offCanvas.height = viewport.height;
                             await page.render({ canvasContext: offCanvas.getContext('2d'), viewport }).promise;
-                            crearNuevaPagina(offCanvas, viewport.width, viewport.height);
+                            crearNuevaPagina(offCanvas, viewport.width, viewport.height, file.name);
                         }
                     } else if (file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|tiff|bmp)$/i.test(file.name)) {
                         await new Promise((resolve, reject) => {
@@ -872,11 +976,18 @@
                             reader.onload = (event) => {
                                 const img = new Image();
                                 img.onload = () => {
+                                    // Detectar orientación de la primera página del primer archivo
+                                    if (!firstPageDetected && pagesData.length === 0) {
+                                        const detectedOrientation = img.width > img.height ? 'landscape' : 'portrait';
+                                        setPageOrientation(detectedOrientation);
+                                        firstPageDetected = true;
+                                    }
+
                                     const offCanvas = document.createElement('canvas');
                                     offCanvas.width = img.width;
                                     offCanvas.height = img.height;
                                     offCanvas.getContext('2d').drawImage(img, 0, 0);
-                                    crearNuevaPagina(offCanvas, img.width, img.height);
+                                    crearNuevaPagina(offCanvas, img.width, img.height, file.name);
                                     resolve();
                                 };
                                 img.onerror = reject;
@@ -903,16 +1014,28 @@
 
         uploadInput.addEventListener('change', (e) => processFiles(e.target.files));
 
-        function crearNuevaPagina(sourceCanvas, width, height) {
+        function crearNuevaPagina(sourceCanvas, width, height, fileName = '') {
             let scale = Math.min(canvas.width / width, canvas.height / height);
             const newPage = {
                 img: sourceCanvas, 
+                processedImg: sourceCanvas,
+                fileName: fileName || `Pagina_${pagesData.length + 1}`,
                 x: canvas.width / 2, y: canvas.height / 2,
                 w: width * scale, h: height * scale,
                 origW: width, origH: height,
-                rotation: 0, copies: 1, strokes: [], texts: [], history: [], redoStack: []
+                rotation: 0, copies: 1, strokes: [], texts: [], history: [], redoStack: [],
+                filters: {
+                    contrast: 100,
+                    brightness: 0,
+                    sharpness: 0,
+                    bw: false,
+                    threshold: 128
+                }
             };
-            newPage.history.push({ x: newPage.x, y: newPage.y, w: newPage.w, h: newPage.h, rotation: 0, strokes: [], texts: [] });
+            newPage.history.push({ 
+                x: newPage.x, y: newPage.y, w: newPage.w, h: newPage.h, rotation: 0, 
+                filters: { ...newPage.filters }, strokes: [], texts: [] 
+            });
             pagesData.push(newPage);
         }
 
@@ -928,6 +1051,66 @@
             };
         }
 
+        // --- FILTROS Y PROCESAMIENTO DE IMAGEN ---
+        function applyFiltersToPage(p) {
+            if (!p || !p.img) return;
+            const f = p.filters;
+            
+            // Si todos los filtros están por defecto, usa el canvas original
+            if (f.contrast === 100 && f.brightness === 0 && f.sharpness === 0 && !f.bw) {
+                p.processedImg = p.img;
+                return;
+            }
+
+            const off = document.createElement('canvas');
+            off.width = p.img.width;
+            off.height = p.img.height;
+            const octx = off.getContext('2d');
+            
+            // Contraste y Brillo vía Canvas Filter CSS
+            octx.filter = `contrast(${f.contrast}%) brightness(${100 + parseInt(f.brightness)}%)`;
+            octx.drawImage(p.img, 0, 0);
+            octx.filter = 'none';
+
+            let imgData = octx.getImageData(0, 0, off.width, off.height);
+            let data = imgData.data;
+
+            // Filtro Nitidez (Sharpening Matrix)
+            if (f.sharpness > 0) {
+                const amount = f.sharpness / 100;
+                const copy = new Uint8ClampedArray(data);
+                const w = off.width, h = off.height;
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const i = (y * w + x) * 4;
+                        for (let c = 0; c < 3; c++) {
+                            const val = 5 * copy[i + c]
+                                - copy[((y - 1) * w + x) * 4 + c]
+                                - copy[((y + 1) * w + x) * 4 + c]
+                                - copy[(y * w + (x - 1)) * 4 + c]
+                                - copy[(y * w + (x + 1)) * 4 + c];
+                            data[i + c] = Math.min(255, Math.max(0, copy[i + c] * (1 - amount) + val * amount));
+                        }
+                    }
+                }
+            }
+
+            // Binarización (Umbral B/N)
+            if (f.bw) {
+                const th = f.threshold;
+                for (let i = 0; i < data.length; i += 4) {
+                    const avg = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                    const v = avg >= th ? 255 : 0;
+                    data[i] = v;
+                    data[i + 1] = v;
+                    data[i + 2] = v;
+                }
+            }
+
+            octx.putImageData(imgData, 0, 0);
+            p.processedImg = off;
+        }
+
         function render(isExport = false) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -935,6 +1118,7 @@
             if (!pagesData[currentIndex]) return;
             
             const p = pagesData[currentIndex];
+            const displayImg = p.processedImg || p.img;
             
             const scaleX = p.w / p.img.width;
             const scaleY = p.h / p.img.height;
@@ -943,7 +1127,7 @@
             ctx.translate(p.x, p.y); 
             ctx.rotate(p.rotation * Math.PI / 180);
             
-            ctx.drawImage(p.img, -p.w/2, -p.h/2, p.w, p.h); 
+            ctx.drawImage(displayImg, -p.w/2, -p.h/2, p.w, p.h); 
             
             ctx.save();
             ctx.scale(scaleX, scaleY);
@@ -1019,7 +1203,6 @@
                     ctx.stroke();
                     ctx.restore();
                 } else if (currentMode === 'erase' && currentEraserMode === 'area' && !isDragging) {
-                    // Muestra unas guías cruzadas naranjas en Modo Área antes de hacer clic para saber dónde empezará el contorno
                     ctx.save();
                     ctx.strokeStyle = "#e67e22";
                     ctx.lineWidth = 1.5 / currentZoom;
@@ -1030,6 +1213,43 @@
                     ctx.moveTo(0, mousePos.y);
                     ctx.lineTo(canvas.width, mousePos.y);
                     ctx.stroke();
+                    ctx.restore();
+                } else if (currentMode === 'crop') {
+                    // Dibuja la selección de área de recorte semi-transparente
+                    ctx.save();
+                    if (cropStart && cropEnd) {
+                        const x = Math.min(cropStart.x, cropEnd.x);
+                        const y = Math.min(cropStart.y, cropEnd.y);
+                        const w = Math.abs(cropEnd.x - cropStart.x);
+                        const h = Math.abs(cropEnd.y - cropStart.y);
+
+                        // Sombra oscura traslúcida en la zona exterior a descartar
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                        ctx.beginPath();
+                        ctx.rect(0, 0, canvas.width, canvas.height);
+                        ctx.rect(x, y, w, h);
+                        ctx.fill('evenodd');
+
+                        // Ligero tinte verde transparente en la zona a conservar
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.12)';
+                        ctx.fillRect(x, y, w, h);
+
+                        // Borde punteado de recorte
+                        ctx.strokeStyle = '#10b981';
+                        ctx.lineWidth = 3 / currentZoom;
+                        ctx.setLineDash([6, 6]);
+                        ctx.strokeRect(x, y, w, h);
+                    } else {
+                        ctx.strokeStyle = "#10b981";
+                        ctx.lineWidth = 1.5 / currentZoom;
+                        ctx.setLineDash([6, 6]);
+                        ctx.beginPath();
+                        ctx.moveTo(mousePos.x, 0);
+                        ctx.lineTo(mousePos.x, canvas.height);
+                        ctx.moveTo(0, mousePos.y);
+                        ctx.lineTo(canvas.width, mousePos.y);
+                        ctx.stroke();
+                    }
                     ctx.restore();
                 }
             }
@@ -1145,6 +1365,9 @@
                     eraserAreaBox.style.height = '0px';
                     eraserAreaBox.style.display = 'block';
                 }
+            } else if (currentMode === 'crop') {
+                cropStart = { x: coords.x, y: coords.y };
+                cropEnd = { x: coords.x, y: coords.y };
             }
         });
 
@@ -1209,6 +1432,8 @@
                     eraserAreaBox.style.width = Math.abs(width) + 'px';
                     eraserAreaBox.style.height = Math.abs(height) + 'px';
                 }
+            } else if (currentMode === 'crop') {
+                cropEnd = { x: coords.x, y: coords.y };
             }
             lastX = coords.x; lastY = coords.y; render();
         });
@@ -1238,7 +1463,9 @@
                         });
                     }
                 }
-                saveHistory(); 
+                if (currentMode !== 'crop') {
+                    saveHistory();
+                }
             } 
             isDragging = false; 
             activeHandle = null; 
@@ -1285,12 +1512,41 @@
             }
         }
 
+        // --- INICIO: CÓDIGO NUEVO AÑADIDO ---
+        function syncGlobalFilters() {
+            const applyFiltersCheckbox = document.getElementById('apply-filters-all-checkbox');
+            if (applyFiltersCheckbox && applyFiltersCheckbox.checked && currentIndex === 0) {
+                const firstPageFilters = JSON.stringify(pagesData[0].filters);
+                for (let i = 1; i < pagesData.length; i++) {
+                    pagesData[i].filters = JSON.parse(firstPageFilters);
+                    applyFiltersToPage(pagesData[i]);
+                }
+            }
+        }
+        // --- FIN: CÓDIGO NUEVO AÑADIDO ---
+
         applyAllCheckbox.addEventListener('change', (e) => {
             if (e.target.checked && pagesData.length > 0) {
                 syncGlobalSettings();
                 render();
             }
         });
+
+        applyTextsAllCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked && pagesData.length > 0) {
+                syncGlobalTexts();
+                render();
+            }
+        });
+
+        // --- INICIO: CÓDIGO NUEVO AÑADIDO ---
+        document.getElementById('apply-filters-all-checkbox')?.addEventListener('change', (e) => {
+            if (e.target.checked && pagesData.length > 0) {
+                syncGlobalFilters();
+                render();
+            }
+        });
+        // --- FIN: CÓDIGO NUEVO AÑADIDO ---
 
         applyTextsAllCheckbox.addEventListener('change', (e) => {
             if (e.target.checked && pagesData.length > 0) {
@@ -1312,37 +1568,165 @@
             const currentScale = (p.w / p.img.width).toFixed(2);
             document.getElementById('scale-slider').value = currentScale;
             document.getElementById('scale-num-input').value = currentScale;
+
+            // Cargar estado de filtros
+            const f = p.filters || { contrast: 100, brightness: 0, sharpness: 0, bw: false, threshold: 128 };
+            document.getElementById('contrast-slider').value = f.contrast;
+            document.getElementById('contrast-val').innerText = `${f.contrast}%`;
+            document.getElementById('brightness-slider').value = f.brightness;
+            document.getElementById('brightness-val').innerText = f.brightness;
+            document.getElementById('sharpness-slider').value = f.sharpness;
+            document.getElementById('sharpness-val').innerText = f.sharpness;
+            document.getElementById('bw-threshold-checkbox').checked = f.bw;
+            document.getElementById('threshold-slider').value = f.threshold;
+            document.getElementById('threshold-val').innerText = f.threshold;
+
+            const thCont = document.getElementById('threshold-container');
+            if (f.bw) {
+                thCont.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                thCont.classList.add('opacity-50', 'pointer-events-none');
+            }
+
             updateZoomUI();
         }
 
         function updateModeButtons() {
-            const modes = ['pan', 'erase', 'text', 'transform'];
+            const modes = ['pan', 'erase', 'text', 'enhance', 'crop', 'transform'];
             
             modes.forEach(m => {
                 const el = document.getElementById(`mode-${m === 'transform' ? 'pan' : m}`);
                 if (!el) return;
                 const active = currentMode === m || (m === 'pan' && currentMode === 'transform');
                 el.className = active 
-                    ? "py-2 text-[10px] font-bold rounded bg-blue-600 text-white shadow-sm flex flex-col items-center gap-1" 
-                    : "py-2 text-[10px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1";
+                    ? "py-2 text-[9px] font-bold rounded bg-blue-600 text-white shadow-sm flex flex-col items-center gap-1" 
+                    : "py-2 text-[9px] font-bold rounded text-slate-500 hover:bg-white/50 flex flex-col items-center gap-1";
             });
 
             document.getElementById('options-pan').classList.toggle('hidden', currentMode !== 'pan' && currentMode !== 'transform');
             document.getElementById('options-erase').classList.toggle('hidden', currentMode !== 'erase');
             document.getElementById('options-text').classList.toggle('hidden', currentMode !== 'text');
+            document.getElementById('options-enhance').classList.toggle('hidden', currentMode !== 'enhance');
+            document.getElementById('options-crop').classList.toggle('hidden', currentMode !== 'crop');
 
             if (currentMode === 'erase' && currentEraserMode === 'area') {
                 canvas.className = 'mode-erase-area';
+            } else if (currentMode === 'crop') {
+                canvas.className = 'mode-crop';
             } else {
                 canvas.className = `mode-${currentMode}`;
             }
 
             if (currentMode !== 'text') hideTextSettings();
+            if (currentMode !== 'crop') { cropStart = null; cropEnd = null; }
         }
 
         document.getElementById('mode-pan').onclick = () => { currentMode = 'pan'; updateModeButtons(); render(); };
         document.getElementById('mode-erase').onclick = () => { currentMode = 'erase'; updateModeButtons(); render(); };
         document.getElementById('mode-text').onclick = () => { currentMode = 'text'; updateModeButtons(); render(); };
+        document.getElementById('mode-enhance').onclick = () => { currentMode = 'enhance'; updateModeButtons(); render(); };
+        document.getElementById('mode-crop').onclick = () => { currentMode = 'crop'; updateModeButtons(); render(); };
+
+        // LÓGICA DE CONTROL DE FILTROS Y MEJORAS
+        function onFilterChange() {
+            const p = pagesData[currentIndex];
+            if (!p) return;
+            
+            p.filters = {
+                contrast: parseInt(document.getElementById('contrast-slider').value),
+                brightness: parseInt(document.getElementById('brightness-slider').value),
+                sharpness: parseInt(document.getElementById('sharpness-slider').value),
+                bw: document.getElementById('bw-threshold-checkbox').checked,
+                threshold: parseInt(document.getElementById('threshold-slider').value)
+            };
+
+            document.getElementById('contrast-val').innerText = `${p.filters.contrast}%`;
+            document.getElementById('brightness-val').innerText = p.filters.brightness;
+            document.getElementById('sharpness-val').innerText = p.filters.sharpness;
+            document.getElementById('threshold-val').innerText = p.filters.threshold;
+
+            const thCont = document.getElementById('threshold-container');
+            if (p.filters.bw) {
+                thCont.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                thCont.classList.add('opacity-50', 'pointer-events-none');
+            }
+
+            applyFiltersToPage(p);
+            syncGlobalFilters(); // <-- LÍNEA NUEVA AÑADIDA AQUÍ
+            render();
+        }
+
+        ['contrast-slider', 'brightness-slider', 'sharpness-slider', 'threshold-slider'].forEach(id => {
+            document.getElementById(id).addEventListener('input', onFilterChange);
+            document.getElementById(id).addEventListener('change', () => saveHistory());
+        });
+
+        document.getElementById('bw-threshold-checkbox').addEventListener('change', () => {
+            onFilterChange();
+            saveHistory();
+        });
+
+        document.getElementById('reset-filters-btn').onclick = () => {
+            const p = pagesData[currentIndex];
+            if (!p) return;
+            p.filters = { contrast: 100, brightness: 0, sharpness: 0, bw: false, threshold: 128 };
+            updateUI();
+            applyFiltersToPage(p);
+            saveHistory();
+            render();
+        };
+
+        // LÓGICA DE RECORTE (CROP)
+        document.getElementById('apply-crop-btn').onclick = () => {
+            if (!cropStart || !cropEnd || !pagesData[currentIndex]) {
+                alert("Por favor, selecciona primero un área en la partitura para recortar.");
+                return;
+            }
+
+            const p = pagesData[currentIndex];
+            const localStart = worldToLocal(Math.min(cropStart.x, cropEnd.x), Math.min(cropStart.y, cropEnd.y), p);
+            const localEnd = worldToLocal(Math.max(cropStart.x, cropEnd.x), Math.max(cropStart.y, cropEnd.y), p);
+
+            const x = Math.max(0, Math.min(p.img.width, Math.round(localStart.x + p.img.width / 2)));
+            const y = Math.max(0, Math.min(p.img.height, Math.round(localStart.y + p.img.height / 2)));
+            const w = Math.min(p.img.width - x, Math.round(Math.abs(localEnd.x - localStart.x)));
+            const h = Math.min(p.img.height - y, Math.round(Math.abs(localEnd.y - localStart.y)));
+
+            if (w < 20 || h < 20) {
+                alert("El área seleccionada es demasiado pequeña para recortar.");
+                return;
+            }
+
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = w;
+            offCanvas.height = h;
+            const offCtx = offCanvas.getContext('2d');
+
+            offCtx.drawImage(p.img, x, y, w, h, 0, 0, w, h);
+
+            p.img = offCanvas;
+            p.origW = w;
+            p.origH = h;
+            
+            let scale = Math.min(canvas.width / w, canvas.height / h);
+            p.w = w * scale;
+            p.h = h * scale;
+
+            applyFiltersToPage(p);
+            cropStart = null;
+            cropEnd = null;
+            
+            saveHistory();
+            render();
+            updateUI();
+        };
+
+        document.getElementById('cancel-crop-btn').onclick = () => {
+            cropStart = null;
+            cropEnd = null;
+            render();
+        };
 
         // LÓGICA DE CONTROL DE MODOS DE BORRADOR
         function changeEraserMode(mode) {
@@ -1593,45 +1977,117 @@
             let scale = Math.min(canvas.width / p.img.width, canvas.height / p.img.height);
             p.x = canvas.width / 2; p.y = canvas.height / 2; 
             p.w = p.img.width * scale; p.h = p.img.height * scale;
-            p.rotation = 0; p.strokes = []; p.texts = []; saveHistory(); render(); updateUI();
+            p.rotation = 0; p.strokes = []; p.texts = []; 
+            p.filters = { contrast: 100, brightness: 0, sharpness: 0, bw: false, threshold: 128 };
+            applyFiltersToPage(p);
+            saveHistory(); render(); updateUI();
         };
 
         function applyState(page, s) {
             page.x = s.x; page.y = s.y; page.w = s.w; page.h = s.h;
-            page.rotation = s.rotation; page.strokes = JSON.parse(JSON.stringify(s.strokes));
+            page.rotation = s.rotation; 
+            page.filters = { ...(s.filters || { contrast: 100, brightness: 0, sharpness: 0, bw: false, threshold: 128 }) };
+            applyFiltersToPage(page);
+            page.strokes = JSON.parse(JSON.stringify(s.strokes));
             page.texts = JSON.parse(JSON.stringify(s.texts || []));
         }
 
         prevPageBtn.onclick = () => { currentIndex--; updateUI(); render(); deselectAll(); };
         nextPageBtn.onclick = () => { currentIndex++; updateUI(); render(); deselectAll(); };
 
+        // LÓGICA DE EXPORTACIÓN A PDF Y ZIP INDIVIDUALIZADO MANTENIENDO GRUPOS Y NOMBRES ORIGINALES
         exportBtn.onclick = async () => {
-            showLoading("Generando PDF...");
-            setTimeout(() => {
+            showLoading("Generando archivos PDF / ZIP...");
+            setTimeout(async () => {
                 const { jsPDF } = window.jspdf;
                 const pdfFormat = orientation === 'landscape' ? 'l' : 'p';
-                const doc = new jsPDF(pdfFormat, 'mm', 'a4');
+                const widthA4 = orientation === 'landscape' ? 297 : 210;
+                const heightA4 = orientation === 'landscape' ? 210 : 297;
                 
                 const originalIdx = currentIndex;
-                let firstPage = true;
+
+                // PDF Unificado Completo
+                const unifiedDoc = new jsPDF(pdfFormat, 'mm', 'a4');
+                let isFirstUnifiedPage = true;
+
+                // Estructura ZIP
+                const zip = new JSZip();
+                const individualFolder = zip.folder("Partituras Individuales");
+
+                // Agrupar las páginas conservadas según su archivo de origen
+                const groupedByFile = new Map();
                 
-                pagesData.forEach((p, i) => {
-                    currentIndex = i; render(true);
-                    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                    const numCopies = p.copies || 1;
-                    
-                    const widthA4 = orientation === 'landscape' ? 297 : 210;
-                    const heightA4 = orientation === 'landscape' ? 210 : 297;
+                pagesData.forEach((p, index) => {
+                    const rawName = p.fileName || `Partitura_${index + 1}`;
+                    if (!groupedByFile.has(rawName)) {
+                        groupedByFile.set(rawName, []);
+                    }
+                    groupedByFile.get(rawName).push({ pageData: p, globalIndex: index });
+                });
+
+                // 1. Generar PDFs individuales agrupando páginas de un mismo documento original
+                for (const [fileName, items] of groupedByFile.entries()) {
+                    const docPartichela = new jsPDF(pdfFormat, 'mm', 'a4');
+                    let isFirstPartPage = true;
+
+                    for (const item of items) {
+                        currentIndex = item.globalIndex;
+                        render(true);
+
+                        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                        const numCopies = item.pageData.copies || 1;
+
+                        for (let c = 0; c < numCopies; c++) {
+                            if (!isFirstPartPage) docPartichela.addPage();
+                            docPartichela.addImage(imgData, 'JPEG', 0, 0, widthA4, heightA4);
+                            isFirstPartPage = false;
+                        }
+                    }
+
+                    // Asegurar extensión .pdf con el nombre de archivo original sin alterar
+                    let finalFileName = fileName;
+                    if (!finalFileName.toLowerCase().endsWith('.pdf')) {
+                        finalFileName += '.pdf';
+                    }
+
+                    const partPdfBlob = docPartichela.output('blob');
+                    individualFolder.file(finalFileName, partPdfBlob);
+                }
+
+                // 2. Generar documento PDF unificado global
+                for (let i = 0; i < pagesData.length; i++) {
+                    currentIndex = i;
+                    render(true);
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    const numCopies = pagesData[i].copies || 1;
 
                     for (let c = 0; c < numCopies; c++) {
-                        if (!firstPage) doc.addPage();
-                        doc.addImage(imgData, 'JPEG', 0, 0, widthA4, heightA4);
-                        firstPage = false;
+                        if (!isFirstUnifiedPage) unifiedDoc.addPage();
+                        unifiedDoc.addImage(imgData, 'JPEG', 0, 0, widthA4, heightA4);
+                        isFirstUnifiedPage = false;
                     }
-                });
-                
-                currentIndex = originalIdx; render();
-                doc.save('Partituras_A4.pdf'); hideLoading();
+                }
+
+                const unifiedPdfBlob = unifiedDoc.output('blob');
+                zip.file('Partituras Unificadas.pdf', unifiedPdfBlob);
+
+                // Si sólo hay 1 partichela original en proceso, descargar directo o vía ZIP
+                if (groupedByFile.size === 1 && pagesData.length === 1 && (pagesData[0].copies || 1) === 1) {
+                    let singleName = pagesData[0].fileName || 'Partitura_A4.pdf';
+                    if (!singleName.toLowerCase().endsWith('.pdf')) singleName += '.pdf';
+                    unifiedDoc.save(singleName);
+                } else {
+                    const zipContent = await zip.generateAsync({ type: 'blob' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(zipContent);
+                    link.download = 'Partituras en A4.zip';
+                    link.click();
+                }
+
+                currentIndex = originalIdx; 
+                render(); 
+                hideLoading();
             }, 500);
         };
 
@@ -1737,9 +2193,12 @@
         async function getAllFiles(items) {
             let files = [];
             for (let i = 0; i < items.length; i++) {
-                const item = items[i].webkitGetAsEntry();
+                const item = items[i].webkitGetAsEntry ? items[i].webkitGetAsEntry() : null;
                 if (item) {
                     files = files.concat(await traverseFileTree(item));
+                } else if (items[i].kind === 'file') {
+                    const f = items[i].getAsFile();
+                    if (f) files.push(f);
                 }
             }
             return files;
@@ -1769,6 +2228,8 @@
                         });
                     };
                     readEntries();
+                } else {
+                    resolve([]);
                 }
             });
         }
@@ -1780,25 +2241,34 @@
                 dragOverlay.classList.remove('flex');
             }
 
-            const items = e.dataTransfer.items;
-            if (items) {
-                const allFiles = await getAllFiles(items);
-                const validFiles = allFiles.filter(file => 
+            let validFiles = [];
+
+            if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+                const allFiles = await getAllFiles(e.dataTransfer.items);
+                validFiles = allFiles.filter(file => 
+                    file && (
+                        file.type === 'application/pdf' || 
+                        file.type.startsWith('image/') || 
+                        /\.(pdf|jpg|jpeg|png|gif|tiff|bmp)$/i.test(file.name)
+                    )
+                );
+            } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                validFiles = Array.from(e.dataTransfer.files).filter(file => 
                     file.type === 'application/pdf' || 
                     file.type.startsWith('image/') || 
                     /\.(pdf|jpg|jpeg|png|gif|tiff|bmp)$/i.test(file.name)
                 );
-                
-                if (validFiles.length === 0) {
-                    alert('Por favor, arrastre archivos PDF, imágenes o carpetas que los contengan.');
-                    return;
-                }
-                
-                // Ordenar alfabéticamente los archivos leídos de las carpetas
-                validFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-                
-                processFiles(validFiles);
             }
+            
+            if (validFiles.length === 0) {
+                alert('Por favor, arrastre archivos PDF, imágenes o carpetas que los contengan.');
+                return;
+            }
+            
+            // Ordenar alfabéticamente los archivos leídos
+            validFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+            
+            processFiles(validFiles);
         });
         // --- FIN LÓGICA DRAG & DROP MEJORADA ---
 
