@@ -124,10 +124,9 @@
             background: #000; display: flex; position: relative;
         }
         .key {
-            flex: 1; position: relative; cursor: pointer;
             user-select: none; display: flex; flex-direction: column;
             justify-content: flex-end; align-items: center;
-            padding-bottom: 6px; box-sizing: border-box;
+            padding-bottom: 6px; box-sizing: border-box; cursor: pointer;
         }
         .pc-key-label {
             font-size: 17px;
@@ -143,16 +142,25 @@
             line-height: 1;
         }
         .white {
+            flex: 1;
             background: linear-gradient(to bottom, #fff 0%, #f0f0f0 100%);
-            border: 1px solid #bbb; z-index: 1; color: #666;
+            border-right: 1px solid #ccc;
+            border-bottom: 1px solid #bbb;
+            z-index: 1; color: #666;
             border-radius: 0 0 4px 4px;
         }
+        .white:first-child {
+            border-left: 1px solid #ccc;
+        }
         .black {
-            background: linear-gradient(to bottom, #333 0%, #000 100%);
-            z-index: 2; height: 62%;
-            margin-left: -1.1%; margin-right: -1.1%;
+            position: absolute;
+            top: 0;
+            z-index: 2; height: 60%;
             border-radius: 0 0 3px 3px; color: #ccc;
-            border: 1px solid #000; min-width: 15px;
+            background: linear-gradient(to bottom, #333 0%, #000 100%);
+            border: 1px solid #111;
+            border-top: none;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.4);
         }
         .black .pc-key-label {
             color: #60a5fa;
@@ -312,26 +320,58 @@
     function buildPiano() {
         const container = document.getElementById('piano-container');
         container.innerHTML = '';
-        const startOct = Math.max(1, currentBaseOctave - 2);
-        const endOct = startOct + 3;
+        
+        const startOct = Math.max(1, currentBaseOctave - 1);
+        const endOct = Math.min(8, currentBaseOctave + 1);
+
+        const whiteNotes = ["C", "D", "E", "F", "G", "A", "B"];
+        const blackNotePositions = { "C#": 1, "D#": 2, "F#": 4, "G#": 5, "A#": 6 };
+
+        const whiteKeyList = [];
+        const blackKeyList = [];
 
         for (let oct = startOct; oct <= endOct; oct++) {
-            noteNames.forEach(name => addKey(name, oct, container));
+            whiteNotes.forEach(name => {
+                whiteKeyList.push({ name, oct });
+            });
+            Object.keys(blackNotePositions).forEach(name => {
+                blackKeyList.push({ name, oct, posInOct: blackNotePositions[name], octIndex: oct - startOct });
+            });
         }
-        addKey("C", endOct + 1, container);
+        whiteKeyList.push({ name: "C", oct: endOct + 1 });
 
-        // Restaurar teclas visualmente activas
+        const totalWhiteKeys = whiteKeyList.length;
+
+        // 1. Renderizar teclas blancas (flujo flex homogéneo)
+        whiteKeyList.forEach(item => {
+            const div = createKeyElement(item.name, item.oct, false);
+            container.appendChild(div);
+        });
+
+        // 2. Renderizar teclas negras (posicionamiento absoluto)
+        blackKeyList.forEach(item => {
+            const div = createKeyElement(item.name, item.oct, true);
+            const whiteIndex = (item.octIndex * 7) + item.posInOct;
+            const leftPercent = (whiteIndex / totalWhiteKeys) * 100;
+            const widthPercent = (1 / totalWhiteKeys) * 60; // 60% del ancho de una tecla blanca
+
+            div.style.width = `${widthPercent}%`;
+            div.style.left = `calc(${leftPercent}% - ${widthPercent / 2}%)`;
+            container.appendChild(div);
+        });
+
+        // Restaurar teclas activas
         activeNotes.forEach(toneNote => {
             const el = document.getElementById(`key-${toneNote}`);
             if (el) el.classList.add('active');
         });
     }
 
-    function addKey(name, oct, container) {
+    function createKeyElement(name, oct, isBlack) {
         const toneNote = `${name}${oct}`;
         const pcKey = getPcKeyForNote(name, oct);
         const div = document.createElement('div');
-        div.className = `key ${name.includes('#') ? 'black' : 'white'}`;
+        div.className = `key ${isBlack ? 'black' : 'white'}`;
         div.id = `key-${toneNote}`;
         div.innerHTML = `
             <span class="pc-key-label">${pcKey}</span>
@@ -347,7 +387,7 @@
         };
         div.onmouseup = () => { if (!holdActive) stopNote(toneNote); };
         div.onmouseleave = () => { if (!holdActive) stopNote(toneNote); };
-        container.appendChild(div);
+        return div;
     }
 
     function changeOctave(dir) {
@@ -380,14 +420,12 @@
 
     function toggleContinuousNote(toneNote) {
         if (activeNotes.has(toneNote)) {
-            // Si ya está activa en modo continuo, apagarla
             activeNotes.delete(toneNote);
             const el = document.getElementById(`key-${toneNote}`);
             if (el) el.classList.remove('active');
             getActiveSoundEngine().triggerRelease(toneNote);
             drawStaff();
         } else {
-            // Encenderla y mantenerla
             Tone.start();
             activeNotes.add(toneNote);
             const el = document.getElementById(`key-${toneNote}`);
