@@ -15,14 +15,38 @@
         
         /* Toolbar Superior */
         .toolbar { background-color: #2d2d2d; padding: 10px 20px; border-bottom: 1px solid #111; display: flex; gap: 8px; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.5); z-index: 10; }
-        button, input[type="file"]::file-selector-button { background-color: #3a3a3a; color: white; border: 1px solid #555; padding: 6px 12px; cursor: pointer; font-size: 12px; border-radius: 3px; }
+button, input[type="file"]::file-selector-button { 
+            background-color: #3a3a3a; 
+            color: white; 
+            border: 1px solid #555; 
+            padding: 6px 12px; 
+            cursor: pointer; 
+            font-size: 12px; 
+            border-radius: 3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
         button:hover { background-color: #505050; }
         button:disabled { background-color: #2a2a2a; color: #666; cursor: not-allowed; border-color: #333; }
+
+        button svg { 
+            pointer-events: none; 
+            flex-shrink: 0; 
+        }
+        
+        /* Botón Volver con tono púrpura/índigo destacado */
+        #btn-back { background-color: #6366f1; border-color: #4f46e5; }
+        #btn-back:hover { background-color: #4f46e5; }
+
+        /* Contenedor derecho para Limpiar y Exportar */
+        .toolbar-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
         
         #btn-clear { background-color: #a33131; border-color: #722; }
         #btn-clear:hover { background-color: #c43c3c; }
         
-        button.export { background-color: #007acc; font-weight: bold; margin-left: auto; }
+        button.export { background-color: #007acc; border-color: #005999; }
+        button.export:hover:not(:disabled) { background-color: #005999; }
 
         /* Área del Editor */
         #main-editor { 
@@ -106,19 +130,70 @@
 
     <div id="drop-overlay">Suelta el audio para abrirlo</div>
 
-    <div class="toolbar">
-        <button id="btn-clear">🗑 Limpiar Editor</button>
+<div class="toolbar">
+        <!-- Volver -->
+        <button id="btn-back" onclick="window.history.back()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+            <span>Volver</span>
+        </button>
+
         <div class="separator"></div>
+
         <input type="file" id="audio-upload" accept="audio/*">
+
         <div class="separator"></div>
-        <button id="btn-undo" disabled>↩ Deshacer</button>
-        <button id="btn-redo" disabled>↪ Rehacer</button>
+
+        <!-- Deshacer -->
+        <button id="btn-undo" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            <span>Deshacer</span>
+        </button>
+
+        <!-- Rehacer -->
+        <button id="btn-redo" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+            <span>Rehacer</span>
+        </button>
+
         <div class="separator"></div>
-        <button id="btn-normalize" disabled>Normalizar</button>
-        <button id="btn-fadein" disabled>Fade In</button>
-        <button id="btn-fadeout" disabled>Fade Out</button>
-        <button id="btn-cut" disabled>Cortar Selección</button>
-        <button id="btn-export" class="export" disabled>Exportar MP3</button>
+
+        <!-- Cortar Selección -->
+        <button id="btn-cut" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+            <span>Cortar</span>
+        </button>
+
+        <!-- Fade In -->
+        <button id="btn-fadein" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M3 20c8 0 12-14 18-14"/></svg>
+            <span>Fade In</span>
+        </button>
+
+        <!-- Fade Out -->
+        <button id="btn-fadeout" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M3 6c6 0 10 14 18 14"/></svg>
+            <span>Fade Out</span>
+        </button>
+
+        <!-- Normalizar -->
+        <button id="btn-normalize" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="2" x2="22" y2="2"/></svg>
+            <span>Normalizar</span>
+        </button>
+        
+        <div class="toolbar-right">
+            <!-- Limpiar Editor -->
+            <button id="btn-clear">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                <span>Limpiar</span>
+            </button>
+
+            <!-- Exportar MP3 -->
+            <button id="btn-export" class="export" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Exportar</span>
+            </button>
+        </div>
     </div>
 
     <div id="main-editor">
@@ -436,7 +511,7 @@
         }
         function disableAllBtns() {
             document.querySelectorAll('.toolbar button, .transport-bar button').forEach(b => {
-                if(b.id !== 'btn-clear') b.disabled = true;
+                if(b.id !== 'btn-clear' && b.id !== 'btn-back') b.disabled = true;
             });
         }
         function toggleEditBtns(a) { 
