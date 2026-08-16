@@ -19,13 +19,21 @@
             background: #1a1a1a; color: white;
             padding: 5px 15px; display: flex;
             justify-content: space-between; align-items: center;
-            height: 45px; border-bottom: 1px solid #333;
+            height: 50px; border-bottom: 1px solid #333;
         }
         .btn {
             padding: 6px 14px; cursor: pointer;
             background: #333; color: white;
             border: 1px solid #555; border-radius: 4px;
             font-weight: bold;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .btn:hover {
+            filter: brightness(1.15);
         }
         #staff-container {
             flex: 1; background: white;
@@ -33,34 +41,128 @@
         }
         #controls {
             background: #222; display: flex;
-            justify-content: center; align-items: center;
-            gap: 15px; padding: 8px; color: white;
+            justify-content: space-between; align-items: center;
+            padding: 8px 20px; color: white;
         }
+        .controls-group {
+            display: flex; align-items: center; gap: 15px;
+        }
+
+        /* --- SELECTOR DE INSTRUMENTOS --- */
+        .select-instrument {
+            background: #2a2a2a;
+            color: #ffffff;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .select-instrument:hover {
+            border-color: #3498db;
+        }
+        .select-instrument:focus {
+            border-color: #3498db;
+            box-shadow: 0 0 6px rgba(52, 152, 219, 0.5);
+        }
+
+        /* --- SWITCHES ESTILO IOS --- */
+        .ios-switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #ddd;
+            user-select: none;
+            cursor: pointer;
+        }
+        .ios-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .ios-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #39393d;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        input:checked + .slider {
+            background-color: #34c759;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* --- TECLAS DE PIANO --- */
         #piano-container {
             width: 100%; height: var(--piano-height);
             background: #000; display: flex; position: relative;
         }
         .key {
             flex: 1; position: relative; cursor: pointer;
-            user-select: none; display: flex;
-            justify-content: center; align-items: flex-end;
-            padding-bottom: 10px; font-size: 9px;
-            box-sizing: border-box;
+            user-select: none; display: flex; flex-direction: column;
+            justify-content: flex-end; align-items: center;
+            padding-bottom: 6px; box-sizing: border-box;
+        }
+        .pc-key-label {
+            font-size: 17px;
+            font-weight: 900;
+            color: #1a5fb4;
+            line-height: 1;
+            margin-bottom: 3px;
+            pointer-events: none;
+        }
+        .note-name-label {
+            font-size: 10px;
+            pointer-events: none;
+            line-height: 1;
         }
         .white {
             background: linear-gradient(to bottom, #fff 0%, #f0f0f0 100%);
-            border: 1px solid #bbb; z-index: 1; color: #999;
-            border-radius: 0 0 3px 3px;
+            border: 1px solid #bbb; z-index: 1; color: #666;
+            border-radius: 0 0 4px 4px;
         }
         .black {
             background: linear-gradient(to bottom, #333 0%, #000 100%);
             z-index: 2; height: 62%;
             margin-left: -1.1%; margin-right: -1.1%;
-            border-radius: 0 0 2px 2px; color: #fff;
+            border-radius: 0 0 3px 3px; color: #ccc;
             border: 1px solid #000; min-width: 15px;
         }
+        .black .pc-key-label {
+            color: #60a5fa;
+            font-size: 14px;
+        }
         .white.active { background: #3498db !important; color: white; }
+        .white.active .pc-key-label { color: #ffffff !important; }
         .black.active { background: #2980b9 !important; }
+        .black.active .pc-key-label { color: #ffffff !important; }
+        
         #loading {
             position: fixed; top:0; left:0; width:100%; height:100%;
             background: #000; color: white; display: flex;
@@ -70,11 +172,16 @@
 </head>
 <body>
 
-<div id="loading"><h2>Cargando Piano Real...</h2><p>Pulsa cualquier tecla al iniciar</p></div>
+<div id="loading"><h2>Cargando Piano...</h2><p>Pulsa cualquier tecla al iniciar</p></div>
 
 <div id="header">
-    <button class="btn" onclick="window.history.back()">← Volver</button>
-    <div style="font-size: 12px; color: #aaa;">Acordes: Pulsa varias teclas a la vez (A=DO,W=DO#,S=RE,E=RE#,D=MI,F=FA,T=FA#,G=SOL,Y=SOL#,H=LA,U=LA#,J=SI,K=DO,O=DO#,L=RE,P=RE#,Ñ=MI)</div>
+    <div>
+        <button onclick="window.history.back()" class="btn" style="background-color: #6b21a8; border-color: #581c87; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+            <span>Volver</span>
+        </button>
+    </div>
+    <div style="font-size: 14px; color: #ffff;">Teclado Virtual: Usa las flechas del teclado [←][→] para cambiar de octava | Pulsa [Espacio] para detener el sonido en el Modo Continuo</div>
     <div style="width: 80px;"></div>
 </div>
 
@@ -83,10 +190,32 @@
 </div>
 
 <div id="controls">
-    <span>OCTAVA TECLADO PC:</span>
-    <button class="btn" onclick="changeOctave(-1)">-</button>
-    <b id="octave-display" style="min-width: 30px; text-align: center; font-size: 18px;">4</b>
-    <button class="btn" onclick="changeOctave(1)">+</button>
+    <!-- Controles Izquierda: Octava -->
+    <div class="controls-group">
+        <span>OCTAVA:</span>
+        <button class="btn" onclick="changeOctave(-1)">-</button>
+        <b id="octave-display" style="min-width: 30px; text-align: center; font-size: 18px;">4</b>
+        <button class="btn" onclick="changeOctave(1)">+</button>
+    </div>
+    
+    <!-- Derecha: Switches Sustain y Modo Continuo -->
+    <div class="controls-group">
+        <label class="ios-switch-container">
+            <span>Sustain</span>
+            <span class="ios-switch">
+                <input type="checkbox" id="chk-sustain" onchange="toggleSustain(this.checked)">
+                <span class="slider"></span>
+            </span>
+        </label>
+
+        <label class="ios-switch-container">
+            <span>Modo Continuo</span>
+            <span class="ios-switch">
+                <input type="checkbox" id="chk-hold" onchange="toggleHold(this.checked)">
+                <span class="slider"></span>
+            </span>
+        </label>
+    </div>
 </div>
 
 <div id="piano-container"></div>
@@ -95,6 +224,9 @@
     const VF = Vex.Flow;
     let currentBaseOctave = 4;
     const activeNotes = new Set();
+    let sustainActive = false;
+    let holdActive = false;
+    let currentInstrument = 'piano';
     
     const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
     
@@ -106,13 +238,76 @@
         'ñ': { n: 'E',  o: 1 }
     };
 
-    // Sampler con polifonía ilimitada
-    const sampler = new Tone.Sampler({
+    // 1. Sampler Piano Acústico
+    const pianoSampler = new Tone.Sampler({
         urls: { A0: "A0.mp3", C1: "C1.mp3", A1: "A1.mp3", C2: "C2.mp3", A2: "A2.mp3", C3: "C3.mp3", A3: "A3.mp3", C4: "C4.mp3", A4: "A4.mp3", C5: "C5.mp3", A5: "A5.mp3", C6: "C6.mp3" },
         release: 1.5,
         baseUrl: "https://tonejs.github.io/audio/salamander/",
         onload: () => document.getElementById('loading').style.display = 'none'
     }).toDestination();
+
+    // 2. Colección de Instrumentos Sintetizados
+    const instruments = {
+        piano: pianoSampler,
+        organ: new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sine8" },
+            envelope: { attack: 0.05, decay: 0.1, sustain: 1.0, release: 0.3 }
+        }).toDestination(),
+        violin: new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "sawtooth" },
+            envelope: { attack: 0.25, decay: 0.2, sustain: 0.9, release: 0.8 }
+        }).toDestination(),
+        flute: new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "triangle" },
+            envelope: { attack: 0.15, decay: 0.1, sustain: 0.8, release: 0.4 }
+        }).toDestination(),
+        trumpet: new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "square" },
+            envelope: { attack: 0.06, decay: 0.2, sustain: 0.85, release: 0.3 }
+        }).toDestination(),
+        horn: new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "fatcustom", partials: [0.8, 0.4, 0.2], spread: 15, count: 2 },
+            envelope: { attack: 0.2, decay: 0.3, sustain: 0.8, release: 0.5 }
+        }).toDestination(),
+        harpsichord: new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: "square4" },
+            envelope: { attack: 0.01, decay: 0.8, sustain: 0.1, release: 0.4 }
+        }).toDestination(),
+        synth: new Tone.PolySynth(Tone.AMSynth, {
+            harmonicity: 1.5,
+            envelope: { attack: 0.1, decay: 0.2, sustain: 1, release: 0.5 }
+        }).toDestination()
+    };
+
+    // Ajustes de ganancia equilibrados
+    instruments.organ.volume.value = -7;
+    instruments.violin.volume.value = -8;
+    instruments.flute.volume.value = -4;
+    instruments.trumpet.volume.value = -12;
+    instruments.horn.volume.value = -8;
+    instruments.harpsichord.volume.value = -8;
+    instruments.synth.volume.value = -9;
+
+    function getActiveSoundEngine() {
+        if (holdActive) {
+            return (currentInstrument === 'piano') ? instruments.organ : instruments[currentInstrument];
+        }
+        return instruments[currentInstrument];
+    }
+
+    function changeInstrument(val) {
+        clearAllNotes();
+        currentInstrument = val;
+    }
+
+    function getPcKeyForNote(noteName, octave) {
+        for (const [key, val] of Object.entries(pcKeyMap)) {
+            if (val.n === noteName && (currentBaseOctave + val.o) === octave) {
+                return key.toUpperCase();
+            }
+        }
+        return '';
+    }
 
     function buildPiano() {
         const container = document.getElementById('piano-container');
@@ -124,17 +319,34 @@
             noteNames.forEach(name => addKey(name, oct, container));
         }
         addKey("C", endOct + 1, container);
+
+        // Restaurar teclas visualmente activas
+        activeNotes.forEach(toneNote => {
+            const el = document.getElementById(`key-${toneNote}`);
+            if (el) el.classList.add('active');
+        });
     }
 
     function addKey(name, oct, container) {
         const toneNote = `${name}${oct}`;
+        const pcKey = getPcKeyForNote(name, oct);
         const div = document.createElement('div');
         div.className = `key ${name.includes('#') ? 'black' : 'white'}`;
         div.id = `key-${toneNote}`;
-        div.innerHTML = `<span>${name}${oct}</span>`;
-        div.onmousedown = (e) => { e.preventDefault(); startNote(toneNote); };
-        div.onmouseup = () => stopNote(toneNote);
-        div.onmouseleave = () => stopNote(toneNote);
+        div.innerHTML = `
+            <span class="pc-key-label">${pcKey}</span>
+            <span class="note-name-label">${name}${oct}</span>
+        `;
+        div.onmousedown = (e) => {
+            e.preventDefault();
+            if (holdActive) {
+                toggleContinuousNote(toneNote);
+            } else {
+                startNote(toneNote);
+            }
+        };
+        div.onmouseup = () => { if (!holdActive) stopNote(toneNote); };
+        div.onmouseleave = () => { if (!holdActive) stopNote(toneNote); };
         container.appendChild(div);
     }
 
@@ -144,35 +356,102 @@
         buildPiano();
     }
 
+    function toggleSustain(checked) {
+        sustainActive = checked;
+    }
+
+    function toggleHold(checked) {
+        holdActive = checked;
+        clearAllNotes();
+    }
+
+    function clearAllNotes() {
+        const soundEngine = getActiveSoundEngine();
+        activeNotes.forEach(toneNote => {
+            try { soundEngine.triggerRelease(toneNote); } catch (e) {}
+            try { instruments.piano.triggerRelease(toneNote); } catch (e) {}
+            try { instruments.organ.triggerRelease(toneNote); } catch (e) {}
+            const el = document.getElementById(`key-${toneNote}`);
+            if (el) el.classList.remove('active');
+        });
+        activeNotes.clear();
+        drawStaff();
+    }
+
+    function toggleContinuousNote(toneNote) {
+        if (activeNotes.has(toneNote)) {
+            // Si ya está activa en modo continuo, apagarla
+            activeNotes.delete(toneNote);
+            const el = document.getElementById(`key-${toneNote}`);
+            if (el) el.classList.remove('active');
+            getActiveSoundEngine().triggerRelease(toneNote);
+            drawStaff();
+        } else {
+            // Encenderla y mantenerla
+            Tone.start();
+            activeNotes.add(toneNote);
+            const el = document.getElementById(`key-${toneNote}`);
+            if (el) el.classList.add('active');
+            getActiveSoundEngine().triggerAttack(toneNote);
+            drawStaff();
+        }
+    }
+
     function startNote(toneNote) {
         if (activeNotes.has(toneNote)) return;
         Tone.start();
         activeNotes.add(toneNote);
         const el = document.getElementById(`key-${toneNote}`);
         if(el) el.classList.add('active');
-        sampler.triggerAttack(toneNote);
+        getActiveSoundEngine().triggerAttack(toneNote);
         drawStaff();
     }
 
     function stopNote(toneNote) {
+        if (holdActive) return;
         if (!activeNotes.has(toneNote)) return;
+        
         activeNotes.delete(toneNote);
         const el = document.getElementById(`key-${toneNote}`);
         if(el) el.classList.remove('active');
-        sampler.triggerRelease(toneNote);
+
+        if (!sustainActive) {
+            getActiveSoundEngine().triggerRelease(toneNote);
+        }
         drawStaff();
     }
 
     window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            changeOctave(-1);
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            changeOctave(1);
+            return;
+        }
+        if (e.code === 'Space') {
+            e.preventDefault();
+            clearAllNotes();
+            return;
+        }
         if (e.repeat) return;
         const keyData = pcKeyMap[e.key.toLowerCase()];
         if (keyData) {
             const targetOctave = currentBaseOctave + keyData.o;
-            startNote(`${keyData.n}${targetOctave}`);
+            const noteToPlay = `${keyData.n}${targetOctave}`;
+            if (holdActive) {
+                toggleContinuousNote(noteToPlay);
+            } else {
+                startNote(noteToPlay);
+            }
         }
     });
 
     window.addEventListener('keyup', (e) => {
+        if (holdActive) return;
         const keyData = pcKeyMap[e.key.toLowerCase()];
         if (keyData) {
             const targetOctave = currentBaseOctave + keyData.o;
@@ -192,7 +471,6 @@
         new VF.StaveConnector(trebleStave, bassStave).setType(3).setContext(context).draw();
 
         if (activeNotes.size > 0) {
-            // Ordenar notas por altura para evitar errores en VexFlow
             const sortedNotes = Array.from(activeNotes).sort((a, b) => {
                 const getVal = (s) => {
                     const oct = parseInt(s.match(/\d+/)[0]);
@@ -206,12 +484,10 @@
             sortedNotes.forEach(tn => {
                 const oct = parseInt(tn.match(/\d+/)[0]);
                 const formatted = tn.replace(/(\d+)/, '/$1');
-                // Notas de Do4 hacia arriba van a Clave de Sol
                 if (oct >= 4) trebleKeys.push(formatted);
                 else bassKeys.push(formatted);
             });
 
-            // Dibujar acorde en Clave de Sol
             if (trebleKeys.length > 0) {
                 const note = new VF.StaveNote({ clef: "treble", keys: trebleKeys, duration: "w" });
                 trebleKeys.forEach((k, i) => { if(k.includes('#')) note.addModifier(new VF.Accidental("#"), i); });
@@ -220,7 +496,6 @@
                 voice.draw(context, trebleStave);
             }
 
-            // Dibujar acorde en Clave de Fa
             if (bassKeys.length > 0) {
                 const note = new VF.StaveNote({ clef: "bass", keys: bassKeys, duration: "w" });
                 bassKeys.forEach((k, i) => { if(k.includes('#')) note.addModifier(new VF.Accidental("#"), i); });
