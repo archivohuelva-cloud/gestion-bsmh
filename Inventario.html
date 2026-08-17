@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventario - Banda</title>
+  
+  <!-- Librería para la exportación directa a PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-hover: #1e40af;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --border: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1050px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+      color: var(--primary);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 10px;
+      padding: 22px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+    }
+
+    .grid-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.88rem;
+      margin-bottom: 5px;
+      color: #475569;
+    }
+
+    input, select {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.15);
+    }
+
+    .btn {
+      cursor: pointer;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-success {
+      background-color: #16a34a;
+    }
+
+    .btn-success:hover {
+      background-color: #15803d;
+    }
+
+    .search-box {
+      width: 100%;
+      padding: 12px 15px;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      font-weight: 700;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    tbody tr.clickable-row {
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    tbody tr.clickable-row:hover {
+      background-color: #f8fafc;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s ease;
+    }
+
+    th.sortable:hover {
+      background-color: #e2e8f0;
+    }
+
+    .th-content {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      gap: 4px;
+    }
+
+    .sort-icon {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: inline-block;
+    }
+
+    .sort-active {
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-cat {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+
+    .badge-excelente { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-buen-estado { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-regular { background-color: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+    .badge-reparacion { background-color: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .badge-baja { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .dot-estado {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      vertical-align: middle;
+    }
+    .dot-excelente { background-color: #22c55e; box-shadow: 0 0 0 2px #bbf7d0; }
+    .dot-buen-estado { background-color: #0284c7; box-shadow: 0 0 0 2px #bae6fd; }
+    .dot-regular { background-color: #eab308; box-shadow: 0 0 0 2px #fef08a; }
+    .dot-reparacion { background-color: #f97316; box-shadow: 0 0 0 2px #fed7aa; }
+    .dot-baja { background-color: #ef4444; box-shadow: 0 0 0 2px #fecaca; }
+
+    .estado-buttons-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 3px;
+    }
+
+    .btn-estado-opt {
+      border: 2px solid transparent;
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      opacity: 0.65;
+    }
+
+    .btn-estado-opt:hover {
+      opacity: 1;
+    }
+
+    .btn-estado-opt.active {
+      opacity: 1;
+      border-color: #0f172a;
+      box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .cat-filters-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      margin-top: 12px;
+      margin-bottom: 15px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .btn-cat-filter {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-cat-filter:hover {
+      background-color: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .btn-cat-filter.active {
+      background-color: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 25px;
+      color: #64748b;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-page {
+      background-color: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-page:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-page:not(:disabled):hover {
+      background-color: #e2e8f0;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(2px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 15px;
+    }
+
+    .modal-content {
+      background: #ffffff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 1.25rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #64748b;
+      line-height: 1;
+      padding: 4px 8px;
+    }
+
+    .modal-close:hover {
+      color: #0f172a;
+    }
+
+    .detalle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .detalle-item {
+      background: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .detalle-label {
+      font-size: 0.78rem;
+      color: #64748b;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .detalle-val {
+      font-size: 0.95rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+
+    .row-checkbox, #selectAllCheckbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+        margin: 10mm;
+      }
+      form, #buscador, .toolbar, .cat-filters-container, .pagination, .modal-overlay, div[style*="margin-top: 35px"], .no-print {
+        display: none !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+      .print-footer {
+        display: block !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 8pt;
+        color: #475569;
+        border-top: 1px solid #cbd5e1;
+        padding-top: 5px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 6px 8px;
+        font-size: 9pt;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+    }
+
+    .print-footer {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Inventario de la Banda Sinfónica Municipal de Huelva</h1>
+    <p>Gestión y control centralizado de instrumentos, accesorios, materiales, mobiliario, etc.</p>
+  </header>
+
+  <!-- TABLA, BUSCADOR, BOTONES Y PAGINACIÓN -->
+  <div class="card">
+    <div class="toolbar">
+      <input type="text" id="buscador" class="search-box" style="margin-bottom: 0; max-width: 320px;" placeholder="Buscar..." onkeyup="aplicarFiltrosYOrden()">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <button id="btnEliminarLote" onclick="eliminarLoteSeleccionado()" class="btn" style="background-color: #ef4444; display: none; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span id="btnEliminarLoteTexto">Eliminar seleccionados</span>
+        </button>
+
+        <button onclick="abrirModalFormulario()" class="btn btn-success" style="display: inline-flex; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Añadir</span>
+        </button>
+        <button onclick="imprimirRegistros()" class="btn" style="background-color: #0284c7; display: inline-flex; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <span>Imprimir</span>
+        </button>
+        <button onclick="descargarPDF()" class="btn" style="background-color: #dc2626; display: inline-flex; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+          <span>Descargar PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTONES DE ACCESO RÁPIDO POR CATEGORÍA -->
+    <div class="cat-filters-container" id="contenedorFiltrosCategoria">
+      <span style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-right: 4px;">Categorías:</span>
+      <button type="button" class="btn-cat-filter active" onclick="filtrarPorCategoriaRapido('TODOS', this)">Todo</button>
+    </div>
+
+    <div class="table-container">
+      <table id="tablaInventario">
+        <thead>
+          <tr>
+            <th class="no-print" style="width: 40px; text-align: center;">
+              <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" title="Seleccionar todos los mostrados">
+            </th>
+            <th class="sortable" onclick="ordenarPor('numRegistro')" style="width: 120px;">
+              <div class="th-content">Nº Reg. <span class="sort-icon" id="sort-numRegistro">⇅</span></div>
+            </th>
+            <th class="sortable" onclick="ordenarPor('cantidad')" style="width: 90px;">
+              <div class="th-content">Cant. <span class="sort-icon" id="sort-cantidad">⇅</span></div>
+            </th>
+            <th class="sortable" onclick="ordenarPor('nombre')">
+              <div class="th-content">Artículo <span class="sort-icon" id="sort-nombre">▲</span></div>
+            </th>
+            <th class="sortable" onclick="ordenarPor('categoria')">
+              <div class="th-content">Categoría <span class="sort-icon" id="sort-categoria">⇅</span></div>
+            </th>
+            <th class="sortable" onclick="ordenarPor('estado')" style="width: 95px; text-align: center;">
+              <div class="th-content" style="justify-content: center; width: 100%;">Estado <span class="sort-icon" id="sort-estado">⇅</span></div>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTabla">
+          <tr>
+            <td colspan="6" class="loading">Cargando inventario desde Google Sheets...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Controles de Paginación -->
+    <div class="pagination" id="paginacionContainer">
+      <span id="infoPaginacion">Mostrando 0-0 de 0 registros</span>
+      <div class="pagination-controls">
+        <button id="btnPrevPage" class="btn-page" onclick="cambiarPagina(-1)">Anterior</button>
+        <span id="numPagina" style="align-self: center; font-weight: 600;">Página 1</span>
+        <button id="btnNextPage" class="btn-page" onclick="cambiarPagina(1)">Siguiente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTÓN VOLVER -->
+  <div style="margin-top: 35px;">
+    <button onclick="window.history.back()" class="btn" style="background-color: #4a5568; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+      <span>Volver</span>
+    </button>
+  </div>
+</div>
+
+<!-- MODAL FORMULARIO: AÑADIR / EDITAR REGISTRO -->
+<div class="modal-overlay" id="modalFormulario">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="formTitle">Añadir Registro</h3>
+      <button class="modal-close" onclick="cerrarModalFormulario()">&times;</button>
+    </div>
+    <form id="formItem" onsubmit="procesarFormulario(event)">
+      <input type="hidden" id="editFila" value="">
+      <div class="grid-form">
+        <div class="form-group">
+          <label for="numRegistro">Nº de Registro:</label>
+          <input type="text" id="numRegistro" placeholder="">
+        </div>
+
+        <div class="form-group">
+          <label for="nombre">Artículo: *</label>
+          <input type="text" id="nombre" placeholder="" required>
+        </div>
+
+        <div class="form-group">
+          <label for="categoriaSelect">Categoría: *</label>
+          <div style="display: flex; gap: 6px;">
+            <select id="categoriaSelect" required style="flex-grow: 1;">
+              <option value="">Seleccione categoría...</option>
+            </select>
+            <button type="button" class="btn" style="background:#64748b; padding: 6px 12px;" onclick="nuevaCategoria()" title="Añadir nueva categoría">+</button>
+          </div>
+        </div>
+
+        <!-- CAMPO EMPRESA / TIENDA CON MENÚ DESPLEGABLE -->
+        <div class="form-group">
+          <label for="empresaSelect">Empresa / Tienda:</label>
+          <div style="display: flex; gap: 6px;">
+            <select id="empresaSelect" style="flex-grow: 1;">
+              <option value="">Seleccione empresa...</option>
+            </select>
+            <button type="button" class="btn" style="background:#64748b; padding: 6px 12px;" onclick="nuevaEmpresa()" title="Añadir nueva empresa">+</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="cantidad">Cantidad: *</label>
+          <input type="number" id="cantidad" min="1" value="1" required>
+        </div>
+
+        <!-- SELECTORES NATIVOS SEPARADOS: FECHA Y HORA -->
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Fecha y hora de registro:</label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px;">
+              <input type="date" id="inputFecha" style="width: 100%; cursor: pointer;" required>
+            </div>
+            <div style="flex: 1; min-width: 130px;">
+              <input type="time" id="inputHora" style="width: 100%; cursor: pointer;" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- SELECCIÓN DE ESTADO POR BOTONES HORIZONTALES -->
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Estado:</label>
+          <input type="hidden" id="estado" value="Buen estado">
+          <div class="estado-buttons-container" id="estadoButtons">
+            <button type="button" class="btn-estado-opt badge-excelente" onclick="seleccionarEstado('Excelente')">Excelente</button>
+            <button type="button" class="btn-estado-opt badge-buen-estado active" onclick="seleccionarEstado('Buen estado')">Buen estado</button>
+            <button type="button" class="btn-estado-opt badge-regular" onclick="seleccionarEstado('Regular')">Regular</button>
+            <button type="button" class="btn-estado-opt badge-reparacion" onclick="seleccionarEstado('En reparación')">En reparación</button>
+            <button type="button" class="btn-estado-opt badge-baja" onclick="seleccionarEstado('Deteriorado')">Deteriorado</button>
+          </div>
+        </div>
+
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="notas">Notas:</label>
+          <input type="text" id="notas" placeholder="">
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn" style="background: #64748b;" onclick="cerrarModalFormulario()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btnGuardar">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL DETALLES DEL REGISTRO -->
+<div class="modal-overlay" id="modalDetalle">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="detalleTitulo">Detalles del Registro</h3>
+      <button class="modal-close" onclick="cerrarModalDetalle()">&times;</button>
+    </div>
+    
+    <div class="detalle-grid" id="detalleContenido">
+      <!-- Se llena dinámicamente -->
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; flex-wrap: wrap; gap: 8px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+      <div style="display: flex; gap: 8px;">
+        <button id="btnExportarItemPDF" class="btn" style="background-color: #dc2626; display: inline-flex; align-items: center; gap: 6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+          <span>Exportar PDF</span>
+        </button>
+        <button id="btnEliminarModal" class="btn" style="background-color: #ef4444;">Eliminar</button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" style="background: #64748b;" onclick="cerrarModalDetalle()">Cerrar</button>
+        <button id="btnEditarModal" class="btn btn-primary">Editar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pie de página para impresión/PDF -->
+<div id="printFooter" class="print-footer"></div>
+
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbzz-jBetanHkiF3UyWTuObWe4YSBFqZaidVb-_otc0UJBIaBlp_O9x0Q0iCfZ7v6bhL/exec";
+
+  const categoriasBase = [
+    "Accesorios",
+    "Archivo / Partituras",
+    "Director",
+    "Madera",
+    "Metal",
+    "Percusión",
+    "Ropa y uniformes"
+  ];
+
+  let listaCategorias = [];
+  let listaEmpresas = [];
+  let datosCompletos = [];
+  let datosFiltrados = [];
+  let paginaActual = 1;
+  const itemsPorPagina = 50;
+
+  let filasSeleccionadas = new Set();
+  let columnaOrdenActual = "nombre";
+  let ordenAscendente = true;
+  let categoriaFiltroSeleccionada = "TODOS";
+  let itemSeleccionadoDetalle = null;
+
+  window.onload = function() {
+    inicializarCategorias();
+    inicializarEmpresas();
+    cargarDatos();
+  };
+
+  function inicializarCategorias() {
+    let guardadas = [];
+    try {
+      guardadas = JSON.parse(localStorage.getItem("inventario_categorias_locales")) || [];
+    } catch(e) {
+      guardadas = [];
+    }
+    const setCats = new Set([...categoriasBase, ...guardadas]);
+    listaCategorias = Array.from(setCats).filter(c => c && c.trim() !== "");
+    actualizarTodasLasCategorias();
+  }
+
+  function sincronizarCategoriasConDatos(datos) {
+    let nuevas = false;
+    datos.forEach(item => {
+      if (item.categoria && item.categoria.trim() !== "") {
+        const cat = item.categoria.trim();
+        if (!listaCategorias.includes(cat)) {
+          listaCategorias.push(cat);
+          nuevas = true;
+        }
+      }
+    });
+    if (nuevas) {
+      guardarCategoriasLocalmente();
+    }
+    actualizarTodasLasCategorias();
+  }
+
+  function guardarCategoriasLocalmente() {
+    try {
+      localStorage.setItem("inventario_categorias_locales", JSON.stringify(listaCategorias));
+    } catch(e) {}
+  }
+
+  function actualizarTodasLasCategorias() {
+    listaCategorias.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    const select = document.getElementById("categoriaSelect");
+    const valorSeleccionado = select.value;
+    select.innerHTML = '<option value="">Seleccione categoría...</option>';
+    listaCategorias.forEach(cat => {
+      const opt = document.createElement("option");
+      opt.value = cat;
+      opt.textContent = cat;
+      select.appendChild(opt);
+    });
+    if (valorSeleccionado && listaCategorias.includes(valorSeleccionado)) {
+      select.value = valorSeleccionado;
+    }
+
+    const contenedor = document.getElementById("contenedorFiltrosCategoria");
+    contenedor.innerHTML = `
+      <span style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-right: 4px;">Categorías:</span>
+      <button type="button" class="btn-cat-filter ${categoriaFiltroSeleccionada === 'TODOS' ? 'active' : ''}" onclick="filtrarPorCategoriaRapido('TODOS', this)">Todo</button>
+    `;
+
+    listaCategorias.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `btn-cat-filter ${categoriaFiltroSeleccionada.toLowerCase() === cat.toLowerCase() ? 'active' : ''}`;
+      btn.innerText = cat;
+      btn.onclick = function() {
+        filtrarPorCategoriaRapido(cat, this);
+      };
+      contenedor.appendChild(btn);
+    });
+  }
+
+  function inicializarEmpresas() {
+    let guardadas = [];
+    try {
+      guardadas = JSON.parse(localStorage.getItem("inventario_empresas_locales")) || [];
+    } catch(e) {
+      guardadas = [];
+    }
+    listaEmpresas = Array.from(new Set(guardadas)).filter(emp => emp && emp.trim() !== "");
+    actualizarTodasLasEmpresas();
+  }
+
+  function sincronizarEmpresasConDatos(datos) {
+    let nuevas = false;
+    datos.forEach(item => {
+      if (item.empresa && item.empresa.trim() !== "") {
+        const emp = item.empresa.trim();
+        if (!listaEmpresas.includes(emp)) {
+          listaEmpresas.push(emp);
+          nuevas = true;
+        }
+      }
+    });
+    if (nuevas) {
+      guardarEmpresasLocalmente();
+    }
+    actualizarTodasLasEmpresas();
+  }
+
+  function guardarEmpresasLocalmente() {
+    try {
+      localStorage.setItem("inventario_empresas_locales", JSON.stringify(listaEmpresas));
+    } catch(e) {}
+  }
+
+  function actualizarTodasLasEmpresas() {
+    listaEmpresas.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+
+    const select = document.getElementById("empresaSelect");
+    const valorSeleccionado = select.value;
+    select.innerHTML = '<option value="">Seleccione empresa...</option>';
+    listaEmpresas.forEach(emp => {
+      const opt = document.createElement("option");
+      opt.value = emp;
+      opt.textContent = emp;
+      select.appendChild(opt);
+    });
+    if (valorSeleccionado && listaEmpresas.includes(valorSeleccionado)) {
+      select.value = valorSeleccionado;
+    }
+  }
+
+  function nuevaEmpresa() {
+    const nueva = prompt("Introduce el nombre de la nueva empresa o tienda:");
+    if (nueva && nueva.trim() !== "") {
+      const nombreEmp = nueva.trim();
+      if (!listaEmpresas.some(e => e.toLowerCase() === nombreEmp.toLowerCase())) {
+        listaEmpresas.push(nombreEmp);
+        guardarEmpresasLocalmente();
+        actualizarTodasLasEmpresas();
+      }
+      document.getElementById("empresaSelect").value = nombreEmp;
+    }
+  }
+
+  function seleccionarEstado(valor) {
+    document.getElementById("estado").value = valor;
+    const botones = document.querySelectorAll(".btn-estado-opt");
+    botones.forEach(btn => {
+      if (btn.innerText.trim().toLowerCase() === valor.trim().toLowerCase()) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+  }
+
+  function filtrarPorCategoriaRapido(categoria, btnElement) {
+    categoriaFiltroSeleccionada = categoria;
+    const todosBotones = document.querySelectorAll(".btn-cat-filter");
+    todosBotones.forEach(b => b.classList.remove("active"));
+    if (btnElement) btnElement.classList.add("active");
+    
+    aplicarFiltrosYOrden();
+  }
+
+  async function cargarDatos() {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+
+      // Normalizar formato de fecha por si vienen registros antiguos con cadenas largas o en inglés
+      data.forEach(item => {
+        if (item.fechaRegistro) {
+          item.fechaRegistro = normalizarCadenaFecha(item.fechaRegistro);
+        }
+      });
+
+      datosCompletos = data;
+      
+      sincronizarCategoriasConDatos(data);
+      sincronizarEmpresasConDatos(data);
+
+      filasSeleccionadas.clear();
+      actualizarBotonLote();
+
+      aplicarFiltrosYOrden();
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      document.getElementById("cuerpoTabla").innerHTML = `<tr><td colspan="6" style="text-align:center; color:#ef4444;">Error al conectar con la hoja de cálculo. Comprueba la conexión.</td></tr>`;
+    }
+  }
+
+  function aplicarFiltrosYOrden() {
+    const query = document.getElementById("buscador").value.toLowerCase().trim();
+
+    datosFiltrados = datosCompletos.filter(item => {
+      const coincideTexto = !query || (
+        (item.numRegistro && item.numRegistro.toLowerCase().includes(query)) ||
+        (item.nombre && item.nombre.toLowerCase().includes(query)) ||
+        (item.categoria && item.categoria.toLowerCase().includes(query)) ||
+        (item.estado && item.estado.toLowerCase().includes(query)) ||
+        (item.notas && item.notas.toLowerCase().includes(query)) ||
+        (item.empresa && item.empresa.toLowerCase().includes(query))
+      );
+
+      const coincideCat = (categoriaFiltroSeleccionada === "TODOS") || 
+                          (item.categoria && item.categoria.toLowerCase() === categoriaFiltroSeleccionada.toLowerCase());
+
+      return coincideTexto && coincideCat;
+    });
+
+    ejecutarOrdenacionArray();
+
+    paginaActual = 1;
+    actualizarIconosOrden();
+    renderizarTabla();
+  }
+
+  function ordenarPor(columna) {
+    if (columnaOrdenActual === columna) {
+      ordenAscendente = !ordenAscendente;
+    } else {
+      columnaOrdenActual = columna;
+      ordenAscendente = true;
+    }
+    ejecutarOrdenacionArray();
+    actualizarIconosOrden();
+    renderizarTabla();
+  }
+
+  function ejecutarOrdenacionArray() {
+    datosFiltrados.sort((a, b) => {
+      let valA = a[columnaOrdenActual] || "";
+      let valB = b[columnaOrdenActual] || "";
+
+      if (columnaOrdenActual === "cantidad") {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+        return ordenAscendente ? valA - valB : valB - valA;
+      }
+
+      valA = valA.toString();
+      valB = valB.toString();
+      const res = valA.localeCompare(valB, 'es', { numeric: true, sensitivity: 'base' });
+      return ordenAscendente ? res : -res;
+    });
+  }
+
+  function actualizarIconosOrden() {
+    const columnas = ['numRegistro', 'nombre', 'categoria', 'cantidad', 'estado'];
+    columnas.forEach(col => {
+      const el = document.getElementById(`sort-${col}`);
+      if (el) {
+        if (col === columnaOrdenActual) {
+          el.innerText = ordenAscendente ? "▲" : "▼";
+          el.className = "sort-icon sort-active";
+        } else {
+          el.innerText = "⇅";
+          el.className = "sort-icon";
+        }
+      }
+    });
+  }
+
+  function getBadgeEstado(estado) {
+    if (!estado) return `<span class="badge badge-buen-estado">Buen estado</span>`;
+    const est = estado.toLowerCase();
+    if (est.includes("excelente")) return `<span class="badge badge-excelente">${estado}</span>`;
+    if (est.includes("buen")) return `<span class="badge badge-buen-estado">${estado}</span>`;
+    if (est.includes("regular") || est.includes("ajuste")) return `<span class="badge badge-regular">${estado}</span>`;
+    if (est.includes("reparación") || est.includes("reparacion")) return `<span class="badge badge-reparacion">${estado}</span>`;
+    if (est.includes("baja") || est.includes("deteriorado")) return `<span class="badge badge-baja">${estado}</span>`;
+    return `<span class="badge badge-buen-estado">${estado}</span>`;
+  }
+
+  function getDotEstado(estado) {
+    let clase = "dot-buen-estado";
+    const est = (estado || "").toLowerCase();
+    if (est.includes("excelente")) clase = "dot-excelente";
+    else if (est.includes("buen")) clase = "dot-buen-estado";
+    else if (est.includes("regular") || est.includes("ajuste")) clase = "dot-regular";
+    else if (est.includes("reparación") || est.includes("reparacion")) clase = "dot-reparacion";
+    else if (est.includes("baja") || est.includes("deteriorado")) clase = "dot-baja";
+
+    return `<span class="dot-estado ${clase}" title="Estado: ${estado || 'Buen estado'}"></span>`;
+  }
+
+  function renderizarTabla() {
+    const tbody = document.getElementById("cuerpoTabla");
+    tbody.innerHTML = "";
+
+    if (!datosFiltrados || datosFiltrados.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #64748b;">No hay artículos registrados con los filtros aplicados.</td></tr>`;
+      document.getElementById("infoPaginacion").innerText = `Mostrando 0 registros`;
+      document.getElementById("btnPrevPage").disabled = true;
+      document.getElementById("btnNextPage").disabled = true;
+      document.getElementById("selectAllCheckbox").checked = false;
+      return;
+    }
+
+    const totalPaginas = Math.ceil(datosFiltrados.length / itemsPorPagina);
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    if (paginaActual < 1) paginaActual = 1;
+
+    const inicio = (paginaActual - 1) * itemsPorPagina;
+    const fin = Math.min(inicio + itemsPorPagina, datosFiltrados.length);
+    const itemsPagina = datosFiltrados.slice(inicio, fin);
+
+    itemsPagina.forEach(item => {
+      const isChecked = filasSeleccionadas.has(item.fila);
+      const tr = document.createElement("tr");
+      tr.className = "clickable-row";
+      tr.title = "Haz clic para ver detalles y editar";
+      tr.onclick = (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          abrirModalDetalle(item);
+        }
+      };
+
+      tr.innerHTML = `
+        <td class="no-print" style="text-align: center;">
+          <input type="checkbox" class="row-checkbox" value="${item.fila}" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); toggleSeleccionFila(${item.fila}, this.checked)">
+        </td>
+        <td><strong>${item.numRegistro || '-'}</strong></td>
+        <td><strong>${item.cantidad || '1'}</strong></td>
+        <td>${item.nombre}</td>
+        <td><span class="badge badge-cat">${item.categoria}</span></td>
+        <td style="text-align: center;">${getDotEstado(item.estado)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("infoPaginacion").innerText = `Mostrando ${inicio + 1}-${fin} de ${datosFiltrados.length} registros`;
+    document.getElementById("numPagina").innerText = `Página ${paginaActual} de ${totalPaginas || 1}`;
+    document.getElementById("btnPrevPage").disabled = (paginaActual === 1);
+    document.getElementById("btnNextPage").disabled = (paginaActual === totalPaginas || totalPaginas === 0);
+
+    const allCurrentSelected = itemsPagina.length > 0 && itemsPagina.every(i => filasSeleccionadas.has(i.fila));
+    document.getElementById("selectAllCheckbox").checked = allCurrentSelected;
+  }
+
+  function toggleSeleccionFila(fila, isChecked) {
+    if (isChecked) {
+      filasSeleccionadas.add(fila);
+    } else {
+      filasSeleccionadas.delete(fila);
+    }
+    actualizarBotonLote();
+  }
+
+  function toggleSelectAll(checkbox) {
+    const inicio = (paginaActual - 1) * itemsPorPagina;
+    const fin = Math.min(inicio + itemsPorPagina, datosFiltrados.length);
+    const itemsPagina = datosFiltrados.slice(inicio, fin);
+
+    if (checkbox.checked) {
+      itemsPagina.forEach(item => filasSeleccionadas.add(item.fila));
+    } else {
+      itemsPagina.forEach(item => filasSeleccionadas.delete(item.fila));
+    }
+    renderizarTabla();
+    actualizarBotonLote();
+  }
+
+  function actualizarBotonLote() {
+    const btn = document.getElementById("btnEliminarLote");
+    const cantidad = filasSeleccionadas.size;
+    if (cantidad > 0) {
+      btn.style.display = "inline-flex";
+      document.getElementById("btnEliminarLoteTexto").innerText = `Eliminar seleccionados (${cantidad})`;
+    } else {
+      btn.style.display = "none";
+    }
+  }
+
+  async function eliminarLoteSeleccionado() {
+    const total = filasSeleccionadas.size;
+    if (total === 0) return;
+
+    const confirmacion = confirm(`⚠️ PRECAUCIÓN: ¿Estás completamente seguro de que deseas eliminar permanentemente los ${total} registros seleccionados? Esta acción no se puede deshacer.`);
+    if (!confirmacion) return;
+
+    const btn = document.getElementById("btnEliminarLote");
+    btn.disabled = true;
+    btn.innerText = "Eliminando lote...";
+
+    try {
+      const filasArray = Array.from(filasSeleccionadas).sort((a, b) => b - a);
+
+      for (const fila of filasArray) {
+        await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ accion: "borrar", fila: fila })
+        });
+      }
+
+      filasSeleccionadas.clear();
+      actualizarBotonLote();
+      await cargarDatos();
+      alert(`✅ Se han eliminado correctamente ${total} registros.`);
+    } catch (error) {
+      console.error(error);
+      alert("Hubo un error al intentar eliminar algunos de los registros.");
+    } finally {
+      btn.disabled = false;
+      actualizarBotonLote();
+    }
+  }
+
+  function cambiarPagina(delta) {
+    paginaActual += delta;
+    renderizarTabla();
+  }
+
+  function nuevaCategoria() {
+    const nueva = prompt("Introduce el nombre de la nueva categoría:");
+    if (nueva && nueva.trim() !== "") {
+      const nombreCat = nueva.trim();
+      if (!listaCategorias.some(c => c.toLowerCase() === nombreCat.toLowerCase())) {
+        listaCategorias.push(nombreCat);
+        guardarCategoriasLocalmente();
+        actualizarTodasLasCategorias();
+      }
+      document.getElementById("categoriaSelect").value = nombreCat;
+    }
+  }
+
+  /* TRATAMIENTO DE FECHA Y HORA */
+  function normalizarCadenaFecha(str) {
+    if (!str || typeof str !== 'string') return "";
+    const strLimpio = str.trim();
+
+    // Si ya coincide con el formato deseado: "Lunes 17/8/26 - 11:59h"
+    if (/^[A-Za-zÁÉÍÓÚáéíóúñÑ]+\s+\d{1,2}\/\d{1,2}\/\d{2}\s+-\s+\d{2}:\d{2}h$/.test(strLimpio)) {
+      return strLimpio;
+    }
+
+    const d = new Date(strLimpio);
+    if (!isNaN(d.getTime())) {
+      const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+      const diaNom = dias[d.getDay()];
+      const diaNum = d.getDate();
+      const mesNum = d.getMonth() + 1;
+      const anioCorto = String(d.getFullYear()).slice(-2);
+      const horas = String(d.getHours()).padStart(2, '0');
+      const min = String(d.getMinutes()).padStart(2, '0');
+      return `${diaNom} ${diaNum}/${mesNum}/${anioCorto} - ${horas}:${min}h`;
+    }
+
+    return strLimpio;
+  }
+
+  function establecerFechaHoraActualFormulario() {
+    const now = new Date();
+    const dia = String(now.getDate()).padStart(2, '0');
+    const mes = String(now.getMonth() + 1).padStart(2, '0');
+    const anio = now.getFullYear();
+    const horas = String(now.getHours()).padStart(2, '0');
+    const minutos = String(now.getMinutes()).padStart(2, '0');
+
+    document.getElementById("inputFecha").value = `${anio}-${mes}-${dia}`;
+    document.getElementById("inputHora").value = `${horas}:${minutos}`;
+  }
+
+  function parsearFechaHoraEnInputs(strFechaHora) {
+    if (!strFechaHora) {
+      establecerFechaHoraActualFormulario();
+      return;
+    }
+
+    try {
+      // Intenta extraer "DíaNum/MesNum/Año - HH:MMh"
+      const matchFormato = strFechaHora.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*-\s*(\d{1,2}):(\d{2})/);
+      if (matchFormato) {
+        const dia = matchFormato[1].padStart(2, '0');
+        const mes = matchFormato[2].padStart(2, '0');
+        let anio = matchFormato[3];
+        if (anio.length === 2) anio = '20' + anio;
+        const horas = matchFormato[4].padStart(2, '0');
+        const mins = matchFormato[5].padStart(2, '0');
+
+        document.getElementById("inputFecha").value = `${anio}-${mes}-${dia}`;
+        document.getElementById("inputHora").value = `${horas}:${mins}`;
+        return;
+      }
+
+      const d = new Date(strFechaHora);
+      if (!isNaN(d.getTime())) {
+        const dia = String(d.getDate()).padStart(2, '0');
+        const mes = String(d.getMonth() + 1).padStart(2, '0');
+        const anio = d.getFullYear();
+        const horas = String(d.getHours()).padStart(2, '0');
+        const minutos = String(d.getMinutes()).padStart(2, '0');
+
+        document.getElementById("inputFecha").value = `${anio}-${mes}-${dia}`;
+        document.getElementById("inputHora").value = `${horas}:${minutos}`;
+        return;
+      }
+
+      establecerFechaHoraActualFormulario();
+    } catch(e) {
+      establecerFechaHoraActualFormulario();
+    }
+  }
+
+  // Genera el formato solicitado: Lunes 17/8/26 - 11:59h
+  function obtenerFechaHoraFormateada() {
+    const fechaVal = document.getElementById("inputFecha").value; // YYYY-MM-DD
+    const horaVal = document.getElementById("inputHora").value;   // HH:MM
+
+    if (!fechaVal) return "";
+    const [anioFull, mesStr, diaStr] = fechaVal.split('-');
+    const fechaObj = new Date(parseInt(anioFull, 10), parseInt(mesStr, 10) - 1, parseInt(diaStr, 10));
+    
+    const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const diaNombre = diasSemana[fechaObj.getDay()];
+    const diaNum = parseInt(diaStr, 10);
+    const mesNum = parseInt(mesStr, 10);
+    const anioCorto = anioFull.slice(-2);
+    const horaTexto = horaVal || "00:00";
+
+    return `${diaNombre} ${diaNum}/${mesNum}/${anioCorto} - ${horaTexto}h`;
+  }
+
+  /* MODAL FORMULARIO */
+  function abrirModalFormulario() {
+    document.getElementById("editFila").value = "";
+    document.getElementById("formItem").reset();
+    seleccionarEstado("Buen estado");
+    document.getElementById("formTitle").innerText = "Añadir Registro";
+    document.getElementById("btnGuardar").innerText = "Guardar";
+    establecerFechaHoraActualFormulario();
+    document.getElementById("modalFormulario").style.display = "flex";
+  }
+
+  function cerrarModalFormulario() {
+    document.getElementById("modalFormulario").style.display = "none";
+  }
+
+  function iniciarEdicion(item) {
+    cerrarModalDetalle();
+    document.getElementById("editFila").value = item.fila;
+    document.getElementById("numRegistro").value = item.numRegistro || "";
+    document.getElementById("nombre").value = item.nombre || "";
+    
+    if (item.categoria && item.categoria.trim() !== "") {
+      const catLimpia = item.categoria.trim();
+      if (!listaCategorias.includes(catLimpia)) {
+        listaCategorias.push(catLimpia);
+        guardarCategoriasLocalmente();
+        actualizarTodasLasCategorias();
+      }
+    }
+    
+    if (item.empresa && item.empresa.trim() !== "") {
+      const empLimpia = item.empresa.trim();
+      if (!listaEmpresas.includes(empLimpia)) {
+        listaEmpresas.push(empLimpia);
+        guardarEmpresasLocalmente();
+        actualizarTodasLasEmpresas();
+      }
+    }
+    
+    document.getElementById("categoriaSelect").value = item.categoria || "";
+    document.getElementById("empresaSelect").value = item.empresa || "";
+    document.getElementById("cantidad").value = item.cantidad || 1;
+    
+    parsearFechaHoraEnInputs(item.fechaRegistro);
+    
+    seleccionarEstado(item.estado || "Buen estado");
+    document.getElementById("notas").value = item.notas || "";
+
+    document.getElementById("formTitle").innerText = `Modificar Registro`;
+    document.getElementById("btnGuardar").innerText = "Actualizar Registro";
+    document.getElementById("modalFormulario").style.display = "flex";
+  }
+
+  /* MODAL DE DETALLE */
+  function abrirModalDetalle(item) {
+    itemSeleccionadoDetalle = item;
+    document.getElementById("detalleTitulo").innerText = item.nombre || "Detalles del Registro";
+    
+    const contenedor = document.getElementById("detalleContenido");
+    contenedor.innerHTML = `
+      <div class="detalle-item">
+        <div class="detalle-label">Nº de Registro</div>
+        <div class="detalle-val">${item.numRegistro || '-'}</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-label">Cantidad</div>
+        <div class="detalle-val">${item.cantidad || '1'}</div>
+      </div>
+      <div class="detalle-item" style="grid-column: 1 / -1;">
+        <div class="detalle-label">Artículo</div>
+        <div class="detalle-val">${item.nombre || '-'}</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-label">Categoría</div>
+        <div class="detalle-val"><span class="badge badge-cat">${item.categoria || '-'}</span></div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-label">Empresa / Tienda</div>
+        <div class="detalle-val">${item.empresa || '-'}</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-label">Estado</div>
+        <div class="detalle-val">${getBadgeEstado(item.estado)}</div>
+      </div>
+      <div class="detalle-item" style="grid-column: 1 / -1;">
+        <div class="detalle-label">Fecha y hora de registro</div>
+        <div class="detalle-val">${item.fechaRegistro || '-'}</div>
+      </div>
+      <div class="detalle-item" style="grid-column: 1 / -1;">
+        <div class="detalle-label">Notas</div>
+        <div class="detalle-val" style="font-weight: normal; color: #475569;">${item.notas || 'Sin notas adicionales.'}</div>
+      </div>
+    `;
+
+    document.getElementById("btnEditarModal").onclick = () => iniciarEdicion(item);
+    document.getElementById("btnEliminarModal").onclick = () => {
+      cerrarModalDetalle();
+      borrarRegistro(item.fila);
+    };
+    document.getElementById("btnExportarItemPDF").onclick = () => exportarItemPDF(item);
+
+    document.getElementById("modalDetalle").style.display = "flex";
+  }
+
+  function cerrarModalDetalle() {
+    document.getElementById("modalDetalle").style.display = "none";
+  }
+
+  async function procesarFormulario(e) {
+    e.preventDefault();
+
+    const numRegInput = document.getElementById("numRegistro");
+    const numRegValue = numRegInput.value.trim();
+    const filaEdicion = document.getElementById("editFila").value;
+    const esModificacion = filaEdicion !== "";
+
+    if (numRegValue !== "") {
+      const existeDuplicado = datosCompletos.some(item => {
+        const mismoNumero = item.numRegistro && item.numRegistro.toString().trim().toLowerCase() === numRegValue.toLowerCase();
+        if (esModificacion) {
+          return mismoNumero && String(item.fila) !== String(filaEdicion);
+        } else {
+          return mismoNumero;
+        }
+      });
+
+      if (existeDuplicado) {
+        alert(`⚠️ El Nº de Registro "${numRegValue}" ya está registrado en el inventario. Por favor, introduce un número diferente.`);
+        numRegInput.focus();
+        return;
+      }
+    }
+
+    const btn = document.getElementById("btnGuardar");
+    btn.disabled = true;
+    btn.textContent = "Sincronizando...";
+
+    const catSeleccionada = document.getElementById("categoriaSelect").value;
+    const empSeleccionada = document.getElementById("empresaSelect").value;
+    const fechaHoraCompuesta = obtenerFechaHoraFormateada();
+
+    const payload = {
+      accion: esModificacion ? "modificar" : "guardar",
+      fila: esModificacion ? parseInt(filaEdicion) : null,
+      data: {
+        numRegistro: numRegValue,
+        nombre: document.getElementById("nombre").value.trim(),
+        categoria: catSeleccionada,
+        cantidad: document.getElementById("cantidad").value,
+        estado: document.getElementById("estado").value,
+        notas: document.getElementById("notas").value.trim(),
+        fechaRegistro: fechaHoraCompuesta,
+        empresa: empSeleccionada
+      }
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      cerrarModalFormulario();
+      cargarDatos();
+    } catch (error) {
+      alert("Hubo un error al guardar o actualizar el registro.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = esModificacion ? "Actualizar Registro" : "Guardar";
+    }
+  }
+
+  async function borrarRegistro(fila) {
+    if (!confirm(`¿Estás seguro de que deseas eliminar este registro?`)) {
+      return;
+    }
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ accion: "borrar", fila: fila })
+      });
+      cargarDatos();
+    } catch (error) {
+      alert("Hubo un error al intentar eliminar el registro.");
+    }
+  }
+
+  function generarPieDePagina() {
+    const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+    const now = new Date();
+    const diaNombre = dias[now.getDay()];
+    const fecha = `${now.getDate()}/${now.getMonth() + 1}/${String(now.getFullYear()).slice(-2)}`;
+    const horas = String(now.getHours()).padStart(2, '0');
+    const minutos = String(now.getMinutes()).padStart(2, '0');
+    return `${diaNombre} ${fecha} - ${horas}:${minutos}h | Total registros: ${datosFiltrados.length}`;
+  }
+
+  function imprimirRegistros() {
+    const tbody = document.getElementById("cuerpoTabla");
+    tbody.innerHTML = "";
+    
+    datosFiltrados.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="no-print"></td>
+        <td><strong>${item.numRegistro || '-'}</strong></td>
+        <td><strong>${item.cantidad || '1'}</strong></td>
+        <td>${item.nombre}</td>
+        <td><span class="badge badge-cat">${item.categoria}</span></td>
+        <td style="text-align: center;">${getBadgeEstado(item.estado)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("printFooter").innerText = generarPieDePagina();
+
+    window.print();
+
+    renderizarTabla();
+  }
+
+  function descargarPDF() {
+    if (!datosFiltrados || datosFiltrados.length === 0) {
+      alert("No hay datos para exportar a PDF.");
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'pt', 'a4');
+
+    doc.setFontSize(14);
+    doc.setTextColor(30, 58, 138);
+    doc.text("Inventario - Banda Sinfónica Municipal de Huelva", 40, 32);
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(generarPieDePagina(), 40, 47);
+
+    const columnas = [
+      { header: "Nº Reg.", dataKey: "numRegistro" },
+      { header: "Cant.", dataKey: "cantidad" },
+      { header: "Artículo", dataKey: "nombre" },
+      { header: "Categoría", dataKey: "categoria" },
+      { header: "Empresa", dataKey: "empresa" },
+      { header: "Estado", dataKey: "estado" },
+      { header: "Fecha y hora", dataKey: "fechaRegistro" },
+      { header: "Notas", dataKey: "notas" }
+    ];
+
+    const filas = datosFiltrados.map(item => ({
+      numRegistro: item.numRegistro || "-",
+      cantidad: item.cantidad || "1",
+      nombre: item.nombre || "-",
+      categoria: item.categoria || "-",
+      empresa: item.empresa || "-",
+      estado: item.estado || "Buen estado",
+      fechaRegistro: item.fechaRegistro || "-",
+      notas: item.notas || "-"
+    }));
+
+    doc.autoTable({
+      startY: 55,
+      columns: columnas,
+      body: filas,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+      styles: { fontSize: 8, cellPadding: 5, overflow: 'linebreak' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: {
+        numRegistro: { cellWidth: 50 },
+        cantidad: { cellWidth: 35, halign: 'center' },
+        nombre: { cellWidth: 140 },
+        categoria: { cellWidth: 85 },
+        empresa: { cellWidth: 85 },
+        estado: { cellWidth: 80 },
+        fechaRegistro: { cellWidth: 110 },
+        notas: { cellWidth: 'auto' }
+      },
+      margin: { left: 40, right: 40, bottom: 40 },
+      didDrawPage: function () {
+        const str = "Página " + doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(140);
+        doc.text(str, doc.internal.pageSize.width - 70, doc.internal.pageSize.height - 18);
+      }
+    });
+
+    const now = new Date();
+    const dia = now.getDate();
+    const mes = now.getMonth() + 1;
+    const anio = String(now.getFullYear()).slice(-2);
+
+    doc.save(`Inventario BSMHuelva - ${dia}-${mes}-${anio}.pdf`);
+  }
+
+  function exportarItemPDF(item) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'pt', 'a4');
+
+    doc.setFillColor(30, 58, 138);
+    doc.rect(0, 0, 595.28, 65, 'F');
+
+    doc.setFontSize(15);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Ficha de Inventario - BSM Huelva", 40, 40);
+
+    const columnas = [
+      { header: "Campo", dataKey: "campo" },
+      { header: "Detalle", dataKey: "valor" }
+    ];
+
+    const filas = [
+      { campo: "Nº de Registro", valor: item.numRegistro || "-" },
+      { campo: "Artículo", valor: item.nombre || "-" },
+      { campo: "Categoría", valor: item.categoria || "-" },
+      { campo: "Empresa / Tienda", valor: item.empresa || "-" },
+      { campo: "Cantidad", valor: (item.cantidad || "1").toString() },
+      { campo: "Estado", valor: item.estado || "Buen estado" },
+      { campo: "Fecha y hora de registro", valor: item.fechaRegistro || "-" },
+      { campo: "Notas / Observaciones", valor: item.notas || "Sin observaciones." }
+    ];
+
+    doc.autoTable({
+      startY: 90,
+      columns: columnas,
+      body: filas,
+      theme: 'striped',
+      headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 10, cellPadding: 8, overflow: 'linebreak' },
+      columnStyles: {
+        campo: { cellWidth: 160, fontStyle: 'bold', textColor: [30, 41, 59] },
+        valor: { cellWidth: 'auto', textColor: [15, 23, 42] }
+      },
+      margin: { left: 40, right: 40 }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 30;
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Documento generado el: ${generarPieDePagina()}`, 40, finalY);
+
+    const safeName = (item.nombre || "Articulo").replace(/[^a-z0-9]/gi, ' ').toLowerCase();
+    doc.save(`Ficha ${item.numRegistro || 'Reg'} - ${safeName}.pdf`);
+  }
+</script>
+</body>
+</html>
