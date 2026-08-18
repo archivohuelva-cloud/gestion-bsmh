@@ -846,7 +846,7 @@
         if (labelsToPrint.length === 0) {
             alert("Selecciona al menos un instrumento.");
             btn.classList.remove('opacity-50', 'cursor-wait');
-            btnText.innerText = "Imprimir Etiquetas";
+            btnText.innerText = "Imprimir";
             return;
         }
 
@@ -881,7 +881,7 @@
         setTimeout(() => {
             window.print();
             btn.classList.remove('opacity-50', 'cursor-wait');
-            btnText.innerText = "Imprimir Etiquetas";
+            btnText.innerText = "Imprimir";
             container.style.display = 'none';
         }, 600);
     }
