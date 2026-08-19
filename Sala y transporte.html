@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Calendario de Ensayos — Banda</title>
+<title>Calendario de Ensayos y Transporte — Banda</title>
+<!-- Librerías jsPDF, AutoTable y JSZip -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <style>
 /* ═══════════════════════════════════════
@@ -14,7 +16,7 @@
 :root {
   --bg: #f2f2f7;
   --surface: #ffffff;
-  --surface-translucent: rgba(255, 255, 255, 0.85);
+  --surface-translucent: rgba(255, 255, 255, 0.88);
   --surface2: #f2f2f7;
   --border: #e5e5ea;
   --border2: #d1d1d6;
@@ -24,25 +26,29 @@
   --text-dim: #8e8e93;
   --text-muted: #c7c7cc;
   
-  /* Colores de texto/tema */
+  /* Azul Unificado para todas las salas en el calendario */
+  --ensayo-blue: #0062cc;
+  --bg-ensayo-blue: #dbeafe;
+  
+  /* Colores formulario selección */
   --sala-b: #0062cc;
   --auditorio: #7b2cbf;
   --gran-teatro: #d90429;
   --lazareto: #1b8a3e;
   --santa-fe: #d46000;
   --custom: #c2185b;
-  
-  /* Logística y Servicios: Naranja para transporte y Amarillo para montaje/desmontaje */
-  --transport-color: #e65100;
-  --montaje-color: #b78103;
 
-  /* Fondos claros sólidos con alto contraste */
+  /* Fondos Formulario */
   --bg-sala-b: #dbeafe;
   --bg-auditorio: #f3e8ff;
   --bg-gran-teatro: #ffe4e6;
   --bg-lazareto: #dcfce7;
   --bg-santa-fe: #ffedd5;
   --bg-custom: #fce7f3;
+  
+  /* Logística y Servicios */
+  --transport-color: #e65100;
+  --montaje-color: #b78103;
   --bg-transport: #ffe0b2;
   --bg-montaje: #fef9c3;
   
@@ -50,6 +56,8 @@
   --radius-sm: 8px;
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
   --shadow-modal: 0 16px 40px rgba(0,0,0,0.18);
+
+  --hour-row-height: 52px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -60,7 +68,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: 20px;
+  padding-bottom: 30px;
   user-select: none;
 }
 
@@ -70,8 +78,8 @@ body {
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 18px;
+  gap: 10px;
+  padding: 10px 18px;
   background: var(--surface-translucent);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -82,7 +90,6 @@ body {
   flex-wrap: wrap;
 }
 
-/* Botón Volver Integrado */
 .btn-back-custom {
   background-color: #4a5568;
   color: #ffffff;
@@ -90,11 +97,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 6px 14px;
+  gap: 6px;
+  padding: 6px 12px;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   transition: opacity 0.2s, transform 0.1s;
   box-shadow: var(--shadow-sm);
@@ -102,18 +109,51 @@ body {
 .btn-back-custom:hover { opacity: 0.9; }
 .btn-back-custom:active { transform: scale(0.97); }
 
-/* BUSCADOR HEADER */
+/* CONTROLES HISTORIAL */
+.history-controls {
+  display: flex;
+  gap: 2px;
+  background: var(--surface2);
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.btn-history {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 5px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.btn-history:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.btn-history:not(:disabled):hover {
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* BUSCADOR EXPANDIDO */
 .search-container {
   position: relative;
   display: flex;
   align-items: center;
-  min-width: 220px;
+  flex: 1;
+  min-width: 150px;
 }
 .search-input {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 100px;
-  padding: 6px 12px 6px 30px;
+  padding: 6px 12px 6px 32px;
   font-size: 13px;
   color: var(--text);
   width: 100%;
@@ -137,7 +177,8 @@ body {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  width: 320px;
+  width: 100%;
+  max-width: 400px;
   max-height: 380px;
   overflow-y: auto;
   background: var(--surface);
@@ -167,7 +208,7 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 0 auto;
+  margin: 0 4px;
 }
 
 .btn-nav {
@@ -193,7 +234,7 @@ body {
   letter-spacing: -0.3px;
 }
 
-/* Segmented Control iOS */
+/* Tabs de vistas */
 .view-tabs {
   display: flex;
   background: rgba(118, 118, 128, 0.12);
@@ -256,7 +297,40 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   MONTH VIEW iOS
+   BOTÓN FLOTANTE ELIMINAR (HOVER 'X')
+═══════════════════════════════════════ */
+.btn-event-quick-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff !important;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 25;
+  transition: transform 0.1s, background 0.15s;
+}
+.btn-event-quick-delete:hover {
+  background: var(--accent) !important;
+  transform: scale(1.15);
+}
+
+.event-chip:hover .btn-event-quick-delete,
+.event-timespan-block:hover .btn-event-quick-delete,
+.agenda-event:hover .btn-event-quick-delete {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════
+   MONTH VIEW
 ═══════════════════════════════════════ */
 .month-grid {
   display: grid;
@@ -323,24 +397,22 @@ body {
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  cursor: grab;
+  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   border-left: 3px solid currentColor;
   touch-action: none;
+  position: relative;
 }
 .event-chip:active { cursor: grabbing; opacity: 0.7; }
 .event-chip.dragging { opacity: 0.4; }
 
 /* ═══════════════════════════════════════
-   WEEK VIEW iOS & LÍNEA ROJA HORIZONTAL EXACTA
+   WEEK VIEW & FRANJA COLOREADA (24 HORAS)
 ═══════════════════════════════════════ */
-.week-grid {
-  display: grid;
-  grid-template-columns: 55px repeat(7, 1fr);
-  gap: 1px;
+.week-grid-wrapper {
   background: var(--border);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -350,13 +422,28 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.week-grid-header {
+  display: grid;
+  grid-template-columns: 55px repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.week-grid-body {
+  display: grid;
+  grid-template-columns: 55px repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  position: relative;
+}
+
 .week-header-cell {
   background: var(--surface);
   padding: 8px 4px;
   text-align: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 .week-header-cell .wday { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; }
 .week-header-cell .wnum { font-size: 18px; font-weight: 700; color: var(--text); margin-top: 2px; }
@@ -371,6 +458,13 @@ body {
   justify-content: center;
 }
 
+.week-time-col {
+  display: grid;
+  grid-template-rows: repeat(24, var(--hour-row-height));
+  gap: 1px;
+  background: var(--border);
+}
+
 .time-label {
   background: var(--surface);
   padding: 4px 6px;
@@ -379,21 +473,51 @@ body {
   color: var(--text-dim);
   border-top: 1px solid var(--border);
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
 }
+
+.week-day-col {
+  position: relative;
+  background: var(--surface);
+  display: grid;
+  grid-template-rows: repeat(24, var(--hour-row-height));
+  gap: 1px;
+}
+.week-day-col.today-col { background: rgba(255, 59, 48, 0.02); }
 
 .week-cell {
   background: var(--surface);
-  min-height: 52px;
+  height: var(--hour-row-height);
   border-top: 1px solid var(--border);
-  padding: 3px;
   cursor: pointer;
   position: relative;
 }
 .week-cell:hover { background: #fafafa; }
 .week-cell.drag-over { background: #e8f0fe !important; }
-.week-cell.today-col { background: rgba(255, 59, 48, 0.02); }
 
-/* Línea roja horizontal exacta */
+/* Bloque continuo de evento */
+.event-timespan-block {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+  border-left: 4px solid currentColor;
+  overflow: hidden;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: opacity 0.15s;
+}
+.event-timespan-block:hover { opacity: 0.94; }
+.event-timespan-block.dragging { opacity: 0.4; }
+
 .red-time-line-horizontal {
   position: absolute;
   left: 0;
@@ -416,46 +540,47 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   DAY VIEW iOS
+   DAY VIEW (24 HORAS)
 ═══════════════════════════════════════ */
-.day-view {
-  display: grid;
-  grid-template-columns: 60px 1fr;
-  gap: 1px;
+.day-view-wrapper {
   background: var(--border);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
-  max-height: calc(100vh - 140px);
   overflow-y: auto;
+  max-height: calc(100vh - 140px);
   box-shadow: var(--shadow-sm);
-  position: relative;
 }
 
 .day-header-full {
   background: var(--surface);
   padding: 16px 20px;
-  grid-column: 1 / -1;
   font-size: 20px;
   font-weight: 700;
   color: var(--text);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
+  border-bottom: 1px solid var(--border);
 }
 
-.day-event-block {
-  margin: 2px;
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
-  cursor: grab;
-  box-shadow: var(--shadow-sm);
-  touch-action: none;
-  border-left: 4px solid currentColor;
+.day-grid-body {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 1px;
+  background: var(--border);
+  position: relative;
+}
+
+.day-col-content {
+  position: relative;
+  background: var(--surface);
+  display: grid;
+  grid-template-rows: repeat(24, var(--hour-row-height));
+  gap: 1px;
 }
 
 /* ═══════════════════════════════════════
-   AGENDA VIEW iOS
+   AGENDA VIEW
 ═══════════════════════════════════════ */
 .agenda-view {
   background: var(--surface);
@@ -499,13 +624,14 @@ body {
   border: 1px solid currentColor;
   border-radius: 6px;
   margin: 4px 16px;
+  position: relative;
   transition: opacity 0.15s;
 }
-.agenda-event:hover { opacity: 0.85; }
+.agenda-event:hover { opacity: 0.88; }
 
-.agenda-time { font-size: 12px; color: var(--text-dim); min-width: 90px; }
+.agenda-time { font-size: 12px; min-width: 100px; }
 .agenda-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-.agenda-notes { font-size: 12px; color: var(--text-dim); margin-left: auto; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agenda-notes { font-size: 12px; margin-left: auto; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 18px; }
 
 .agenda-add-btn {
   padding: 8px 16px 8px 24px;
@@ -616,7 +742,7 @@ body {
   border-radius: 50%;
 }
 .year-dot.ensayo {
-  background-color: var(--sala-b);
+  background-color: var(--ensayo-blue);
 }
 .year-dot.logistica {
   background-color: var(--transport-color);
@@ -641,7 +767,7 @@ body {
 .modal {
   background: var(--surface);
   border-radius: 16px;
-  width: 480px;
+  width: 500px;
   max-width: 92vw;
   max-height: 90vh;
   overflow-y: auto;
@@ -650,6 +776,12 @@ body {
   transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .modal-overlay.open .modal { transform: scale(1); }
+
+/* Modal de Visualización Horizontal Amplio */
+.modal-wide {
+  width: 780px !important;
+  max-width: 92vw !important;
+}
 
 .modal-header {
   padding: 16px 20px;
@@ -750,6 +882,27 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   font-weight: 700;
 }
 
+.radiobox {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.radiobox.checked {
+  border-color: var(--transport-color);
+  background: var(--transport-color);
+}
+.radiobox.checked::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+}
+
 .modal-footer {
   padding: 14px 20px 18px;
   border-top: 0.5px solid var(--border);
@@ -757,27 +910,41 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 }
 
 /* ═══════════════════════════════════════
-   LEGEND iOS
+   DETALLES EN MODAL DE VISUALIZACIÓN
 ═══════════════════════════════════════ */
-.legend {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 20px;
-  background: var(--surface);
-  border-top: 0.5px solid var(--border);
-  margin-top: 20px;
-  flex-wrap: wrap;
-  border-radius: var(--radius);
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
+.view-detail-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--text-dim); }
-.legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+.view-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+}
+.view-detail-row.full-width {
+  grid-column: 1 / -1;
+}
+.view-detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  min-width: 75px;
+}
+.view-detail-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  word-break: break-word;
+}
 
 /* ═══════════════════════════════════════
-   TOAST NOTIFICATION iOS
+   TOAST NOTIFICATION
 ═══════════════════════════════════════ */
 .toast {
   position: fixed;
@@ -802,22 +969,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 /* ═══════════════════════════════════════
-   ADAPTATIVIDAD (Móviles / Tablets)
+   RESPONSIVE
 ═══════════════════════════════════════ */
 @media (max-width: 768px) {
-  .header { padding: 10px 14px; gap: 8px; }
-  .search-container { order: 2; width: 100%; margin-top: 4px; }
-  .header-nav { order: 3; width: 100%; justify-content: space-between; margin-top: 6px; }
-  .view-tabs { order: 4; width: 100%; margin-top: 6px; justify-content: center; }
+  .header { padding: 10px 12px; gap: 6px; }
+  .history-controls { order: 1; }
+  .header-actions { order: 2; margin-left: auto; }
+  .search-container { order: 3; width: 100%; min-width: 100%; margin-top: 4px; }
+  .header-nav { order: 4; width: 100%; justify-content: space-between; margin-top: 6px; }
+  .view-tabs { order: 5; width: 100%; margin-top: 6px; justify-content: center; }
   .view-tab { flex: 1; text-align: center; }
-  .header-actions { order: 1; margin-left: auto; }
   #calendar-container { padding: 8px; }
   .month-day { min-height: 80px; padding: 3px; }
   .day-num { font-size: 11px; min-width: 18px; height: 18px; }
   .event-chip { font-size: 9px; padding: 2px 4px; }
-  .modal {
-    width: 100vw;
-    max-width: 100vw;
+  .btn-event-quick-delete { display: flex !important; }
+  .modal, .modal-wide {
+    width: 100vw !important;
+    max-width: 100vw !important;
     border-radius: 20px 20px 0 0;
     position: fixed;
     bottom: 0;
@@ -825,13 +994,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   }
   .modal-overlay.open .modal { transform: translateY(0); }
   .modal-overlay { align-items: flex-end; }
-}
-
-@media print {
-  body { background: white; color: black; }
-  .header, .header-actions, .btn-back-custom, .view-tabs, .btn-nav, .legend, .red-time-line-horizontal, .search-container { display: none !important; }
-  .month-grid, .week-grid, .agenda-view, .year-grid { box-shadow: none; border: 1px solid #ccc; }
-  .month-day, .week-cell { background: white !important; }
+  .view-detail-card { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -840,16 +1003,22 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 <!-- HEADER -->
 <header class="header" id="main-header">
   <button onclick="window.history.back()" class="btn-back-custom">
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
     <span>Volver</span>
   </button>
 
-  <!-- BUSCADOR -->
+  <!-- BOTONES DESHACER Y REHACER -->
+  <div class="history-controls">
+    <button class="btn-history" id="btn-undo" onclick="undo()" title="Deshacer (Ctrl+Z)" disabled>↶</button>
+    <button class="btn-history" id="btn-redo" onclick="redo()" title="Rehacer (Ctrl+Y)" disabled>↷</button>
+  </div>
+
+  <!-- BUSCADOR EXPANDIDO -->
   <div class="search-container">
     <div class="search-icon">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
     </div>
-    <input type="text" id="calendar-search-input" class="search-input" placeholder="Buscar" autocomplete="off" />
+    <input type="text" id="calendar-search-input" class="search-input" placeholder="Buscar eventos, salas, notas..." autocomplete="off" />
     <div class="search-results-dropdown" id="search-results"></div>
   </div>
 
@@ -869,9 +1038,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   </div>
 
   <div class="header-actions">
-    <button class="btn-action" id="btn-sheets-config" onclick="openSheetsConfig()">⚙</button>
-    <button class="btn-action" onclick="syncWithSheets()" id="btn-sync">↻</button>
-    <button class="btn-action" onclick="exportPDF()">⬇ PDF</button>
+    <button class="btn-action" onclick="openExportModal()">⬇ PDF</button>
     <button class="btn-action primary" onclick="openAddModal()">+ Añadir</button>
   </div>
 </header>
@@ -879,18 +1046,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 <!-- CALENDAR -->
 <div id="calendar-container"></div>
 
-<!-- LEGEND -->
-<div class="legend" id="legend">
-  <span style="color:var(--text-dim);font-size:12px;font-weight:600;margin-right:4px;">SALAS:</span>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--sala-b)"></div> Sala B</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--auditorio)"></div> Auditorio</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--gran-teatro)"></div> Gran Teatro</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--lazareto)"></div> Lazareto</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--santa-fe)"></div> Santa Fe</div>
-  <span style="color:var(--text-dim);font-size:12px;font-weight:600;margin-left:8px;">ELEMENTOS:</span>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--transport-color)"></div> 🚚 TRANSPORTE</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--montaje-color)"></div> 🛒 MONTAJE</div>
-  <div class="legend-item"><div class="legend-dot" style="background:var(--montaje-color)"></div> 🛒 DESMONTAJE</div>
+<!-- ═══════════════════ MODAL VISUALIZAR DETALLE DE EVENTO (SOLO LECTURA) ═══════════════════ -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div class="modal-title" id="view-modal-title">Detalles del Evento</div>
+      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="view-detail-card" id="view-detail-content">
+        <!-- Renderizado dinámico de la info -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-action" id="btn-delete-from-view" style="margin-right:auto;color:#ff3b30;border-color:rgba(255,59,48,0.3)" onclick="deleteFromViewModal()">Eliminar</button>
+      <button type="button" class="btn-action" onclick="closeModal('view-modal')">Cerrar</button>
+      <button type="button" class="btn-action primary" id="btn-open-edit-from-view" onclick="switchToEditModal()">✏ Editar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════ MODAL AÑADIR/EDITAR ═══════════════════ -->
@@ -902,42 +1075,110 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     </div>
     <div class="modal-body">
 
-      <!-- SALA DE ENSAYO -->
-      <div class="section-box">
-        <label onclick="selectSalaMode()" class="range-toggle">
-          <div class="checkbox checked" id="has-sala-checkbox"></div>
-          <strong>Sala de ensayo</strong>
-        </label>
+      <!-- SELECTOR DE MODO: SALA vs LOGÍSTICA (EXCLUSIVIDAD Y OCULTACIÓN MUTUA) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+        <button type="button" class="btn-action" id="btn-tab-sala" onclick="setMode('sala')" style="justify-content:center;border-radius:8px;font-weight:700;">🎵 Sala de Ensayo</button>
+        <button type="button" class="btn-action" id="btn-tab-logistica" onclick="setMode('logistica')" style="justify-content:center;border-radius:8px;font-weight:700;">🚚 Logística / Servicios</button>
+      </div>
+
+      <!-- SECCIÓN: SALA DE ENSAYO -->
+      <div class="section-box" id="box-sala">
+        <label><strong>Sala de ensayo</strong></label>
         <div id="sala-config-group">
           <div class="sala-presets" id="sala-presets">
-            <button class="sala-preset-btn" data-sala="SALA B" style="background:var(--bg-sala-b);color:var(--sala-b)">SALA B</button>
-            <button class="sala-preset-btn" data-sala="AUDITORIO" style="background:var(--bg-auditorio);color:var(--auditorio)">AUDITORIO</button>
-            <button class="sala-preset-btn" data-sala="GRAN TEATRO" style="background:var(--bg-gran-teatro);color:var(--gran-teatro)">GRAN TEATRO</button>
-            <button class="sala-preset-btn" data-sala="LAZARETO" style="background:var(--bg-lazareto);color:var(--lazareto)">LAZARETO</button>
-            <button class="sala-preset-btn" data-sala="SANTA FE" style="background:var(--bg-santa-fe);color:var(--santa-fe)">SANTA FE</button>
-            <button class="sala-preset-btn" data-sala="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">+ Otra</button>
+            <button type="button" class="sala-preset-btn" data-sala="SALA B" style="background:var(--bg-sala-b);color:var(--sala-b)">SALA B</button>
+            <button type="button" class="sala-preset-btn" data-sala="AUDITORIO" style="background:var(--bg-auditorio);color:var(--auditorio)">AUDITORIO</button>
+            <button type="button" class="sala-preset-btn" data-sala="GRAN TEATRO" style="background:var(--bg-gran-teatro);color:var(--gran-teatro)">GRAN TEATRO</button>
+            <button type="button" class="sala-preset-btn" data-sala="LAZARETO" style="background:var(--bg-lazareto);color:var(--lazareto)">LAZARETO</button>
+            <button type="button" class="sala-preset-btn" data-sala="SANTA FE" style="background:var(--bg-santa-fe);color:var(--santa-fe)">SANTA FE</button>
+            <button type="button" class="sala-preset-btn" data-sala="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">+ Otra</button>
           </div>
           <input type="text" id="sala-input" placeholder="Nombre de la sala…" style="margin-top:6px" />
         </div>
       </div>
 
-      <!-- LOGÍSTICA / SERVICIOS INDEPENDIENTES -->
-      <div class="section-box">
-        <label style="margin-bottom:4px">Logística y Servicios</label>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <label onclick="selectLogisticsOption('has-transport-checkbox')" class="range-toggle">
-            <div class="checkbox" id="has-transport-checkbox"></div>
+      <!-- SECCIÓN: LOGÍSTICA / SERVICIOS (SELECCIÓN EXCLUSIVA) -->
+      <div class="section-box" id="box-logistica" style="display:none;">
+        <label><strong>Logística, Transporte y Servicios</strong></label>
+        
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:6px;">
+          <label onclick="selectLogisticsOption('transporte')" class="range-toggle">
+            <div class="radiobox" id="radio-transporte"></div>
             🚚 TRANSPORTE
           </label>
-          <label onclick="selectLogisticsOption('has-montaje-checkbox')" class="range-toggle">
-            <div class="checkbox" id="has-montaje-checkbox"></div>
+          <label onclick="selectLogisticsOption('montaje')" class="range-toggle">
+            <div class="radiobox" id="radio-montaje"></div>
             🛒 MONTAJE
           </label>
-          <label onclick="selectLogisticsOption('has-desmontaje-checkbox')" class="range-toggle">
-            <div class="checkbox" id="has-desmontaje-checkbox"></div>
+          <label onclick="selectLogisticsOption('desmontaje')" class="range-toggle">
+            <div class="radiobox" id="radio-desmontaje"></div>
             🛒 DESMONTAJE
           </label>
         </div>
+
+        <!-- UBICACIÓN Y TRAYECTO DINÁMICO -->
+        <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
+          <label style="color:var(--transport-color)">📍 Ubicación y Trayecto de Logística</label>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label style="font-size:11px">Tipo de Trayecto</label>
+              <select id="trayecto-tipo" onchange="handleTrayectoTipoChange()">
+                <option value="">(Sin especificar)</option>
+                <option value="Ida a">Ida a</option>
+                <option value="Vuelta de">Vuelta de</option>
+                <option value="Ubicación">Ubicación fija</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label style="font-size:11px" id="lbl-ubi-primaria">Lugar / Destino (A - Z)</label>
+              <select id="ubicacion-select" onchange="handleUbicacionSelectChange()">
+                <option value="">Selecciona ubicación...</option>
+                <option value="ALMACÉN BANDA">Almacén Banda</option>
+                <option value="AUDITORIO">Auditorio</option>
+                <option value="GRAN TEATRO">Gran Teatro</option>
+                <option value="LAZARETO">Lazareto</option>
+                <option value="SALA B">Sala B</option>
+                <option value="SANTA FE">Santa Fe</option>
+                <option value="_CUSTOM_">Añadir nueva ubicación...</option> 
+              </select>
+            </div>
+          </div>
+          <input type="text" id="ubicacion-custom" placeholder="Escribe el lugar o destino específico…" style="display:none;margin-top:2px;" />
+
+          <!-- PREGUNTA Y SECCIÓN SECUNDARIA DE TRAYECTO -->
+          <div id="secondary-trayecto-group" style="display:none;margin-top:6px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);border:1px dashed var(--border2);flex-direction:column;gap:8px;">
+            <label class="range-toggle" onclick="toggleSecondaryTrayecto()">
+              <div class="checkbox" id="has-secondary-checkbox"></div>
+              <span id="secondary-toggle-label" style="font-weight:600;font-size:12px;color:var(--transport-color);">¿Hay vuelta posterior?</span>
+            </label>
+
+            <div id="secondary-inputs" style="display:none;flex-direction:column;gap:8px;margin-top:4px;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label style="font-size:11px;" id="lbl-secondary-select">Lugar correspondiente:</label>
+                  <select id="ubicacion-secondary-select" onchange="handleSecondaryUbicacionChange()">
+                    <option value="">Mismo lugar principal</option>
+                    <option value="ALMACÉN BANDA">Almacén Banda</option>
+                    <option value="AUDITORIO">Auditorio</option>
+                    <option value="GRAN TEATRO">Gran Teatro</option>
+                    <option value="LAZARETO">Lazareto</option>
+                    <option value="SALA B">Sala B</option>
+                    <option value="SANTA FE">Santa Fe</option>
+                    <option value="_CUSTOM_">Añadir otro lugar específico...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label style="font-size:11px;" id="lbl-secondary-time">Hora correspondiente:</label>
+                  <input type="time" id="secondary-time" value="13:30" />
+                </div>
+              </div>
+              <input type="text" id="ubicacion-secondary-custom" placeholder="Escribe el lugar secundario…" style="display:none;margin-top:2px;" />
+            </div>
+          </div>
+
+        </div>
+
       </div>
 
       <!-- RANGO DE DÍAS -->
@@ -964,14 +1205,14 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       <div class="form-group">
         <label onclick="toggleHourRange()" class="range-toggle">
           <div class="checkbox" id="hour-range-checkbox"></div>
-          Aplicar a rango de horas
+          <span id="hour-range-label">Aplicar a rango de horas</span>
         </label>
       </div>
 
       <!-- HORAS -->
       <div class="form-row">
         <div class="form-group">
-          <label>Hora inicio</label>
+          <label id="lbl-main-time-start">Hora inicio</label>
           <input type="time" id="time-start" value="09:15" />
         </div>
         <div class="form-group" id="time-end-group">
@@ -983,35 +1224,64 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       <!-- NOTAS -->
       <div class="form-group">
         <label>Notas</label>
-        <textarea id="event-notes" placeholder="Información adicional, recordatorios…"></textarea>
+        <textarea id="event-notes" rows="4" placeholder="Información adicional, instrumental, recordatorios…"></textarea>
       </div>
 
     </div>
     <div class="modal-footer">
-      <button class="btn-action" id="btn-delete-event" style="display:none;margin-right:auto;color:#ff3b30;border-color:rgba(255,59,48,0.3)" onclick="deleteCurrentEvent()">Eliminar</button>
-      <button class="btn-action" onclick="closeModal('add-modal')">Cancelar</button>
-      <button class="btn-action primary" onclick="saveEvent()">Guardar</button>
+      <button type="button" class="btn-action" id="btn-delete-event" style="display:none;margin-right:auto;color:#ff3b30;border-color:rgba(255,59,48,0.3)" onclick="deleteCurrentEvent()">Eliminar</button>
+      <button type="button" class="btn-action" onclick="closeModal('add-modal')">Cancelar</button>
+      <button type="button" class="btn-action primary" onclick="saveEvent()">Guardar</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════ MODAL GOOGLE SHEETS CONFIG ═══════════════════ -->
-<div class="modal-overlay" id="sheets-modal">
-  <div class="modal">
+<!-- ═══════════════════ MODAL EXPORTAR PDF / ZIP ═══════════════════ -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal" style="width:460px;">
     <div class="modal-header">
-      <div class="modal-title">⚙ Configurar Google Sheets</div>
-      <button class="modal-close" onclick="closeModal('sheets-modal')">✕</button>
+      <div class="modal-title">⬇ Descargar PDF / ZIP</div>
+      <button class="modal-close" onclick="closeModal('export-modal')">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>URL del Web App de Apps Script</label>
-        <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/…/exec" />
+        <label>Alcance de la exportación</label>
+        <select id="export-scope" onchange="handleExportScopeChange()">
+          <option value="all_views">📦 Paquete Completo (Todas las Vistas en ZIP)</option>
+          <option value="year">📅 Todo el Año actual</option>
+          <option value="month">🗓 Mes actual</option>
+          <option value="day">📌 Día seleccionado</option>
+          <option value="custom_range">📆 Rango de días personalizado</option>
+        </select>
       </div>
-      <button class="btn-action" onclick="copyAppsScript()" style="width:100%;justify-content:center;margin-top:8px">📋 Copiar código Apps Script</button>
+
+      <div class="form-row" id="export-custom-dates" style="display:none;">
+        <div class="form-group">
+          <label>Desde</label>
+          <input type="date" id="export-date-from" />
+        </div>
+        <div class="form-group">
+          <label>Hasta</label>
+          <input type="date" id="export-date-to" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Filtrar Tipo de Elementos</label>
+        <select id="export-filter">
+          <option value="all">Todo (Salas + Transporte + Logística)</option>
+          <option value="salas">Solo Ensayos / Salas</option>
+          <option value="logistica">Solo Transporte y Montajes</option>
+        </select>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-dim);background:var(--surface2);padding:10px;border-radius:8px;line-height:1.4">
+        💡 Se generará un archivo comprimido <strong>.ZIP</strong> nombrado con la fecha actual conteniendo los PDFs con el formato correspondiente.
+      </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-action" onclick="closeModal('sheets-modal')">Cancelar</button>
-      <button class="btn-action primary" onclick="saveSheetsConfig()">Guardar</button>
+      <button type="button" class="btn-action" onclick="closeModal('export-modal')">Cancelar</button>
+      <button type="button" class="btn-action primary" id="btn-do-export" onclick="executeExportPDF()">Generar ZIP</button>
     </div>
   </div>
 </div>
@@ -1020,18 +1290,78 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 <div class="toast" id="toast"></div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════════════════════
+   CONFIGURACIÓN GOOGLE APPS SCRIPT
+═══════════════════════════════════════════════════════════════════════════════ */
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwKuLPVQqThSlc6A_BdJXZDufBnxdQTXxRkEZLPNX56Yh-7GLm3ijz28lwiG0oBB_0/exec';
+
 /* ═══════════════════════════════════════════════════════
-   ESTADO
+   ESTADO Y SISTEMA DE HISTORIAL (UNDO / REDO)
 ═══════════════════════════════════════════════════════ */
 let currentView = 'mes';
 let currentDate = new Date();
 let events = JSON.parse(localStorage.getItem('banda_events') || '[]');
+
+let undoStack = [];
+let redoStack = [];
+const MAX_HISTORY = 40;
+
+function pushState() {
+  undoStack.push(JSON.stringify(events));
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  redoStack = [];
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+  redoStack.push(JSON.stringify(events));
+  const prevState = undoStack.pop();
+  events = JSON.parse(prevState);
+  saveEvents(false);
+  updateHistoryButtons();
+  render();
+  showToast('Acción deshecha', 'info');
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+  undoStack.push(JSON.stringify(events));
+  const nextState = redoStack.pop();
+  events = JSON.parse(nextState);
+  saveEvents(false);
+  updateHistoryButtons();
+  render();
+  showToast('Acción rehecha', 'info');
+}
+
+function updateHistoryButtons() {
+  const btnU = document.getElementById('btn-undo');
+  const btnR = document.getElementById('btn-redo');
+  if (btnU) btnU.disabled = undoStack.length === 0;
+  if (btnR) btnR.disabled = redoStack.length === 0;
+}
+
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+    if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+    e.preventDefault();
+    undo();
+  } else if ((e.ctrlKey || e.metaKey) && ((!e.shiftKey && e.key.toLowerCase() === 'y') || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+    if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+    e.preventDefault();
+    redo();
+  }
+});
+
 let editingEventId = null;
+let viewingEventId = null;
+let viewingContextDate = null;
+let currentMode = 'sala'; // 'sala' o 'logistica'
+let selectedLogisticsType = 'transporte'; // 'transporte' | 'montaje' | 'desmontaje'
 let isRange = false;
 let isHourRange = true;
-let hasSala = true;
 let selectedSala = 'SALA B';
-let sheetsUrl = localStorage.getItem('banda_sheets_url') || '';
 
 let yearFilterEnsayos = true;
 let yearFilterLogistica = true;
@@ -1043,9 +1373,9 @@ const DAYS_ES = ['lun','mar','mié','jue','vie','sáb','dom'];
 const DAYS_FULL = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-/* ═══════════════════════════════════════════════════════
-   UTILIDADES & ESTILOS DE COLOR SÓLIDO
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   UTILIDADES & FORMATEOS
+═══════════════════════════════════════ */
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 function dateStr(d) {
@@ -1060,21 +1390,83 @@ function parseDate(s) {
   return new Date(y, m-1, d); 
 }
 
+function addDays(s, n) {
+  const d = parseDate(s);
+  d.setDate(d.getDate() + n);
+  return dateStr(d);
+}
+
 function isToday(d) { 
   const t = new Date(); 
   return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate(); 
 }
 
+function formatTimeH(t) {
+  if (!t) return '';
+  const clean = t.trim().replace(/h$/i, '');
+  return `${clean}h`;
+}
+
+function formatTimeRangeDisplay(ev) {
+  if (typeof ev === 'string') {
+    return formatTimeH(ev);
+  }
+  if (!ev) return 'Sin horario especificado';
+  
+  if (!ev.sala && ev.secondaryTime) {
+    const mainTime = formatTimeH(ev.timeStart || '08:30');
+    const secTime = formatTimeH(ev.secondaryTime);
+    if (ev.ubicacion && ev.ubicacion.startsWith('Vuelta de')) {
+      return `Ida: ${secTime} • Vuelta: ${mainTime}`;
+    }
+    return `Ida: ${mainTime} • Vuelta: ${secTime}`;
+  }
+
+  const start = ev.timeStart;
+  const end = ev.timeEnd;
+  if (!start) return 'Sin horario especificado';
+  const sH = formatTimeH(start);
+  if (end && end !== start) {
+    return `${sH} - ${formatTimeH(end)}`;
+  }
+  return sH;
+}
+
+function formatDisplayDateWithDay(s) {
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const d = parseDate(s);
+    const dow = (d.getDay() + 6) % 7;
+    const [y, m, day] = s.split('-');
+    const shortY = y.slice(-2);
+    const dayNum = parseInt(day, 10);
+    const monthNum = parseInt(m, 10);
+    return `${DAYS_FULL[dow]} ${dayNum}-${monthNum}-${shortY}`;
+  }
+  return s;
+}
+
+function formatDisplayDate(s) {
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}-${m}-${y}`;
+  }
+  return s;
+}
+
+function formatDisplayRange(start, end) {
+  if (!start) return '';
+  const dStart = formatDisplayDateWithDay(start);
+  if (end && end !== start) {
+    return `${dStart} al ${formatDisplayDateWithDay(end)}`;
+  }
+  return dStart;
+}
+
 function getEventStyle(ev) {
   if (ev.sala) {
-    switch(ev.sala) {
-      case 'SALA B': return { color: 'var(--sala-b)', bg: 'var(--bg-sala-b)' };
-      case 'AUDITORIO': return { color: 'var(--auditorio)', bg: 'var(--bg-auditorio)' };
-      case 'GRAN TEATRO': return { color: 'var(--gran-teatro)', bg: 'var(--bg-gran-teatro)' };
-      case 'LAZARETO': return { color: 'var(--lazareto)', bg: 'var(--bg-lazareto)' };
-      case 'SANTA FE': return { color: 'var(--santa-fe)', bg: 'var(--bg-santa-fe)' };
-      default: return { color: 'var(--custom)', bg: 'var(--bg-custom)' };
-    }
+    return { color: 'var(--ensayo-blue)', bg: 'var(--bg-ensayo-blue)' };
   }
   if (ev.transport === 'si') return { color: 'var(--transport-color)', bg: 'var(--bg-transport)' };
   if (ev.montaje || ev.desmontaje) return { color: 'var(--montaje-color)', bg: 'var(--bg-montaje)' };
@@ -1088,6 +1480,10 @@ function getEventTitle(ev) {
   if (ev.montaje) titleParts.push('🛒 MONTAJE');
   if (ev.desmontaje) titleParts.push('🛒 DESMONTAJE');
   
+  if (ev.ubicacion && !ev.sala) {
+    titleParts.push(`[${ev.ubicacion}]`);
+  }
+  
   if (titleParts.length === 0) return 'EVENTO';
   return titleParts.join(' • ');
 }
@@ -1100,7 +1496,7 @@ function mondayOf(d) {
 
 function eventsOnDate(dateS) {
   const filtered = events.filter(e => {
-    if (e.dateEnd) {
+    if (e.dateEnd && e.dateEnd !== e.dateStart) {
       return dateS >= e.dateStart && dateS <= e.dateEnd;
     }
     return e.dateStart === dateS;
@@ -1113,13 +1509,78 @@ function eventsOnDate(dateS) {
   });
 }
 
-function saveEvents() {
+function saveEvents(recordHistory = true) {
   localStorage.setItem('banda_events', JSON.stringify(events));
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ELIMINACIÓN INDIVIDUAL (SOPORTE PARA RANGOS DE FECHAS)
+═══════════════════════════════════════════════════════════════════════════════ */
+function removeEventForSpecificDate(id, targetDate) {
+  const evIndex = events.findIndex(item => item.id === id);
+  if (evIndex === -1) return;
+  const ev = events[evIndex];
+
+  const hasRange = ev.dateEnd && ev.dateEnd > ev.dateStart;
+
+  if (!hasRange || !targetDate || (ev.dateStart === targetDate && ev.dateEnd === targetDate)) {
+    syncEvent('delete', ev);
+    events.splice(evIndex, 1);
+  } else {
+    if (targetDate === ev.dateStart) {
+      ev.dateStart = addDays(ev.dateStart, 1);
+      if (ev.dateStart === ev.dateEnd) ev.dateEnd = null;
+      syncEvent('update', ev);
+    } else if (targetDate === ev.dateEnd) {
+      ev.dateEnd = addDays(ev.dateEnd, -1);
+      if (ev.dateStart === ev.dateEnd) ev.dateEnd = null;
+      syncEvent('update', ev);
+    } else if (targetDate > ev.dateStart && targetDate < ev.dateEnd) {
+      const prevEnd = addDays(targetDate, -1);
+      const nextStart = addDays(targetDate, 1);
+
+      const splitEv = {
+        ...JSON.parse(JSON.stringify(ev)),
+        id: uid(),
+        dateStart: nextStart,
+        dateEnd: (nextStart === ev.dateEnd) ? null : ev.dateEnd,
+        synced: false
+      };
+
+      ev.dateEnd = (ev.dateStart === prevEnd) ? null : prevEnd;
+      syncEvent('update', ev);
+
+      events.push(splitEv);
+      syncEvent('add', splitEv);
+    }
+  }
+}
+
+function quickDeleteEvent(id, targetDate, e) {
+  if (e) e.stopPropagation();
+  const ev = events.find(item => item.id === id);
+  if (!ev) return;
+  const title = getEventTitle(ev);
+  const dateToDelete = targetDate || ev.dateStart;
+  const fechaStr = formatDisplayDateWithDay(dateToDelete);
+
+  const isPartOfRange = ev.dateEnd && ev.dateEnd > ev.dateStart;
+  const promptMsg = isPartOfRange 
+    ? `¿Deseas eliminar este evento únicamente del día ${fechaStr}?\n("${title}")`
+    : `¿Estás seguro de que deseas eliminar este evento?\n\n"${title}" (${fechaStr})`;
+
+  if (confirm(promptMsg)) {
+    pushState();
+    removeEventForSpecificDate(id, dateToDelete);
+    saveEvents();
+    showToast('Evento eliminado', 'info');
+    render();
+  }
+}
+
+/* ═══════════════════════════════════════
    BUSCADOR DE EVENTOS
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 const searchInput = document.getElementById('calendar-search-input');
 const searchResults = document.getElementById('search-results');
 
@@ -1135,11 +1596,17 @@ searchInput.addEventListener('input', (e) => {
   events.forEach(ev => {
     const title = getEventTitle(ev).toLowerCase();
     const notes = (ev.notes || '').toLowerCase();
+    const ubi = (ev.ubicacion || '').toLowerCase();
     const dateStart = ev.dateStart || '';
     const dateEnd = ev.dateEnd || '';
-    const time = `${ev.timeStart || ''} ${ev.timeEnd || ''}`.toLowerCase();
+    const time = `${ev.timeStart || ''} ${ev.timeEnd || ''} ${ev.secondaryTime || ''}`.toLowerCase();
+    const dateStartFormatted = formatDisplayDate(dateStart);
+    const dateEndFormatted = formatDisplayDate(dateEnd);
 
-    if (title.includes(query) || notes.includes(query) || dateStart.includes(query) || dateEnd.includes(query) || time.includes(query)) {
+    if (title.includes(query) || notes.includes(query) || ubi.includes(query) || 
+        dateStart.includes(query) || dateEnd.includes(query) || 
+        dateStartFormatted.includes(query) || dateEndFormatted.includes(query) || 
+        time.includes(query)) {
       matchedEvents.push(ev);
     }
   });
@@ -1151,8 +1618,8 @@ searchInput.addEventListener('input', (e) => {
     matchedEvents.slice(0, 15).forEach(ev => {
       const style = getEventStyle(ev);
       const title = getEventTitle(ev);
-      const dates = ev.dateEnd && ev.dateEnd !== ev.dateStart ? `${ev.dateStart} al ${ev.dateEnd}` : ev.dateStart;
-      const hours = ev.timeStart ? `${ev.timeStart}${ev.timeEnd ? ' – ' + ev.timeEnd : ''}` : 'Sin horario';
+      const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
+      const hours = formatTimeRangeDisplay(ev);
 
       html += `<div class="search-result-item" data-date="${ev.dateStart}" data-id="${ev.id}">
         <div class="search-result-title">
@@ -1173,17 +1640,11 @@ searchInput.addEventListener('input', (e) => {
 searchResults.addEventListener('click', (e) => {
   const item = e.target.closest('.search-result-item');
   if (!item) return;
-  const targetDateStr = item.dataset.date;
-  
-  currentDate = parseDate(targetDateStr);
-  currentView = 'dia';
-  document.querySelectorAll('.view-tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === 'dia');
-  });
-
+  const targetId = item.dataset.id;
+  const targetDate = item.dataset.date;
   searchResults.style.display = 'none';
   searchInput.value = '';
-  render();
+  openViewModal(targetId, targetDate);
 });
 
 document.addEventListener('click', (e) => {
@@ -1192,9 +1653,9 @@ document.addEventListener('click', (e) => {
   }
 });
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    NAVEGACIÓN
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 document.getElementById('btn-prev').addEventListener('click', () => navigate(-1));
 document.getElementById('btn-next').addEventListener('click', () => navigate(1));
 
@@ -1218,9 +1679,9 @@ document.querySelectorAll('.view-tab').forEach(btn => {
   });
 });
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    RENDER DISPATCHER
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function render() {
   if (currentView === 'mes') renderMonth();
   else if (currentView === 'semana') renderWeek();
@@ -1229,9 +1690,9 @@ function render() {
   else if (currentView === 'ano') renderYear();
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    MONTH VIEW
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function renderMonth() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -1271,8 +1732,9 @@ function renderMonth() {
   });
   document.querySelectorAll('.event-chip').forEach(chip => {
     chip.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-event-quick-delete')) return;
       e.stopPropagation();
-      openEditModal(chip.dataset.id);
+      openViewModal(chip.dataset.id, chip.dataset.contextDate);
     });
   });
 }
@@ -1287,8 +1749,10 @@ function renderMonthCell(d, otherMonth) {
   dayEvents.forEach(ev => {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
-    evHTML += `<div class="event-chip" draggable="true" data-id="${ev.id}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
-      <span style="overflow:hidden;text-overflow:ellipsis">${title}${ev.timeStart ? ' '+ev.timeStart : ''}</span>
+    const timeLabel = ev.timeStart ? ` ${formatTimeH(ev.timeStart)}` : '';
+    evHTML += `<div class="event-chip" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
+      <span style="overflow:hidden;text-overflow:ellipsis;padding-right:16px;">${title}${timeLabel}</span>
+      <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
     </div>`;
   });
 
@@ -1298,9 +1762,34 @@ function renderMonthCell(d, otherMonth) {
   </div>`;
 }
 
-/* ═══════════════════════════════════════════════════════
-   WEEK VIEW + LÍNEA ROJA HORIZONTAL EXACTA
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   CÁLCULOS DE POSICIÓN PARA FRANJA HORARIA
+═══════════════════════════════════════ */
+function calculateSpanPosition(ev) {
+  const rowHeight = 52;
+  const startStr = ev.timeStart || '09:00';
+  const [sH, sM] = startStr.split(':').map(Number);
+  const startMinutes = (sH * 60) + (sM || 0);
+
+  let endMinutes = startMinutes + 60;
+  if (ev.timeEnd) {
+    const [eH, eM] = ev.timeEnd.split(':').map(Number);
+    let calcEnd = (eH * 60) + (eM || 0);
+    if (calcEnd > startMinutes) {
+      endMinutes = calcEnd;
+    }
+  }
+
+  const topPx = (startMinutes / 60) * rowHeight;
+  const durationMinutes = Math.max(30, endMinutes - startMinutes);
+  const heightPx = Math.max(28, (durationMinutes / 60) * rowHeight - 2);
+
+  return { topPx, heightPx };
+}
+
+/* ═══════════════════════════════════════
+   WEEK VIEW (24 HORAS + FRANJA COLOREADA)
+═══════════════════════════════════════ */
 function renderWeek() {
   const monday = mondayOf(currentDate);
   const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
@@ -1308,73 +1797,90 @@ function renderWeek() {
     `${monday.getDate()} ${MONTHS_ES[monday.getMonth()].slice(0,3)} – ${sunday.getDate()} ${MONTHS_ES[sunday.getMonth()].slice(0,3)} ${sunday.getFullYear()}`;
 
   const HOURS = [];
-  for (let h=7; h<=22; h++) HOURS.push(h);
+  for (let h=0; h<24; h++) HOURS.push(h);
 
-  let html = '<div class="week-grid" id="week-grid-container">';
-  html += '<div class="month-header"></div>';
+  let html = '<div class="week-grid-wrapper" id="week-scroll-wrapper">';
   
+  html += '<div class="week-grid-header">';
+  html += '<div class="month-header" style="border-right: 1px solid var(--border);"></div>';
   for (let i=0; i<7; i++) {
     const d = new Date(monday); d.setDate(monday.getDate()+i);
     const tc = isToday(d) ? 'today-col' : '';
     html += `<div class="week-header-cell ${tc}"><div class="wday">${DAYS_ES[i]}</div><div class="wnum">${d.getDate()}</div></div>`;
   }
+  html += '</div>';
 
+  html += '<div class="week-grid-body">';
+  
+  html += '<div class="week-time-col">';
   HOURS.forEach(h => {
-    html += `<div class="time-label">${String(h).padStart(2,'0')}:00</div>`;
-    for (let i=0; i<7; i++) {
-      const d = new Date(monday); d.setDate(monday.getDate()+i);
-      const ds = dateStr(d);
-      const tc = isToday(d) ? 'today-col' : '';
-      const dayEvs = eventsOnDate(ds);
-      let evHtml = '';
-      
-      dayEvs.forEach(ev => {
-        const sh = ev.timeStart ? parseInt(ev.timeStart.split(':')[0]) : 9;
-        if (sh === h) {
-          const style = getEventStyle(ev);
-          const title = getEventTitle(ev);
-          evHtml += `<div class="event-chip" draggable="true" data-id="${ev.id}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};padding:4px 6px;margin-bottom:2px">
-            <span style="font-size:10px;overflow:hidden;text-overflow:ellipsis">${title} (${ev.timeStart})</span>
-          </div>`;
-        }
-      });
-      html += `<div class="week-cell ${tc}" data-date="${ds}" data-hour="${h}">${evHtml}</div>`;
-    }
+    html += `<div class="time-label">${String(h).padStart(2,'0')}:00h</div>`;
   });
   html += '</div>';
 
+  for (let i=0; i<7; i++) {
+    const d = new Date(monday); d.setDate(monday.getDate()+i);
+    const ds = dateStr(d);
+    const tc = isToday(d) ? 'today-col' : '';
+    const dayEvs = eventsOnDate(ds);
+
+    html += `<div class="week-day-col ${tc}" data-day-date="${ds}">`;
+
+    HOURS.forEach(h => {
+      html += `<div class="week-cell" data-date="${ds}" data-hour="${h}"></div>`;
+    });
+
+    dayEvs.forEach(ev => {
+      const { topPx, heightPx } = calculateSpanPosition(ev);
+      const style = getEventStyle(ev);
+      const title = getEventTitle(ev);
+      const timeDisplay = formatTimeRangeDisplay(ev);
+
+      html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
+        <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:18px;">${title}</div>
+        <div style="font-size:10px;font-weight:600;opacity:0.9;">${timeDisplay}</div>
+        ${ev.notes ? `<div style="font-size:9.5px;opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:auto;">${ev.notes}</div>` : ''}
+        <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
+      </div>`;
+    });
+
+    if (isToday(d)) {
+      const now = new Date();
+      const curMinutes = (now.getHours() * 60) + now.getMinutes();
+      const lineTop = (curMinutes / 60) * 52;
+      html += `<div class="red-time-line-horizontal" style="top:${lineTop}px"></div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  html += '</div></div>';
   document.getElementById('calendar-container').innerHTML = html;
 
-  // DIBUJAR LÍNEA ROJA HORIZONTAL EXACTA EN LA HORA ACTUAL
-  const now = new Date();
-  const curH = now.getHours();
-  const curM = now.getMinutes();
-
-  if (curH >= 7 && curH <= 22) {
-    const todayCell = document.querySelector(`.week-cell.today-col[data-hour="${curH}"]`);
-    if (todayCell) {
-      const redLine = document.createElement('div');
-      redLine.className = 'red-time-line-horizontal';
-      redLine.style.top = `${(curM / 60) * 100}%`;
-      todayCell.appendChild(redLine);
-    }
-  }
+  setTimeout(() => {
+    const scroller = document.getElementById('week-scroll-wrapper');
+    if (scroller) scroller.scrollTop = 8 * 52;
+  }, 10);
 
   attachDragAndDropListeners();
 
   document.querySelectorAll('.week-cell').forEach(cell => {
     cell.addEventListener('click', (e) => {
-      if (!e.target.closest('.event-chip')) openAddModal(cell.dataset.date, cell.dataset.hour);
+      if (!e.target.closest('.event-timespan-block')) openAddModal(cell.dataset.date, cell.dataset.hour);
     });
   });
-  document.querySelectorAll('.event-chip').forEach(chip => {
-    chip.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(chip.dataset.id); });
+  document.querySelectorAll('.event-timespan-block').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-event-quick-delete')) return;
+      e.stopPropagation();
+      openViewModal(chip.dataset.id, chip.dataset.contextDate);
+    });
   });
 }
 
-/* ═══════════════════════════════════════════════════════
-   DAY VIEW + LÍNEA ROJA HORIZONTAL EXACTA
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   DAY VIEW (24 HORAS)
+═══════════════════════════════════════ */
 function renderDay() {
   const ds = dateStr(currentDate);
   const dayOfWeek = (currentDate.getDay()+6)%7;
@@ -1383,66 +1889,74 @@ function renderDay() {
 
   const dayEvs = eventsOnDate(ds);
   const HOURS = [];
-  for (let h=7; h<=22; h++) HOURS.push(h);
+  for (let h=0; h<24; h++) HOURS.push(h);
 
-  let html = `<div class="day-view">
-    <div class="day-header-full">${DAYS_FULL[dayOfWeek]}, ${currentDate.getDate()} de ${MONTHS_ES[currentDate.getMonth()]} ${currentDate.getFullYear()}</div>`;
+  let html = `<div class="day-view-wrapper" id="day-scroll-wrapper">
+    <div class="day-header-full">${DAYS_FULL[dayOfWeek]}, ${currentDate.getDate()} de ${MONTHS_ES[currentDate.getMonth()]} ${currentDate.getFullYear()}</div>
+    <div class="day-grid-body">`;
+
+  html += '<div class="week-time-col">';
+  HOURS.forEach(h => {
+    html += `<div class="time-label">${String(h).padStart(2,'0')}:00h</div>`;
+  });
+  html += '</div>';
+
+  html += `<div class="day-col-content" data-day-date="${ds}">`;
 
   HOURS.forEach(h => {
-    html += `<div class="time-label">${String(h).padStart(2,'0')}:00</div>`;
-    let evHtml = '';
-    dayEvs.forEach(ev => {
-      const sh = ev.timeStart ? parseInt(ev.timeStart.split(':')[0]) : 9;
-      if (sh === h) {
-        const style = getEventStyle(ev);
-        const title = getEventTitle(ev);
-        evHtml += `<div class="day-event-block" draggable="true" data-id="${ev.id}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <strong style="font-size:14px">${title}</strong>
-            <span style="color:${style.color};font-size:12px;font-weight:600;margin-left:auto">${ev.timeStart||''}${ev.timeEnd?' – '+ev.timeEnd:''}</span>
-          </div>
-          ${ev.notes?`<div style="color:${style.color};font-size:12px;opacity:0.9">${ev.notes}</div>`:''}
-        </div>`;
-      }
-    });
-    html += `<div class="week-cell" data-date="${ds}" data-hour="${h}">${evHtml}</div>`;
+    html += `<div class="week-cell" data-date="${ds}" data-hour="${h}"></div>`;
   });
 
-  html += '</div>';
-  document.getElementById('calendar-container').innerHTML = html;
+  dayEvs.forEach(ev => {
+    const { topPx, heightPx } = calculateSpanPosition(ev);
+    const style = getEventStyle(ev);
+    const title = getEventTitle(ev);
+    const timeDisplay = formatTimeRangeDisplay(ev);
 
-  // LÍNEA ROJA HORIZONTAL EXACTA
+    html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color}; padding:8px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:18px;">
+        <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</strong>
+        <span style="font-size:12px;font-weight:700;">${timeDisplay}</span>
+      </div>
+      ${ev.notes ? `<div style="font-size:12px;opacity:0.9;margin-top:4px;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${ev.notes}</div>` : ''}
+      <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
+    </div>`;
+  });
+
   if (isToday(currentDate)) {
     const now = new Date();
-    const curH = now.getHours();
-    const curM = now.getMinutes();
-
-    if (curH >= 7 && curH <= 22) {
-      const todayCell = document.querySelector(`.day-view .week-cell[data-hour="${curH}"]`);
-      if (todayCell) {
-        const redLine = document.createElement('div');
-        redLine.className = 'red-time-line-horizontal';
-        redLine.style.top = `${(curM / 60) * 100}%`;
-        todayCell.appendChild(redLine);
-      }
-    }
+    const curMinutes = (now.getHours() * 60) + now.getMinutes();
+    const lineTop = (curMinutes / 60) * 52;
+    html += `<div class="red-time-line-horizontal" style="top:${lineTop}px"></div>`;
   }
+
+  html += `</div></div></div>`;
+  document.getElementById('calendar-container').innerHTML = html;
+
+  setTimeout(() => {
+    const scroller = document.getElementById('day-scroll-wrapper');
+    if (scroller) scroller.scrollTop = 8 * 52;
+  }, 10);
 
   attachDragAndDropListeners();
 
   document.querySelectorAll('.week-cell').forEach(cell => {
     cell.addEventListener('click', (e) => {
-      if (!e.target.closest('.day-event-block')) openAddModal(cell.dataset.date, cell.dataset.hour);
+      if (!e.target.closest('.event-timespan-block')) openAddModal(cell.dataset.date, cell.dataset.hour);
     });
   });
-  document.querySelectorAll('.day-event-block').forEach(block => {
-    block.addEventListener('click', (e) => { e.stopPropagation(); openEditModal(block.dataset.id); });
+  document.querySelectorAll('.event-timespan-block').forEach(block => {
+    block.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-event-quick-delete')) return;
+      e.stopPropagation();
+      openViewModal(block.dataset.id, block.dataset.contextDate);
+    });
   });
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    AGENDA VIEW
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function renderAgenda() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -1469,10 +1983,12 @@ function renderAgenda() {
     } else {
       dayEvs.forEach(ev => {
         const style = getEventStyle(ev);
-        html += `<div class="agenda-event" data-id="${ev.id}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
-          <span class="agenda-time" style="color:${style.color};font-weight:600">${ev.timeStart||'—'}${ev.timeEnd?' – '+ev.timeEnd:''}</span>
-          <span class="agenda-title">${getEventTitle(ev)}</span>
+        const timeDisplay = formatTimeRangeDisplay(ev);
+        html += `<div class="agenda-event" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
+          <span class="agenda-time" style="color:${style.color};font-weight:600">${timeDisplay}</span>
+          <span class="agenda-title" style="color:${style.color}">${getEventTitle(ev)}</span>
           ${ev.notes?`<span class="agenda-notes" style="color:${style.color};">${ev.notes}</span>`:''}
+          <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
         </div>`;
       });
       html += `<div class="agenda-add-btn" data-date="${ds}">+ Añadir otro</div>`;
@@ -1486,13 +2002,16 @@ function renderAgenda() {
     btn.addEventListener('click', () => openAddModal(btn.dataset.date));
   });
   document.querySelectorAll('.agenda-event').forEach(ev => {
-    ev.addEventListener('click', () => openEditModal(ev.dataset.id));
+    ev.addEventListener('click', (e) => {
+      if (e.target.closest('.btn-event-quick-delete')) return;
+      openViewModal(ev.dataset.id, ev.dataset.contextDate);
+    });
   });
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    YEAR VIEW (AÑO)
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function renderYear() {
   const year = currentDate.getFullYear();
   const realToday = new Date();
@@ -1583,9 +2102,9 @@ function toggleYearFilter(type) {
   renderYear();
 }
 
-/* ═══════════════════════════════════════════════════════
-   DRAG & DROP SYSTEM (RATÓN + TOUCH IPAD/IPHONE)
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   DRAG & DROP SYSTEM
+═══════════════════════════════════════ */
 function attachDragAndDropListeners() {
   const draggables = document.querySelectorAll('[draggable="true"]');
   const dropTargets = document.querySelectorAll('.month-day, .week-cell');
@@ -1670,6 +2189,8 @@ function moveEventToTarget(evId, target) {
   const ev = events.find(e => e.id === evId);
   if (!ev) return;
 
+  pushState();
+
   const newDate = target.dataset.date;
   const newHour = target.dataset.hour;
 
@@ -1694,9 +2215,321 @@ function moveEventToTarget(evId, target) {
   render();
 }
 
-/* ═══════════════════════════════════════════════════════
-   MODAL LOGIC & EXCLUSIVIDAD MUTUA
-═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   MODAL DE DETALLE (SOLO LECTURA)
+═══════════════════════════════════════ */
+function openViewModal(id, contextDate) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  viewingEventId = id;
+  viewingContextDate = contextDate || ev.dateStart;
+
+  const content = document.getElementById('view-detail-content');
+  const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
+  const horario = formatTimeRangeDisplay(ev);
+
+  let typeBadge = '';
+  if (ev.sala) {
+    typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:4px 10px;border-radius:6px;font-weight:700">🎵 Ensayo: ${ev.sala}</span>`;
+  } else {
+    let parts = [];
+    if (ev.transport === 'si') parts.push('🚚 Transporte');
+    if (ev.montaje) parts.push('🛒 Montaje');
+    if (ev.desmontaje) parts.push('🛒 Desmontaje');
+    typeBadge = `<span style="background:var(--bg-transport);color:var(--transport-color);padding:4px 10px;border-radius:6px;font-weight:700">${parts.join(' • ') || 'Logística'}</span>`;
+  }
+
+  let html = `
+    <div class="view-detail-row">
+      <div class="view-detail-label">Tipo</div>
+      <div class="view-detail-value">${typeBadge}</div>
+    </div>
+    <div class="view-detail-row">
+      <div class="view-detail-label">Fecha</div>
+      <div class="view-detail-value">📅 ${dates}</div>
+    </div>
+    <div class="view-detail-row">
+      <div class="view-detail-label">Horario</div>
+      <div class="view-detail-value">⏰ ${horario}</div>
+    </div>
+  `;
+
+  if (ev.ubicacion && !ev.sala) {
+    html += `
+      <div class="view-detail-row">
+        <div class="view-detail-label">Ubicación</div>
+        <div class="view-detail-value">📍 ${ev.ubicacion}</div>
+      </div>
+    `;
+  }
+
+  if (ev.notes) {
+    html += `
+      <div class="view-detail-row full-width">
+        <div class="view-detail-label">Notas</div>
+        <div class="view-detail-value" style="font-weight:normal;line-height:1.6;white-space:pre-wrap;min-height:90px;max-height:55vh;overflow-y:auto;background:var(--surface);padding:10px 12px;border-radius:8px;border:1px solid var(--border);">${ev.notes}</div>
+      </div>
+    `;
+  }
+
+  content.innerHTML = html;
+  openModal('view-modal');
+}
+
+function switchToEditModal() {
+  const idToEdit = viewingEventId;
+  closeModal('view-modal');
+  openEditModal(idToEdit);
+}
+
+function deleteFromViewModal() {
+  if (!viewingEventId) return;
+  const ev = events.find(e => e.id === viewingEventId);
+  if (!ev) return;
+
+  const dateToDelete = viewingContextDate || ev.dateStart;
+  const hasRange = ev.dateEnd && ev.dateEnd > ev.dateStart;
+  const fechaStr = formatDisplayDateWithDay(dateToDelete);
+
+  const promptMsg = hasRange
+    ? `¿Deseas eliminar este evento únicamente del día ${fechaStr}?`
+    : `¿Eliminar este evento del ${fechaStr}?`;
+
+  if (!confirm(promptMsg)) return;
+
+  pushState();
+  removeEventForSpecificDate(viewingEventId, dateToDelete);
+  saveEvents();
+  closeModal('view-modal');
+  showToast('Evento eliminado', 'info');
+  render();
+}
+
+/* ═══════════════════════════════════════
+   UBICACIÓN DINÁMICA & TRAYECTOS HANDLERS
+═══════════════════════════════════════ */
+function handleTrayectoTipoChange() {
+  const tipo = document.getElementById('trayecto-tipo').value;
+  const secGroup = document.getElementById('secondary-trayecto-group');
+  const secLabel = document.getElementById('secondary-toggle-label');
+  const lblPrimary = document.getElementById('lbl-ubi-primaria');
+  const lblMainTime = document.getElementById('lbl-main-time-start');
+  const lblSecTime = document.getElementById('lbl-secondary-time');
+
+  if (tipo === 'Ida a') {
+    lblPrimary.textContent = 'Lugar de Ida:';
+    secGroup.style.display = 'flex';
+    secLabel.textContent = '¿Hay vuelta posterior?';
+    document.getElementById('lbl-secondary-select').textContent = 'Lugar de Vuelta:';
+    lblMainTime.textContent = 'Hora de Ida';
+    if (lblSecTime) lblSecTime.textContent = 'Hora de Vuelta:';
+  } else if (tipo === 'Vuelta de') {
+    lblPrimary.textContent = 'Lugar de Vuelta:';
+    secGroup.style.display = 'flex';
+    secLabel.textContent = '¿Hay ida previa?';
+    document.getElementById('lbl-secondary-select').textContent = 'Lugar de Ida previa:';
+    lblMainTime.textContent = 'Hora de Vuelta';
+    if (lblSecTime) lblSecTime.textContent = 'Hora de Ida:';
+  } else {
+    lblPrimary.textContent = 'Lugar / Destino fijo:';
+    secGroup.style.display = 'none';
+    document.getElementById('has-secondary-checkbox').classList.remove('checked');
+    document.getElementById('secondary-inputs').style.display = 'none';
+    lblMainTime.textContent = currentMode === 'sala' ? 'Hora inicio' : 'Hora';
+  }
+}
+
+function handleUbicacionSelectChange() {
+  const val = document.getElementById('ubicacion-select').value;
+  const customInput = document.getElementById('ubicacion-custom');
+  if (val === '_CUSTOM_') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+}
+
+function toggleSecondaryTrayecto() {
+  const cb = document.getElementById('has-secondary-checkbox');
+  cb.classList.toggle('checked');
+  const inputs = document.getElementById('secondary-inputs');
+  inputs.style.display = cb.classList.contains('checked') ? 'flex' : 'none';
+}
+
+function handleSecondaryUbicacionChange() {
+  const val = document.getElementById('ubicacion-secondary-select').value;
+  const customInput = document.getElementById('ubicacion-secondary-custom');
+  if (val === '_CUSTOM_') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+}
+
+function getFormattedUbicacion() {
+  if (currentMode === 'sala') return '';
+  const tipo = document.getElementById('trayecto-tipo').value;
+  const ubiSel = document.getElementById('ubicacion-select').value;
+  const customVal = document.getElementById('ubicacion-custom').value.trim();
+
+  let lugar = ubiSel === '_CUSTOM_' ? customVal : ubiSel;
+  if (!lugar && !tipo) return '';
+
+  if (tipo === 'Ubicación' || !tipo) {
+    return lugar ? (tipo ? `${tipo} ${lugar}` : lugar) : '';
+  }
+
+  const hasSecondary = document.getElementById('has-secondary-checkbox').classList.contains('checked');
+  if (!hasSecondary) {
+    return `${tipo} ${lugar}`.trim();
+  }
+
+  const secSel = document.getElementById('ubicacion-secondary-select').value;
+  const secCustom = document.getElementById('ubicacion-secondary-custom').value.trim();
+  let secLugar = secSel === '_CUSTOM_' ? secCustom : (secSel || lugar);
+
+  if (tipo === 'Ida a') {
+    return `Ida a ${lugar} y vuelta de ${secLugar}`.trim();
+  } else if (tipo === 'Vuelta de') {
+    return `Ida a ${secLugar} y vuelta de ${lugar}`.trim();
+  }
+
+  return `${tipo} ${lugar}`.trim();
+}
+
+function setFormattedUbicacion(val, secTimeVal) {
+  const tipoSel = document.getElementById('trayecto-tipo');
+  const ubiSel = document.getElementById('ubicacion-select');
+  const customInput = document.getElementById('ubicacion-custom');
+  const secCb = document.getElementById('has-secondary-checkbox');
+  const secSel = document.getElementById('ubicacion-secondary-select');
+  const secCustom = document.getElementById('ubicacion-secondary-custom');
+  const secInputs = document.getElementById('secondary-inputs');
+  const secTime = document.getElementById('secondary-time');
+
+  tipoSel.value = '';
+  ubiSel.value = '';
+  customInput.value = '';
+  customInput.style.display = 'none';
+  secCb.classList.remove('checked');
+  secSel.value = '';
+  secCustom.value = '';
+  secCustom.style.display = 'none';
+  secInputs.style.display = 'none';
+  if (secTime) secTime.value = secTimeVal || '13:30';
+
+  if (!val) {
+    handleTrayectoTipoChange();
+    return;
+  }
+
+  const presets = ['ALMACÉN BANDA', 'AUDITORIO', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
+
+  if (val.startsWith('Ida a ') && val.includes(' y vuelta de ')) {
+    tipoSel.value = 'Ida a';
+    handleTrayectoTipoChange();
+    secCb.classList.add('checked');
+    secInputs.style.display = 'flex';
+
+    const parts = val.replace('Ida a ', '').split(' y vuelta de ');
+    const p1 = parts[0].trim();
+    const p2 = (parts[1] || '').trim();
+
+    if (presets.includes(p1.toUpperCase())) ubiSel.value = p1.toUpperCase();
+    else { ubiSel.value = '_CUSTOM_'; customInput.value = p1; customInput.style.display = 'block'; }
+
+    if (presets.includes(p2.toUpperCase())) secSel.value = p2.toUpperCase();
+    else if (p2) { secSel.value = '_CUSTOM_'; secCustom.value = p2; secCustom.style.display = 'block'; }
+    return;
+  }
+
+  if (val.startsWith('Ida a ')) {
+    tipoSel.value = 'Ida a';
+    handleTrayectoTipoChange();
+    const p = val.replace('Ida a ', '').trim();
+    if (presets.includes(p.toUpperCase())) ubiSel.value = p.toUpperCase();
+    else { ubiSel.value = '_CUSTOM_'; customInput.value = p; customInput.style.display = 'block'; }
+    return;
+  }
+
+  if (val.startsWith('Vuelta de ')) {
+    tipoSel.value = 'Vuelta de';
+    handleTrayectoTipoChange();
+    const p = val.replace('Vuelta de ', '').trim();
+    if (presets.includes(p.toUpperCase())) ubiSel.value = p.toUpperCase();
+    else { ubiSel.value = '_CUSTOM_'; customInput.value = p; customInput.style.display = 'block'; }
+    return;
+  }
+
+  if (val.startsWith('Ubicación ')) {
+    tipoSel.value = 'Ubicación';
+    handleTrayectoTipoChange();
+    const p = val.replace('Ubicación ', '').trim();
+    if (presets.includes(p.toUpperCase())) ubiSel.value = p.toUpperCase();
+    else { ubiSel.value = '_CUSTOM_'; customInput.value = p; customInput.style.display = 'block'; }
+    return;
+  }
+
+  if (presets.includes(val.toUpperCase())) {
+    ubiSel.value = val.toUpperCase();
+  } else {
+    ubiSel.value = '_CUSTOM_';
+    customInput.value = val;
+    customInput.style.display = 'block';
+  }
+  handleTrayectoTipoChange();
+}
+
+/* ═══════════════════════════════════════
+   CONTROL DE MODOS
+═══════════════════════════════════════ */
+function setMode(mode) {
+  currentMode = mode;
+  const boxSala = document.getElementById('box-sala');
+  const boxLogistica = document.getElementById('box-logistica');
+  const tabSala = document.getElementById('btn-tab-sala');
+  const tabLogistica = document.getElementById('btn-tab-logistica');
+  const lblMainTime = document.getElementById('lbl-main-time-start');
+
+  if (mode === 'sala') {
+    boxSala.style.display = '';
+    boxLogistica.style.display = 'none';
+    tabSala.style.borderColor = 'var(--ensayo-blue)';
+    tabSala.style.color = 'var(--ensayo-blue)';
+    tabLogistica.style.borderColor = 'var(--border)';
+    tabLogistica.style.color = 'var(--text)';
+    lblMainTime.textContent = 'Hora inicio';
+  } else {
+    boxSala.style.display = 'none';
+    boxLogistica.style.display = '';
+    tabLogistica.style.borderColor = 'var(--transport-color)';
+    tabLogistica.style.color = 'var(--transport-color)';
+    tabSala.style.borderColor = 'var(--border)';
+    tabSala.style.color = 'var(--text)';
+    lblMainTime.textContent = 'Hora';
+
+    if (!editingEventId) {
+      selectLogisticsOption('transporte');
+      document.getElementById('time-start').value = '08:30';
+      isHourRange = false;
+      updateHourRangeUI();
+    }
+  }
+  handleTrayectoTipoChange();
+}
+
+function selectLogisticsOption(type) {
+  selectedLogisticsType = type;
+  document.getElementById('radio-transporte').classList.toggle('checked', type === 'transporte');
+  document.getElementById('radio-montaje').classList.toggle('checked', type === 'montaje');
+  document.getElementById('radio-desmontaje').classList.toggle('checked', type === 'desmontaje');
+}
+
+/* ═══════════════════════════════════════
+   MODAL LOGIC FORM
+═══════════════════════════════════════ */
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -1728,23 +2561,22 @@ function openEditModal(id) {
   document.getElementById('modal-title').textContent = 'Editar evento';
   document.getElementById('btn-delete-event').style.display = '';
 
-  hasSala = !!ev.sala;
-  updateSalaCheckboxUI();
-  if (hasSala) {
+  if (ev.sala) {
+    setMode('sala');
     setSala(ev.sala);
     document.getElementById('sala-input').value = ev.sala;
-    setCheckbox('has-transport-checkbox', false);
-    setCheckbox('has-montaje-checkbox', false);
-    setCheckbox('has-desmontaje-checkbox', false);
+    setFormattedUbicacion('', null);
   } else {
-    setCheckbox('has-transport-checkbox', ev.transport === 'si');
-    setCheckbox('has-montaje-checkbox', !!ev.montaje);
-    setCheckbox('has-desmontaje-checkbox', !!ev.desmontaje);
+    setMode('logistica');
+    if (ev.desmontaje) selectLogisticsOption('desmontaje');
+    else if (ev.montaje) selectLogisticsOption('montaje');
+    else selectLogisticsOption('transporte');
+    setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
   }
 
   document.getElementById('date-start').value = ev.dateStart;
   document.getElementById('date-end').value = ev.dateEnd || ev.dateStart;
-  document.getElementById('time-start').value = ev.timeStart || (hasSala ? '09:15' : '08:30');
+  document.getElementById('time-start').value = ev.timeStart || (ev.sala ? '09:15' : '08:30');
   document.getElementById('time-end').value = ev.timeEnd || '';
   document.getElementById('event-notes').value = ev.notes || '';
 
@@ -1769,8 +2601,7 @@ function openEditModal(id) {
 function resetForm() {
   isRange = false;
   isHourRange = true;
-  hasSala = true;
-  updateSalaCheckboxUI();
+  setMode('sala');
   updateHourRangeUI();
   document.getElementById('range-checkbox').classList.remove('checked');
   document.getElementById('date-end-group').style.display = 'none';
@@ -1778,62 +2609,12 @@ function resetForm() {
   setSala('SALA B');
   document.getElementById('sala-input').value = 'SALA B';
   
-  setCheckbox('has-transport-checkbox', false);
-  setCheckbox('has-montaje-checkbox', false);
-  setCheckbox('has-desmontaje-checkbox', false);
+  selectLogisticsOption('transporte');
+  setFormattedUbicacion('', null);
 
   document.getElementById('time-start').value = '09:15';
   document.getElementById('time-end').value = '13:15';
   document.getElementById('event-notes').value = '';
-}
-
-// Al seleccionar Sala de ensayo: se activa Sala y se desmarcan y desactivan Logística y Servicios
-function selectSalaMode() {
-  hasSala = !hasSala;
-  if (hasSala) {
-    setCheckbox('has-transport-checkbox', false);
-    setCheckbox('has-montaje-checkbox', false);
-    setCheckbox('has-desmontaje-checkbox', false);
-    document.getElementById('time-start').value = '09:15';
-    document.getElementById('time-end').value = '13:15';
-    isHourRange = true;
-    updateHourRangeUI();
-  }
-  updateSalaCheckboxUI();
-}
-
-function updateSalaCheckboxUI() {
-  const cb = document.getElementById('has-sala-checkbox');
-  const grp = document.getElementById('sala-config-group');
-  cb.classList.toggle('checked', hasSala);
-  grp.style.display = hasSala ? '' : 'none';
-}
-
-function toggleCheckbox(id) {
-  const cb = document.getElementById(id);
-  cb.classList.toggle('checked');
-}
-
-// Al seleccionar Logística y Servicios: se desactiva Sala de ensayo (Exclusividad total)
-function selectLogisticsOption(id) {
-  toggleCheckbox(id);
-  const hasLogistics = getCheckbox('has-transport-checkbox') || getCheckbox('has-montaje-checkbox') || getCheckbox('has-desmontaje-checkbox');
-  
-  if (hasLogistics) {
-    hasSala = false;
-    updateSalaCheckboxUI();
-    document.getElementById('time-start').value = '08:30';
-    isHourRange = false;
-    updateHourRangeUI();
-  } else {
-    // Si se desmarcan todos los servicios, por defecto volvemos a permitir Sala
-    hasSala = true;
-    updateSalaCheckboxUI();
-    document.getElementById('time-start').value = '09:15';
-    document.getElementById('time-end').value = '13:15';
-    isHourRange = true;
-    updateHourRangeUI();
-  }
 }
 
 function toggleHourRange() {
@@ -1846,16 +2627,6 @@ function updateHourRangeUI() {
   const endGrp = document.getElementById('time-end-group');
   cb.classList.toggle('checked', isHourRange);
   endGrp.style.display = isHourRange ? '' : 'none';
-}
-
-function setCheckbox(id, val) {
-  const cb = document.getElementById(id);
-  if (val) cb.classList.add('checked');
-  else cb.classList.remove('checked');
-}
-
-function getCheckbox(id) {
-  return document.getElementById(id).classList.contains('checked');
 }
 
 document.getElementById('sala-presets').addEventListener('click', (e) => {
@@ -1899,10 +2670,15 @@ function toggleRange() {
 }
 
 function saveEvent() {
-  const sala = hasSala ? document.getElementById('sala-input').value.trim().toUpperCase() : null;
-  const transport = getCheckbox('has-transport-checkbox') ? 'si' : 'no';
-  const montaje = getCheckbox('has-montaje-checkbox');
-  const desmontaje = getCheckbox('has-desmontaje-checkbox');
+  const isSalaMode = currentMode === 'sala';
+  const sala = isSalaMode ? document.getElementById('sala-input').value.trim().toUpperCase() : null;
+  const transport = !isSalaMode && selectedLogisticsType === 'transporte' ? 'si' : 'no';
+  const montaje = !isSalaMode && selectedLogisticsType === 'montaje';
+  const desmontaje = !isSalaMode && selectedLogisticsType === 'desmontaje';
+  const ubicacion = isSalaMode ? '' : getFormattedUbicacion();
+
+  const hasSec = !isSalaMode && document.getElementById('has-secondary-checkbox').classList.contains('checked');
+  const secondaryTime = hasSec ? document.getElementById('secondary-time').value : null;
 
   const dateStart = document.getElementById('date-start').value;
   const dateEnd = isRange ? document.getElementById('date-end').value : dateStart;
@@ -1910,18 +2686,26 @@ function saveEvent() {
   const timeEnd = isHourRange ? document.getElementById('time-end').value : null;
   const notes = document.getElementById('event-notes').value.trim();
 
-  if (!hasSala && transport === 'no' && !montaje && !desmontaje && !notes) {
-    showToast('Selecciona al menos una sala o una opción de logística', 'error');
+  if (isSalaMode && !sala) {
+    showToast('Indica el nombre de la sala', 'error');
+    return;
+  }
+  if (!isSalaMode && transport === 'no' && !montaje && !desmontaje && !notes && !ubicacion) {
+    showToast('Selecciona al menos una opción de logística o una ubicación', 'error');
     return;
   }
   if (!dateStart) { showToast('Indica la fecha', 'error'); return; }
   if (isRange && dateEnd < dateStart) { showToast('La fecha fin debe ser posterior al inicio', 'error'); return; }
 
+  pushState();
+
   const payload = {
-    sala: hasSala ? (sala || '') : '',
-    transport: hasSala ? 'no' : transport,
-    montaje: hasSala ? false : montaje,
-    desmontaje: hasSala ? false : desmontaje,
+    sala: isSalaMode ? (sala || '') : '',
+    transport: isSalaMode ? 'no' : transport,
+    montaje: isSalaMode ? false : montaje,
+    desmontaje: isSalaMode ? false : desmontaje,
+    ubicacion: isSalaMode ? '' : ubicacion,
+    secondaryTime: isSalaMode ? null : secondaryTime,
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
@@ -1950,7 +2734,10 @@ function saveEvent() {
 function deleteCurrentEvent() {
   if (!editingEventId) return;
   const ev = events.find(e => e.id === editingEventId);
-  if (!confirm(`¿Eliminar este evento del ${ev.dateStart}?`)) return;
+  if (!confirm(`¿Eliminar este evento del ${formatDisplayDateWithDay(ev.dateStart)}?`)) return;
+
+  pushState();
+
   syncEvent('delete', ev);
   events = events.filter(e => e.id !== editingEventId);
   saveEvents();
@@ -1965,207 +2752,225 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
   });
 });
 
-/* ═══════════════════════════════════════════════════════
-   GOOGLE SHEETS SYNC
-═══════════════════════════════════════════════════════ */
-function openSheetsConfig() {
-  document.getElementById('sheets-url').value = sheetsUrl;
-  openModal('sheets-modal');
+/* ═══════════════════════════════════════
+   EXPORTACIÓN PDF MODAL & ZIP COMPLETO
+═══════════════════════════════════════ */
+function openExportModal() {
+  const dStr = dateStr(new Date());
+  document.getElementById('export-date-from').value = dStr;
+  document.getElementById('export-date-to').value = dStr;
+  openModal('export-modal');
 }
 
-function saveSheetsConfig() {
-  sheetsUrl = document.getElementById('sheets-url').value.trim();
-  localStorage.setItem('banda_sheets_url', sheetsUrl);
-  closeModal('sheets-modal');
-  showToast('Configuración guardada', 'success');
+function handleExportScopeChange() {
+  const sc = document.getElementById('export-scope').value;
+  document.getElementById('export-custom-dates').style.display = (sc === 'custom_range') ? 'grid' : 'none';
 }
+
+function filterEventsByType(evList, filterType) {
+  if (filterType === 'salas') {
+    return evList.filter(e => !!e.sala);
+  }
+  if (filterType === 'logistica') {
+    return evList.filter(e => e.transport === 'si' || e.montaje || e.desmontaje);
+  }
+  return evList;
+}
+
+function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(`🎵 ${titleHeader}`, 10, 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(subTitleHeader, 280, 14, { align: 'right' });
+
+  const tableData = [];
+
+  listEvents.forEach(ev => {
+    const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
+    const horario = formatTimeRangeDisplay(ev);
+    const salaCol = ev.sala || '—';
+    const transCol = ev.transport === 'si' ? '🚚 Sí' : 'No';
+    const montCol = (ev.montaje ? '🛒 Montaje ' : '') + (ev.desmontaje ? '🛒 Desmontaje' : '') || '—';
+    const ubiCol = ev.ubicacion || '—';
+    const notesCol = ev.notes || '';
+
+    tableData.push([dates, salaCol, transCol, montCol, ubiCol, horario, notesCol]);
+  });
+
+  if (tableData.length === 0) {
+    tableData.push(['—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
+  }
+
+  doc.autoTable({
+    startY: 20,
+    head: [['Fecha', 'Sala', 'Transporte', 'Montaje / Desm.', 'Ubicación / Trayecto', 'Horario', 'Notas']],
+    body: tableData,
+    theme: 'grid',
+    styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
+    headStyles: { fillColor: [230, 235, 245], textColor: [0, 0, 0], fontStyle: 'bold' },
+    margin: { left: 8, right: 8 }
+  });
+
+  return doc;
+}
+
+async function executeExportPDF() {
+  const scope = document.getElementById('export-scope').value;
+  const filter = document.getElementById('export-filter').value;
+  const btn = document.getElementById('btn-do-export');
+  
+  btn.textContent = 'Generando...';
+  btn.disabled = true;
+
+  try {
+    const now = new Date();
+    const curYear = currentDate.getFullYear();
+    const curMonth = currentDate.getMonth();
+    const dateFormatted = `${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()}`;
+
+    const zip = new JSZip();
+
+    if (scope === 'all_views') {
+      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`))), filter);
+      const docAnual = generatePDFDocument(`Sala y transporte — Vista Anual ${curYear}`, `Generado: ${dateFormatted}`, yearEvents);
+      zip.file(`Sala y transporte (anual) - ${dateFormatted}.pdf`, docAnual.output('blob'));
+
+      const monthPrefix = `${curYear}-${String(curMonth+1).padStart(2,'0')}`;
+      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix))), filter);
+      const docMensual = generatePDFDocument(`Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, `Generado: ${dateFormatted}`, monthEvents);
+      zip.file(`Sala y transporte (mensual) - ${dateFormatted}.pdf`, docMensual.output('blob'));
+
+      const allSortedEvents = filterEventsByType([...events].sort((a,b) => (a.dateStart||'').localeCompare(b.dateStart||'')), filter);
+      const docAgenda = generatePDFDocument(`Sala y transporte — Agenda Completa`, `Generado: ${dateFormatted}`, allSortedEvents);
+      zip.file(`Sala y transporte (agenda) - ${dateFormatted}.pdf`, docAgenda.output('blob'));
+
+    } else if (scope === 'year') {
+      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`))), filter);
+      const doc = generatePDFDocument(`Sala y transporte — Anual ${curYear}`, `Generado: ${dateFormatted}`, yearEvents);
+      zip.file(`Sala y transporte (anual) - ${dateFormatted}.pdf`, doc.output('blob'));
+
+    } else if (scope === 'month') {
+      const monthPrefix = `${curYear}-${String(curMonth+1).padStart(2,'0')}`;
+      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix))), filter);
+      const doc = generatePDFDocument(`Sala y transporte — ${MONTHS_ES[curMonth]} ${curYear}`, `Generado: ${dateFormatted}`, monthEvents);
+      zip.file(`Sala y transporte (mensual) - ${dateFormatted}.pdf`, doc.output('blob'));
+
+    } else if (scope === 'day') {
+      const ds = dateStr(currentDate);
+      const dayEvs = filterEventsByType(eventsOnDate(ds), filter);
+      const doc = generatePDFDocument(`Sala y transporte — Día ${formatDisplayDateWithDay(ds)}`, `Generado: ${dateFormatted}`, dayEvs);
+      zip.file(`Sala y transporte (dia_${formatDisplayDate(ds)}) - ${dateFormatted}.pdf`, doc.output('blob'));
+
+    } else if (scope === 'custom_range') {
+      const from = document.getElementById('export-date-from').value;
+      const to = document.getElementById('export-date-to').value;
+      const rangeEvents = filterEventsByType(events.filter(e => e.dateStart >= from && e.dateStart <= to), filter);
+      const doc = generatePDFDocument(`Sala y transporte — Rango (${formatDisplayDateWithDay(from)} al ${formatDisplayDateWithDay(to)})`, `Generado: ${dateFormatted}`, rangeEvents);
+      zip.file(`Sala y transporte (rango_${formatDisplayDate(from)}_a_${formatDisplayDate(to)}) - ${dateFormatted}.pdf`, doc.output('blob'));
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const zipName = `Sala y transporte - ${dateFormatted}.zip`;
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(content);
+    downloadLink.download = zipName;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    closeModal('export-modal');
+    showToast(`Archivo ${zipName} descargado`, 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Error generando los PDFs', 'error');
+  }
+
+  btn.textContent = 'Generar ZIP';
+  btn.disabled = false;
+}
+
+/* ═══════════════════════════════════════════════════════
+   GOOGLE SHEETS AUTOMATIC BACKGROUND SYNC
+═══════════════════════════════════════════════════════ */
+let isSyncingToServer = 0; // Contador de peticiones POST en curso
 
 async function syncEvent(action, ev) {
-  if (!sheetsUrl) return;
+  if (!GOOGLE_SHEETS_URL) return;
+  isSyncingToServer++;
   try {
-    await fetch(sheetsUrl, {
+    await fetch(GOOGLE_SHEETS_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, event: ev })
     });
+    
     const idx = events.findIndex(e => e.id === ev.id);
-    if (idx >= 0 && action !== 'delete') { events[idx].synced = true; saveEvents(); }
+    if (idx >= 0 && action !== 'delete') {
+      events[idx].synced = true;
+      saveEvents(false);
+    }
   } catch(err) {
     console.warn('Sync error:', err);
+  } finally {
+    setTimeout(() => {
+      isSyncingToServer = Math.max(0, isSyncingToServer - 1);
+    }, 1500);
   }
 }
 
-async function syncWithSheets() {
-  if (!sheetsUrl) { showToast('Configura Google Sheets primero', 'error'); openSheetsConfig(); return; }
-  const btn = document.getElementById('btn-sync');
-  btn.textContent = '↻…';
-  btn.disabled = true;
+async function autoSyncSheets() {
+  if (!GOOGLE_SHEETS_URL || isSyncingToServer > 0) return;
   try {
-    const res = await fetch(`${sheetsUrl}?action=getAll`);
+    const res = await fetch(`${GOOGLE_SHEETS_URL}?action=getAll`);
     const data = await res.json();
-    if (data.events) {
-      events = data.events.map(se => {
-        const local = events.find(e => e.id === se.id);
-        return { ...se, synced: true, notes: local?.notes || se.notes || '' };
+    
+    if (data.events && Array.isArray(data.events)) {
+      const serverEvents = data.events;
+      
+      // FUSIÓN INTELIGENTE: No borrar eventos locales pendientes de sincronizar
+      const mergedMap = new Map();
+
+      // 1. Agregar eventos del servidor
+      serverEvents.forEach(se => {
+        mergedMap.set(se.id, { ...se, synced: true });
       });
-      saveEvents();
-      showToast(`Sincronizado — ${events.length} eventos`, 'success');
-    } else {
-      await fetch(sheetsUrl, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'syncAll', events }) });
-      events.forEach(e => e.synced = true);
-      saveEvents();
-      showToast('Datos enviados a Google Sheets', 'success');
+
+      // 2. Conservar eventos locales que aún no llegaron al servidor
+      events.forEach(localEv => {
+        if (!mergedMap.has(localEv.id)) {
+          mergedMap.set(localEv.id, localEv);
+        }
+      });
+
+      events = Array.from(mergedMap.values());
+      saveEvents(false);
+      render();
     }
   } catch(err) {
-    showToast('Error de sincronización', 'error');
+    console.warn('AutoSync background notice:', err);
   }
-  btn.textContent = '↻';
-  btn.disabled = false;
-  render();
 }
 
-function copyAppsScript() {
-  const code = `const SHEET_NAME = 'Eventos';
-const HEADERS = ['ID','Sala','Transporte','Montaje','Desmontaje','Fecha Inicio','Fecha Fin','Hora Inicio','Hora Fin','Notas','Creado'];
-
-function doGet(e) {
-  const action = e.parameter.action;
-  if (action === 'getAll') return getAll();
-  return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
-  const action = data.action;
-  if (action === 'add') addEvent(data.event);
-  else if (action === 'update') updateEvent(data.event);
-  else if (action === 'delete') deleteEvent(data.event.id);
-  else if (action === 'syncAll') syncAll(data.events);
-  return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
-}
-
-function getSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(HEADERS);
-  }
-  return sheet;
-}
-
-function getAll() {
-  const sheet = getSheet();
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return ContentService.createTextOutput(JSON.stringify({events:[]})).setMimeType(ContentService.MimeType.JSON);
-  const events = data.slice(1).map(row => ({
-    id: row[0], sala: row[1], transport: row[2], montaje: row[3], desmontaje: row[4],
-    dateStart: row[5], dateEnd: row[6],
-    timeStart: row[7], timeEnd: row[8],
-    notes: row[9], createdAt: row[10], synced: true
-  }));
-  return ContentService.createTextOutput(JSON.stringify({events})).setMimeType(ContentService.MimeType.JSON);
-}
-
-function addEvent(ev) {
-  const sheet = getSheet();
-  sheet.appendRow([ev.id, ev.sala||'', ev.transport||'no', ev.montaje||false, ev.desmontaje||false, ev.dateStart, ev.dateEnd||'', ev.timeStart||'', ev.timeEnd||'', ev.notes||'', ev.createdAt||new Date().toISOString()]);
-}
-
-function updateEvent(ev) {
-  const sheet = getSheet();
-  const data = sheet.getDataRange().getValues();
-  for (let i=1; i<data.length; i++) {
-    if (data[i][0] === ev.id) {
-      sheet.getRange(i+1,1,1,11).setValues([[ev.id, ev.sala||'', ev.transport||'no', ev.montaje||false, ev.desmontaje||false, ev.dateStart, ev.dateEnd||'', ev.timeStart||'', ev.timeEnd||'', ev.notes||'', ev.createdAt||data[i][10]]]);
-      return;
+let focusDebounceTimer;
+window.addEventListener('focus', () => {
+  clearTimeout(focusDebounceTimer);
+  focusDebounceTimer = setTimeout(() => {
+    if (GOOGLE_SHEETS_URL && isSyncingToServer === 0) {
+      autoSyncSheets();
     }
-  }
-  addEvent(ev);
-}
+  }, 1000);
+});
 
-function deleteEvent(id) {
-  const sheet = getSheet();
-  const data = sheet.getDataRange().getValues();
-  for (let i=data.length-1; i>=1; i--) {
-    if (data[i][0] === id) { sheet.deleteRow(i+1); return; }
-  }
-}
-
-function syncAll(events) {
-  const sheet = getSheet();
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 1) sheet.deleteRows(2, lastRow-1);
-  events.forEach(ev => addEvent(ev));
-}`;
-
-  navigator.clipboard.writeText(code).then(() => {
-    showToast('Código copiado al portapapeles', 'success');
-  });
-}
-
-/* ═══════════════════════════════════════════════════════
-   EXPORT PDF
-═══════════════════════════════════════════════════════ */
-function exportPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(14);
-  doc.text(`🎵 Calendario de Ensayos — Banda`, 10, 15);
-  doc.setFont('helvetica','normal');
-  doc.setFontSize(10);
-  doc.text(`${MONTHS_ES[month]} ${year}`, 250, 15);
-
-  const daysInMonth = new Date(year,month+1,0).getDate();
-  const tableData = [];
-
-  for (let i=1; i<=daysInMonth; i++) {
-    const d = new Date(year,month,i);
-    const ds = dateStr(d);
-    const evs = eventsOnDate(ds);
-    const dow = (d.getDay()+6)%7;
-
-    if (evs.length === 0) {
-      tableData.push([`${i} ${DAYS_FULL[dow].slice(0,3)}`, '—', '—', '—', '—', '—', '']);
-    } else {
-      evs.forEach((ev,ei) => {
-        tableData.push([
-          ei===0 ? `${i} ${DAYS_FULL[dow].slice(0,3)}` : '',
-          ev.sala || '—',
-          ev.transport === 'si' ? '🚚 Sí' : 'No',
-          ev.montaje ? '🛒 Sí' : 'No',
-          ev.desmontaje ? '🛒 Sí' : 'No',
-          `${ev.timeStart || '—'}${ev.timeEnd ? ' a '+ev.timeEnd : ''}`,
-          ev.notes || ''
-        ]);
-      });
-    }
-  }
-
-  doc.autoTable({
-    startY: 22,
-    head: [['Fecha','Sala','Transporte','Montaje','Desmontaje','Horario','Notas']],
-    body: tableData,
-    theme: 'grid',
-    styles: { font:'helvetica', fontSize:8, cellPadding:2 },
-    headStyles: { fillColor:[240,240,245], textColor:[0,0,0], fontStyle:'bold' },
-    margin: { left:8, right:8 }
-  });
-
-  doc.save(`ensayos_${MONTHS_ES[month].toLowerCase()}_${year}.pdf`);
-  showToast('PDF exportado', 'success');
-}
-
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    TOAST
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 let toastTimer;
 function showToast(msg, type='info') {
   const t = document.getElementById('toast');
@@ -2175,33 +2980,35 @@ function showToast(msg, type='info') {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════
    INIT (DATOS INICIALES SEMILLA)
-═══════════════════════════════════════════════════════ */
+═══════════════════════════════════════ */
 function seedInitialData() {
-  if (localStorage.getItem('banda_seeded_v3')) return;
+  if (localStorage.getItem('banda_seeded_v7')) return;
   const seed = [
-    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-01',dateEnd:'2026-06-05',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-08',dateEnd:'2026-06-09',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'',transport:'si',montaje:false,desmontaje:false,dateStart:'2026-06-10',timeStart:'13:30',timeEnd:null,notes:'Transporte a las 13:30',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'GRAN TEATRO',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-11',timeStart:'09:15',timeEnd:'13:15',notes:'Transporte a las 08:30',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'GRAN TEATRO',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-12',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'',transport:'no',montaje:false,desmontaje:true,dateStart:'2026-06-13',timeStart:'08:30',timeEnd:null,notes:'Arrinconar instrumental para limpiar el foso',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'',transport:'si',montaje:true,desmontaje:false,dateStart:'2026-06-15',timeStart:'08:00',timeEnd:null,notes:'Transporte a las 08:00',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'LAZARETO',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-16',dateEnd:'2026-06-19',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'SANTA FE',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-22',dateEnd:'2026-06-23',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'AUDITORIO',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-24',timeStart:'09:15',timeEnd:'13:15',notes:'Almacén Banda',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'AUDITORIO',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-25',timeStart:'09:15',timeEnd:'13:15',notes:'Almacén Banda',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-26',timeStart:'09:15',timeEnd:'13:15',notes:'Almacén Banda',synced:false,createdAt:new Date().toISOString()},
-    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,dateStart:'2026-06-29',dateEnd:'2026-07-03',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-01',dateEnd:'2026-06-05',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-08',dateEnd:'2026-06-09',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'',transport:'si',montaje:false,desmontaje:false,ubicacion:'Ida a LAZARETO',secondaryTime:null,dateStart:'2026-06-10',timeStart:'13:30',timeEnd:null,notes:'Transporte a las 13:30h',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'GRAN TEATRO',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-11',timeStart:'09:15',timeEnd:'13:15',notes:'Transporte a las 08:30h',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'GRAN TEATRO',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-12',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'',transport:'no',montaje:false,desmontaje:true,ubicacion:'Vuelta de GRAN TEATRO',secondaryTime:null,dateStart:'2026-06-13',timeStart:'08:30',timeEnd:null,notes:'Arrinconar instrumental para limpiar el foso',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'',transport:'si',montaje:false,desmontaje:false,ubicacion:'Ida a LAZARETO',secondaryTime:null,dateStart:'2026-06-15',timeStart:'08:00',timeEnd:null,notes:'Transporte a las 08:00h',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'LAZARETO',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-16',dateEnd:'2026-06-19',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'SANTA FE',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-22',dateEnd:'2026-06-23',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'AUDITORIO',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-24',timeStart:'09:15',timeEnd:'13:15',notes:'Almacén Banda',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'AUDITORIO',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-25',timeStart:'09:15',timeEnd:'13:15',notes:'Almacén Banda',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-26',timeStart:'09:15',timeEnd:'13:15',notes:'Almacén Banda',synced:false,createdAt:new Date().toISOString()},
+    {id:uid(),sala:'SALA B',transport:'no',montaje:false,desmontaje:false,ubicacion:'',secondaryTime:null,dateStart:'2026-06-29',dateEnd:'2026-07-03',timeStart:'09:15',timeEnd:'13:15',notes:'',synced:false,createdAt:new Date().toISOString()},
   ];
   events = seed;
-  saveEvents();
-  localStorage.setItem('banda_seeded_v3', '1');
+  saveEvents(false);
+  localStorage.setItem('banda_seeded_v7', '1');
 }
 
 seedInitialData();
+updateHistoryButtons();
 render();
+if (GOOGLE_SHEETS_URL) autoSyncSheets();
 </script>
 </body>
 </html>
