@@ -1306,7 +1306,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
 
       </div>
-      <div class="section-box" style="background:#fdfdfe;border-color:var(--border);">
+ <div class="section-box" style="background:#fdfdfe;border-color:var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <label style="font-weight:700;color:var(--text);">🏛️ Autorizado por Cultura</label>
@@ -1316,6 +1316,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <button type="button" class="btn-auth-option active-no" id="btn-auth-no" onclick="setAuthStatus('no')">No</button>
             <button type="button" class="btn-auth-option" id="btn-auth-si" onclick="setAuthStatus('si')">Sí</button>
           </div>
+        </div>
+
+        <!-- CAMPO EDITABLE DE FECHA Y HORA (SE MUESTRA AL MARCAR 'SÍ') -->
+        <div id="auth-datetime-container" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+          <label style="font-size:11px;color:#16a34a;margin-bottom:4px;display:block;">Fecha y hora en que fue autorizado:</label>
+          <input type="datetime-local" id="auth-datetime-input" style="font-size:13px;padding:8px 10px;" />
         </div>
       </div>
 
@@ -2754,15 +2760,31 @@ function setAuthStatus(status, preservedTimestamp = null) {
   const btnNo = document.getElementById('btn-auth-no');
   const btnSi = document.getElementById('btn-auth-si');
   const displayLbl = document.getElementById('auth-timestamp-display');
+  const dtContainer = document.getElementById('auth-datetime-container');
+  const dtInput = document.getElementById('auth-datetime-input');
 
   if (status === 'si') {
     btnSi.classList.add('active-si');
     btnNo.classList.remove('active-no');
-    currentAuthDate = preservedTimestamp || new Date().toISOString();
-    displayLbl.innerHTML = `Autorizado: <span style="color:#16a34a;font-weight:700;">${formatTimestampFull(currentAuthDate)}</span>`;
+    
+    // Si ya existe una fecha guardada la usamos; si no, ponemos la fecha/hora actual
+    const targetDate = preservedTimestamp ? new Date(preservedTimestamp) : new Date();
+    
+    // Formateo para input tipo datetime-local (YYYY-MM-DDTHH:mm)
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+    const hh = String(targetDate.getHours()).padStart(2, '0');
+    const min = String(targetDate.getMinutes()).padStart(2, '0');
+    
+    dtInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+    dtContainer.style.display = 'block';
+    displayLbl.innerHTML = `<span style="color:#16a34a;font-weight:700;">Autorizado (editable abajo)</span>`;
   } else {
     btnNo.classList.add('active-no');
     btnSi.classList.remove('active-si');
+    dtContainer.style.display = 'none';
+    dtInput.value = '';
     currentAuthDate = null;
     displayLbl.innerHTML = `<span style="color:#dc2626;font-weight:600;">No autorizado</span>`;
   }
@@ -2932,6 +2954,12 @@ function saveEvent() {
   const timeEnd = isHourRange ? document.getElementById('time-end').value : null;
   const notes = document.getElementById('event-notes').value.trim();
 
+  // 1. Leemos la fecha y hora manual del selector de autorización:
+  const customAuthVal = document.getElementById('auth-datetime-input').value;
+  const finalAuthDate = (currentAuth === 'si' && customAuthVal) 
+    ? new Date(customAuthVal).toISOString() 
+    : null;
+
   if (isSalaMode && !sala) {
     showToast('Indica el nombre de la sala', 'error');
     return;
@@ -2953,7 +2981,7 @@ function saveEvent() {
     ubicacion: isSalaMode ? '' : ubicacion,
     secondaryTime: isSalaMode ? null : secondaryTime,
     autorizadoCultura: currentAuth,
-    autorizadoFecha: currentAuth === 'si' ? currentAuthDate : null,
+    autorizadoFecha: finalAuthDate, // 2. Guardamos la fecha/hora que tú hayas editado
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
