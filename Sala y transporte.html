@@ -1252,7 +1252,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
               <select id="trayecto-tipo" onchange="handleTrayectoTipoChange()">
                 <option value="">(Sin especificar)</option>
                 <option value="Ida a">Ida a</option>
-                <option value="Vuelta de">Vuelta de</option>
+                <option value="Vuelta a">Vuelta a</option>
                 <option value="Ubicación">Ubicación fija</option>
               </select>
             </div>
@@ -1583,7 +1583,7 @@ function formatTimeRangeDisplay(ev) {
   if (!ev.sala && ev.secondaryTime) {
     const mainTime = formatTimeH(ev.timeStart || '08:30');
     const secTime = formatTimeH(ev.secondaryTime);
-    if (ev.ubicacion && ev.ubicacion.startsWith('Vuelta de')) {
+    if (ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
       return `Ida: ${secTime} • Vuelta: ${mainTime}`;
     }
     return `Ida: ${mainTime} • Vuelta: ${secTime}`;
@@ -2548,7 +2548,7 @@ function handleTrayectoTipoChange() {
     document.getElementById('lbl-secondary-select').textContent = 'Lugar de Vuelta:';
     lblMainTime.textContent = 'Hora de Ida';
     if (lblSecTime) lblSecTime.textContent = 'Hora de Vuelta:';
-  } else if (tipo === 'Vuelta de') {
+  } else if (tipo === 'Vuelta a') {
     lblPrimary.textContent = 'Lugar de Vuelta:';
     secGroup.style.display = 'flex';
     secLabel.textContent = '¿Hay ida previa?';
@@ -2616,9 +2616,9 @@ function getFormattedUbicacion() {
   let secLugar = secSel === '_CUSTOM_' ? secCustom : (secSel || lugar);
 
   if (tipo === 'Ida a') {
-    return `Ida a ${lugar} y vuelta de ${secLugar}`.trim();
-  } else if (tipo === 'Vuelta de') {
-    return `Ida a ${secLugar} y vuelta de ${lugar}`.trim();
+    return `Ida a ${lugar} y vuelta a ${secLugar}`.trim();
+  } else if (tipo === 'Vuelta a') {
+    return `Ida a ${secLugar} y vuelta a ${lugar}`.trim();
   }
 
   return `${tipo} ${lugar}`.trim();
@@ -2652,13 +2652,13 @@ function setFormattedUbicacion(val, secTimeVal) {
 
   const presets = ['ALMACÉN BANDA', 'CASA COLÓN', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
 
-  if (val.startsWith('Ida a ') && val.includes(' y vuelta de ')) {
+  if (val.startsWith('Ida a ') && val.includes(' y vuelta a ')) {
     tipoSel.value = 'Ida a';
     handleTrayectoTipoChange();
     secCb.classList.add('checked');
     secInputs.style.display = 'flex';
 
-    const parts = val.replace('Ida a ', '').split(' y vuelta de ');
+    const parts = val.replace('Ida a ', '').split(' y vuelta a ');
     const p1 = parts[0].trim();
     const p2 = (parts[1] || '').trim();
 
@@ -2679,10 +2679,10 @@ function setFormattedUbicacion(val, secTimeVal) {
     return;
   }
 
-  if (val.startsWith('Vuelta de ')) {
-    tipoSel.value = 'Vuelta de';
+  if (val.startsWith('Vuelta a ')) {
+    tipoSel.value = 'Vuelta a';
     handleTrayectoTipoChange();
-    const p = val.replace('Vuelta de ', '').trim();
+    const p = val.replace('Vuelta a ', '').trim();
     if (presets.includes(p.toUpperCase())) ubiSel.value = p.toUpperCase();
     else { ubiSel.value = '_CUSTOM_'; customInput.value = p; customInput.style.display = 'block'; }
     return;
