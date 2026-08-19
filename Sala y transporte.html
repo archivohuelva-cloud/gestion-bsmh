@@ -32,7 +32,7 @@
   
   /* Colores formulario selección */
   --sala-b: #0062cc;
-  --auditorio: #7b2cbf;
+  --casa colón: #7b2cbf;
   --gran-teatro: #d90429;
   --lazareto: #1b8a3e;
   --santa-fe: #d46000;
@@ -40,7 +40,7 @@
 
   /* Fondos Formulario */
   --bg-sala-b: #dbeafe;
-  --bg-auditorio: #f3e8ff;
+  --bg-casa colón: #f3e8ff;
   --bg-gran-teatro: #ffe4e6;
   --bg-lazareto: #dcfce7;
   --bg-santa-fe: #ffedd5;
@@ -51,6 +51,10 @@
   --montaje-color: #b78103;
   --bg-transport: #ffe0b2;
   --bg-montaje: #fef9c3;
+
+  /* Fin de semana */
+  --bg-weekend: #fdf2f8;
+  --bg-weekend-hover: #fce7f3;
   
   --radius: 12px;
   --radius-sm: 8px;
@@ -70,6 +74,52 @@ body {
   -webkit-font-smoothing: antialiased;
   padding-bottom: 30px;
   user-select: none;
+}
+
+/* ═══════════════════════════════════════
+   PANTALLA DE CARGA / SINCRONIZACIÓN INICIAL
+═══════════════════════════════════════ */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.loading-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+.loading-spinner {
+  width: 46px;
+  height: 46px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 0.8s linear infinite;
 }
 
 /* ═══════════════════════════════════════
@@ -330,7 +380,7 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   MONTH VIEW
+   MONTH VIEW & FIN DE SEMANA
 ═══════════════════════════════════════ */
 .month-grid {
   display: grid;
@@ -351,6 +401,10 @@ body {
   font-weight: 600;
   color: var(--text-dim);
 }
+.month-header.weekend-col {
+  background: #fae8f3;
+  color: #9d174d;
+}
 
 .month-day {
   background: var(--surface);
@@ -362,8 +416,11 @@ body {
   overflow: hidden;
 }
 .month-day:hover { background: #fdfdfd; }
+.month-day.is-weekend { background: var(--bg-weekend); }
+.month-day.is-weekend:hover { background: var(--bg-weekend-hover); }
 .month-day.drag-over { background: #e8f0fe !important; }
 .month-day.other-month { background: #fafafa; opacity: 0.55; }
+.month-day.other-month.is-weekend { background: #fcf5f8; opacity: 0.65; }
 .month-day.today .day-num {
   background: var(--accent);
   color: #ffffff;
@@ -445,7 +502,11 @@ body {
   padding: 8px 4px;
   text-align: center;
 }
+.week-header-cell.weekend-col {
+  background: #fae8f3;
+}
 .week-header-cell .wday { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; }
+.week-header-cell.weekend-col .wday { color: #9d174d; }
 .week-header-cell .wnum { font-size: 18px; font-weight: 700; color: var(--text); margin-top: 2px; }
 .week-header-cell.today-col .wnum {
   color: #fff;
@@ -485,16 +546,17 @@ body {
   grid-template-rows: repeat(24, var(--hour-row-height));
   gap: 1px;
 }
+.week-day-col.is-weekend { background: var(--bg-weekend); }
 .week-day-col.today-col { background: rgba(255, 59, 48, 0.02); }
 
 .week-cell {
-  background: var(--surface);
+  background: transparent;
   height: var(--hour-row-height);
   border-top: 1px solid var(--border);
   cursor: pointer;
   position: relative;
 }
-.week-cell:hover { background: #fafafa; }
+.week-cell:hover { background: rgba(0,0,0,0.02); }
 .week-cell.drag-over { background: #e8f0fe !important; }
 
 /* Bloque continuo de evento */
@@ -562,6 +624,10 @@ body {
   z-index: 20;
   border-bottom: 1px solid var(--border);
 }
+.day-header-full.is-weekend {
+  background: #fae8f3;
+  color: #9d174d;
+}
 
 .day-grid-body {
   display: grid;
@@ -578,6 +644,7 @@ body {
   grid-template-rows: repeat(24, var(--hour-row-height));
   gap: 1px;
 }
+.day-col-content.is-weekend { background: var(--bg-weekend); }
 
 /* ═══════════════════════════════════════
    AGENDA VIEW
@@ -602,6 +669,10 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+.agenda-date-header.is-weekend {
+  background: #fae8f3;
+  color: #9d174d;
 }
 .agenda-date-header.today-row { color: var(--accent); }
 .agenda-date-badge {
@@ -699,6 +770,9 @@ body {
   color: var(--text-dim);
   padding-bottom: 4px;
 }
+.year-mini-th.weekend-col {
+  color: #9d174d;
+}
 .year-mini-day {
   font-size: 11px;
   padding: 4px 0;
@@ -711,8 +785,14 @@ body {
   cursor: pointer;
   border-radius: 6px;
 }
+.year-mini-day.is-weekend {
+  background: #fdf2f8;
+}
 .year-mini-day:hover {
   background: var(--surface2);
+}
+.year-mini-day.is-weekend:hover {
+  background: #fce7f3;
 }
 .year-mini-day.today .day-number-span {
   border: 1.5px solid var(--accent);
@@ -746,6 +826,39 @@ body {
 }
 .year-dot.logistica {
   background-color: var(--transport-color);
+}
+
+/* ═══════════════════════════════════════
+   AUTORIZACIÓN TOGGLES & BADGES
+═══════════════════════════════════════ */
+.auth-toggle-group {
+  display: inline-flex;
+  background: var(--surface2);
+  padding: 3px;
+  border-radius: 8px;
+  gap: 4px;
+  border: 1px solid var(--border);
+}
+.btn-auth-option {
+  border: none;
+  background: transparent;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-dim);
+}
+.btn-auth-option.active-no {
+  background: #fee2e2;
+  color: #dc2626;
+  box-shadow: 0 1px 3px rgba(220,38,38,0.2);
+}
+.btn-auth-option.active-si {
+  background: #dcfce7;
+  color: #16a34a;
+  box-shadow: 0 1px 3px rgba(22,163,74,0.2);
 }
 
 /* ═══════════════════════════════════════
@@ -933,7 +1046,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   font-weight: 700;
   color: var(--text-dim);
   text-transform: uppercase;
-  min-width: 75px;
+  min-width: 80px;
 }
 .view-detail-value {
   font-size: 14px;
@@ -1000,6 +1113,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 </head>
 <body>
 
+<!-- PANTALLA DIFUMINADA DE SINCRONIZACIÓN -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Sincronizando datos…</div>
+</div>
+
 <!-- HEADER -->
 <header class="header" id="main-header">
   <button onclick="window.history.back()" class="btn-back-custom">
@@ -1018,7 +1137,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     <div class="search-icon">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
     </div>
-    <input type="text" id="calendar-search-input" class="search-input" placeholder="Buscar eventos, salas, notas..." autocomplete="off" />
+    <input type="text" id="calendar-search-input" class="search-input" placeholder="Buscar" autocomplete="off" />
     <div class="search-results-dropdown" id="search-results"></div>
   </div>
 
@@ -1038,6 +1157,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   </div>
 
   <div class="header-actions">
+    <!-- BOTÓN SINCRONIZACIÓN MANUAL -->
+    <button class="btn-action" id="btn-manual-sync" onclick="manualSync()" title="Forzar sincronización con Google Sheets">
+      <svg id="sync-icon-svg" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+      </svg>
+    </button>
     <button class="btn-action" onclick="openExportModal()">⬇ PDF</button>
     <button class="btn-action primary" onclick="openAddModal()">+ Añadir</button>
   </div>
@@ -1060,8 +1185,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     </div>
     <div class="modal-footer">
       <button type="button" class="btn-action" id="btn-delete-from-view" style="margin-right:auto;color:#ff3b30;border-color:rgba(255,59,48,0.3)" onclick="deleteFromViewModal()">Eliminar</button>
+      <button type="button" class="btn-action primary" id="btn-open-edit-from-view" onclick="switchToEditModal()">Editar</button>
       <button type="button" class="btn-action" onclick="closeModal('view-modal')">Cerrar</button>
-      <button type="button" class="btn-action primary" id="btn-open-edit-from-view" onclick="switchToEditModal()">✏ Editar</button>
     </div>
   </div>
 </div>
@@ -1087,7 +1212,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         <div id="sala-config-group">
           <div class="sala-presets" id="sala-presets">
             <button type="button" class="sala-preset-btn" data-sala="SALA B" style="background:var(--bg-sala-b);color:var(--sala-b)">SALA B</button>
-            <button type="button" class="sala-preset-btn" data-sala="AUDITORIO" style="background:var(--bg-auditorio);color:var(--auditorio)">AUDITORIO</button>
+            <button type="button" class="sala-preset-btn" data-sala="CASA COLÓN" style="background:var(--bg-casa colón);color:var(--casa colón)">CASA COLÓN</button>
             <button type="button" class="sala-preset-btn" data-sala="GRAN TEATRO" style="background:var(--bg-gran-teatro);color:var(--gran-teatro)">GRAN TEATRO</button>
             <button type="button" class="sala-preset-btn" data-sala="LAZARETO" style="background:var(--bg-lazareto);color:var(--lazareto)">LAZARETO</button>
             <button type="button" class="sala-preset-btn" data-sala="SANTA FE" style="background:var(--bg-santa-fe);color:var(--santa-fe)">SANTA FE</button>
@@ -1135,7 +1260,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
               <select id="ubicacion-select" onchange="handleUbicacionSelectChange()">
                 <option value="">Selecciona ubicación...</option>
                 <option value="ALMACÉN BANDA">Almacén Banda</option>
-                <option value="AUDITORIO">Auditorio</option>
+                <option value="CASA COLÓN">Casa Colón</option>
                 <option value="GRAN TEATRO">Gran Teatro</option>
                 <option value="LAZARETO">Lazareto</option>
                 <option value="SALA B">Sala B</option>
@@ -1160,7 +1285,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
                   <select id="ubicacion-secondary-select" onchange="handleSecondaryUbicacionChange()">
                     <option value="">Mismo lugar principal</option>
                     <option value="ALMACÉN BANDA">Almacén Banda</option>
-                    <option value="AUDITORIO">Auditorio</option>
+                    <option value="CASA COLÓN">Casa Colón</option>
                     <option value="GRAN TEATRO">Gran Teatro</option>
                     <option value="LAZARETO">Lazareto</option>
                     <option value="SALA B">Sala B</option>
@@ -1179,6 +1304,18 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
         </div>
 
+      </div>
+      <div class="section-box" style="background:#fdfdfe;border-color:var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <label style="font-weight:700;color:var(--text);">🏛️ Autorizado por Cultura</label>
+            <div id="auth-timestamp-display" style="font-size:11px;color:var(--text-dim);margin-top:2px;">Estado inicial: No autorizado</div>
+          </div>
+          <div class="auth-toggle-group">
+            <button type="button" class="btn-auth-option active-no" id="btn-auth-no" onclick="setAuthStatus('no')">No</button>
+            <button type="button" class="btn-auth-option" id="btn-auth-si" onclick="setAuthStatus('si')">Sí</button>
+          </div>
+        </div>
       </div>
 
       <!-- RANGO DE DÍAS -->
@@ -1224,7 +1361,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       <!-- NOTAS -->
       <div class="form-group">
         <label>Notas</label>
-        <textarea id="event-notes" rows="4" placeholder="Información adicional, instrumental, recordatorios…"></textarea>
+        <textarea id="event-notes" rows="4" placeholder=""></textarea>
       </div>
 
     </div>
@@ -1363,6 +1500,10 @@ let isRange = false;
 let isHourRange = true;
 let selectedSala = 'SALA B';
 
+/* AUTORIZACIÓN POR CULTURA */
+let currentAuth = 'no';
+let currentAuthDate = null;
+
 let yearFilterEnsayos = true;
 let yearFilterLogistica = true;
 
@@ -1401,10 +1542,29 @@ function isToday(d) {
   return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate(); 
 }
 
+function isWeekendDay(d) {
+  const day = d.getDay();
+  return day === 0 || day === 6; // 0 = Domingo, 6 = Sábado
+}
+
 function formatTimeH(t) {
   if (!t) return '';
   const clean = t.trim().replace(/h$/i, '');
   return `${clean}h`;
+}
+
+function formatTimestampFull(isoOrStr) {
+  if (!isoOrStr) return '';
+  const d = new Date(isoOrStr);
+  if (isNaN(d.getTime())) return isoOrStr;
+  const dow = (d.getDay() + 6) % 7;
+  const dayName = DAYS_FULL[dow];
+  const day = d.getDate();
+  const month = d.getMonth() + 1;
+  const shortYear = String(d.getFullYear()).slice(-2);
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${dayName} ${day}-${month}-${shortYear} | ${hours}:${minutes}h`;
 }
 
 function formatTimeRangeDisplay(ev) {
@@ -1691,7 +1851,7 @@ function render() {
 }
 
 /* ═══════════════════════════════════════
-   MONTH VIEW
+   MONTH VIEW (CON SOMBREADO FIN DE SEMANA)
 ═══════════════════════════════════════ */
 function renderMonth() {
   const year = currentDate.getFullYear();
@@ -1703,7 +1863,10 @@ function renderMonth() {
   const startOffset = (firstDay.getDay()+6)%7;
 
   let html = '<div class="month-grid">';
-  DAYS_ES.forEach(d => html += `<div class="month-header">${d.toUpperCase()}</div>`);
+  DAYS_ES.forEach((d, idx) => {
+    const isWk = idx >= 5;
+    html += `<div class="month-header ${isWk ? 'weekend-col' : ''}">${d.toUpperCase()}</div>`;
+  });
 
   for (let i=0; i<startOffset; i++) {
     const d = new Date(year, month, 1-startOffset+i);
@@ -1744,6 +1907,7 @@ function renderMonthCell(d, otherMonth) {
   const dayEvents = eventsOnDate(ds);
   const todayClass = isToday(d) ? 'today' : '';
   const otherClass = otherMonth ? 'other-month' : '';
+  const weekendClass = isWeekendDay(d) ? 'is-weekend' : '';
 
   let evHTML = '';
   dayEvents.forEach(ev => {
@@ -1756,7 +1920,7 @@ function renderMonthCell(d, otherMonth) {
     </div>`;
   });
 
-  return `<div class="month-day ${todayClass} ${otherClass}" data-date="${ds}">
+  return `<div class="month-day ${todayClass} ${otherClass} ${weekendClass}" data-date="${ds}">
     <div class="day-num">${d.getDate()}</div>
     <div class="day-events">${evHTML}</div>
   </div>`;
@@ -1806,7 +1970,8 @@ function renderWeek() {
   for (let i=0; i<7; i++) {
     const d = new Date(monday); d.setDate(monday.getDate()+i);
     const tc = isToday(d) ? 'today-col' : '';
-    html += `<div class="week-header-cell ${tc}"><div class="wday">${DAYS_ES[i]}</div><div class="wnum">${d.getDate()}</div></div>`;
+    const wkClass = isWeekendDay(d) ? 'weekend-col' : '';
+    html += `<div class="week-header-cell ${tc} ${wkClass}"><div class="wday">${DAYS_ES[i]}</div><div class="wnum">${d.getDate()}</div></div>`;
   }
   html += '</div>';
 
@@ -1822,9 +1987,10 @@ function renderWeek() {
     const d = new Date(monday); d.setDate(monday.getDate()+i);
     const ds = dateStr(d);
     const tc = isToday(d) ? 'today-col' : '';
+    const wkClass = isWeekendDay(d) ? 'is-weekend' : '';
     const dayEvs = eventsOnDate(ds);
 
-    html += `<div class="week-day-col ${tc}" data-day-date="${ds}">`;
+    html += `<div class="week-day-col ${tc} ${wkClass}" data-day-date="${ds}">`;
 
     HOURS.forEach(h => {
       html += `<div class="week-cell" data-date="${ds}" data-hour="${h}"></div>`;
@@ -1884,6 +2050,8 @@ function renderWeek() {
 function renderDay() {
   const ds = dateStr(currentDate);
   const dayOfWeek = (currentDate.getDay()+6)%7;
+  const isWk = isWeekendDay(currentDate);
+
   document.getElementById('period-label').textContent =
     `${DAYS_FULL[dayOfWeek]}, ${currentDate.getDate()} ${MONTHS_ES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
@@ -1892,7 +2060,7 @@ function renderDay() {
   for (let h=0; h<24; h++) HOURS.push(h);
 
   let html = `<div class="day-view-wrapper" id="day-scroll-wrapper">
-    <div class="day-header-full">${DAYS_FULL[dayOfWeek]}, ${currentDate.getDate()} de ${MONTHS_ES[currentDate.getMonth()]} ${currentDate.getFullYear()}</div>
+    <div class="day-header-full ${isWk ? 'is-weekend' : ''}">${DAYS_FULL[dayOfWeek]}, ${currentDate.getDate()} de ${MONTHS_ES[currentDate.getMonth()]} ${currentDate.getFullYear()}</div>
     <div class="day-grid-body">`;
 
   html += '<div class="week-time-col">';
@@ -1901,7 +2069,7 @@ function renderDay() {
   });
   html += '</div>';
 
-  html += `<div class="day-col-content" data-day-date="${ds}">`;
+  html += `<div class="day-col-content ${isWk ? 'is-weekend' : ''}" data-day-date="${ds}">`;
 
   HOURS.forEach(h => {
     html += `<div class="week-cell" data-date="${ds}" data-hour="${h}"></div>`;
@@ -1971,9 +2139,10 @@ function renderAgenda() {
     const dayEvs = eventsOnDate(ds);
     const dow = (d.getDay()+6)%7;
     const todayClass = isToday(d) ? 'today-row' : '';
+    const weekendClass = isWeekendDay(d) ? 'is-weekend' : '';
 
     html += `<div class="agenda-group">
-      <div class="agenda-date-header ${todayClass}">
+      <div class="agenda-date-header ${todayClass} ${weekendClass}">
         ${isToday(d) ? `<div class="agenda-date-badge">${i}</div>` : `<span style="min-width:24px;text-align:center;display:inline-block">${i}</span>`}
         ${DAYS_FULL[dow]}
       </div>`;
@@ -2041,8 +2210,9 @@ function renderYear() {
       <div class="${titleClass}">${MONTHS_ES[m]}</div>
       <div class="year-mini-table">`;
     
-    DAYS_ES.forEach(d => {
-      html += `<div class="year-mini-th">${d.slice(0,2).toUpperCase()}</div>`;
+    DAYS_ES.forEach((d, idx) => {
+      const isWk = idx >= 5;
+      html += `<div class="year-mini-th ${isWk ? 'weekend-col' : ''}">${d.slice(0,2).toUpperCase()}</div>`;
     });
 
     const firstDay = new Date(year, m, 1);
@@ -2058,6 +2228,7 @@ function renderYear() {
       const ds = dateStr(curD);
       const evs = eventsOnDate(ds);
       const isTod = isToday(curD) ? 'today' : '';
+      const wkClass = isWeekendDay(curD) ? 'is-weekend' : '';
 
       const hasEnsayo = evs.some(e => !!e.sala);
       const hasLogistica = evs.some(e => e.transport === 'si' || e.montaje || e.desmontaje);
@@ -2071,7 +2242,7 @@ function renderYear() {
       }
       dotsHtml += '</div>';
 
-      html += `<div class="year-mini-day ${isTod}" data-date="${ds}">
+      html += `<div class="year-mini-day ${isTod} ${wkClass}" data-date="${ds}">
         <span class="day-number-span">${d}</span>
         ${dotsHtml}
       </div>`;
@@ -2239,18 +2410,43 @@ function openViewModal(id, contextDate) {
     typeBadge = `<span style="background:var(--bg-transport);color:var(--transport-color);padding:4px 10px;border-radius:6px;font-weight:700">${parts.join(' • ') || 'Logística'}</span>`;
   }
 
+  // Autorización badge & timestamp
+  let authBadge = '';
+  if (ev.autorizadoCultura === 'si') {
+    const authDateFormatted = ev.autorizadoFecha ? formatTimestampFull(ev.autorizadoFecha) : '';
+    authBadge = `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span> ${authDateFormatted ? `<span style="font-size:12px;font-weight:500;color:var(--text);margin-left:6px;">(${authDateFormatted})</span>` : ''}`;
+  } else {
+    authBadge = `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
+  }
+
+  // Fecha y hora de creación/registro
+  const createdFormatted = ev.createdAt ? formatTimestampFull(ev.createdAt) : 'No disponible';
+
   let html = `
     <div class="view-detail-row">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-check-icon lucide-copy-check"><path d="m12 15 2 2 4-4"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
       <div class="view-detail-label">Tipo</div>
       <div class="view-detail-value">${typeBadge}</div>
     </div>
     <div class="view-detail-row">
-      <div class="view-detail-label">Fecha</div>
-      <div class="view-detail-value">📅 ${dates}</div>
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-days-icon lucide-calendar-days"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg>
+      <div class="view-detail-label">Fecha:</div>
+      <div class="view-detail-value">${dates}</div>
     </div>
     <div class="view-detail-row">
-      <div class="view-detail-label">Horario</div>
-      <div class="view-detail-value">⏰ ${horario}</div>
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock-icon lucide-clock"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <div class="view-detail-label">Horario:</div>
+      <div class="view-detail-value">${horario}</div>
+    </div>
+    <div class="view-detail-row">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-signature-icon lucide-signature"><path d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284"/><path d="M3 21h18"/></svg>
+      <div class="view-detail-label">Autorización</div>
+      <div class="view-detail-value">${authBadge}</div>
+    </div>
+    <div class="view-detail-row full-width" style="background:#f8fafc;border:1px dashed var(--border);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-badge-check-icon lucide-badge-check"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>
+      <div class="view-detail-label" style="color:var(--accent-blue);">Registro</div>
+      <div class="view-detail-value" style="font-size:13px;color:var(--text);"><strong>${createdFormatted}</strong></div>
     </div>
   `;
 
@@ -2425,7 +2621,7 @@ function setFormattedUbicacion(val, secTimeVal) {
     return;
   }
 
-  const presets = ['ALMACÉN BANDA', 'AUDITORIO', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
+  const presets = ['ALMACÉN BANDA', 'CASA COLÓN', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
 
   if (val.startsWith('Ida a ') && val.includes(' y vuelta de ')) {
     tipoSel.value = 'Ida a';
@@ -2528,6 +2724,28 @@ function selectLogisticsOption(type) {
 }
 
 /* ═══════════════════════════════════════
+   CONTROL DE AUTORIZACIÓN POR CULTURA
+═══════════════════════════════════════ */
+function setAuthStatus(status, preservedTimestamp = null) {
+  currentAuth = status;
+  const btnNo = document.getElementById('btn-auth-no');
+  const btnSi = document.getElementById('btn-auth-si');
+  const displayLbl = document.getElementById('auth-timestamp-display');
+
+  if (status === 'si') {
+    btnSi.classList.add('active-si');
+    btnNo.classList.remove('active-no');
+    currentAuthDate = preservedTimestamp || new Date().toISOString();
+    displayLbl.innerHTML = `Autorizado: <span style="color:#16a34a;font-weight:700;">${formatTimestampFull(currentAuthDate)}</span>`;
+  } else {
+    btnNo.classList.add('active-no');
+    btnSi.classList.remove('active-si');
+    currentAuthDate = null;
+    displayLbl.innerHTML = `<span style="color:#dc2626;font-weight:600;">No autorizado</span>`;
+  }
+}
+
+/* ═══════════════════════════════════════
    MODAL LOGIC FORM
 ═══════════════════════════════════════ */
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -2574,6 +2792,9 @@ function openEditModal(id) {
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
   }
 
+  // Cargar estado de autorización
+  setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
+
   document.getElementById('date-start').value = ev.dateStart;
   document.getElementById('date-end').value = ev.dateEnd || ev.dateStart;
   document.getElementById('time-start').value = ev.timeStart || (ev.sala ? '09:15' : '08:30');
@@ -2611,6 +2832,8 @@ function resetForm() {
   
   selectLogisticsOption('transporte');
   setFormattedUbicacion('', null);
+
+  setAuthStatus('no');
 
   document.getElementById('time-start').value = '09:15';
   document.getElementById('time-end').value = '13:15';
@@ -2706,6 +2929,8 @@ function saveEvent() {
     desmontaje: isSalaMode ? false : desmontaje,
     ubicacion: isSalaMode ? '' : ubicacion,
     secondaryTime: isSalaMode ? null : secondaryTime,
+    autorizadoCultura: currentAuth,
+    autorizadoFecha: currentAuth === 'si' ? currentAuthDate : null,
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
@@ -2797,18 +3022,19 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
     const transCol = ev.transport === 'si' ? '🚚 Sí' : 'No';
     const montCol = (ev.montaje ? '🛒 Montaje ' : '') + (ev.desmontaje ? '🛒 Desmontaje' : '') || '—';
     const ubiCol = ev.ubicacion || '—';
+    const authCol = ev.autorizadoCultura === 'si' ? 'Sí' : 'No';
     const notesCol = ev.notes || '';
 
-    tableData.push([dates, salaCol, transCol, montCol, ubiCol, horario, notesCol]);
+    tableData.push([dates, salaCol, transCol, montCol, ubiCol, horario, authCol, notesCol]);
   });
 
   if (tableData.length === 0) {
-    tableData.push(['—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
+    tableData.push(['—', '—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
   }
 
   doc.autoTable({
     startY: 20,
-    head: [['Fecha', 'Sala', 'Transporte', 'Montaje / Desm.', 'Ubicación / Trayecto', 'Horario', 'Notas']],
+    head: [['Fecha', 'Sala', 'Transporte', 'Montaje / Desm.', 'Ubicación / Trayecto', 'Horario', 'Autoriz.', 'Notas']],
     body: tableData,
     theme: 'grid',
     styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
@@ -2896,9 +3122,19 @@ async function executeExportPDF() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   GOOGLE SHEETS AUTOMATIC BACKGROUND SYNC
+   GOOGLE SHEETS AUTOMATIC BACKGROUND SYNC & POLLING
 ═══════════════════════════════════════════════════════ */
-let isSyncingToServer = 0; // Contador de peticiones POST en curso
+let isSyncingToServer = 0;
+
+function showLoadingOverlay() {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.classList.add('active');
+}
+
+function hideLoadingOverlay() {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.classList.remove('active');
+}
 
 async function syncEvent(action, ev) {
   if (!GOOGLE_SHEETS_URL) return;
@@ -2925,8 +3161,11 @@ async function syncEvent(action, ev) {
   }
 }
 
-async function autoSyncSheets() {
+async function autoSyncSheets(showFeedback = false) {
   if (!GOOGLE_SHEETS_URL || isSyncingToServer > 0) return;
+  const syncIcon = document.getElementById('sync-icon-svg');
+  if (syncIcon) syncIcon.classList.add('spin-icon');
+
   try {
     const res = await fetch(`${GOOGLE_SHEETS_URL}?action=getAll`);
     const data = await res.json();
@@ -2934,15 +3173,12 @@ async function autoSyncSheets() {
     if (data.events && Array.isArray(data.events)) {
       const serverEvents = data.events;
       
-      // FUSIÓN INTELIGENTE: No borrar eventos locales pendientes de sincronizar
       const mergedMap = new Map();
 
-      // 1. Agregar eventos del servidor
       serverEvents.forEach(se => {
         mergedMap.set(se.id, { ...se, synced: true });
       });
 
-      // 2. Conservar eventos locales que aún no llegaron al servidor
       events.forEach(localEv => {
         if (!mergedMap.has(localEv.id)) {
           mergedMap.set(localEv.id, localEv);
@@ -2952,18 +3188,36 @@ async function autoSyncSheets() {
       events = Array.from(mergedMap.values());
       saveEvents(false);
       render();
+      if (showFeedback) showToast('Base de datos sincronizada', 'success');
     }
   } catch(err) {
     console.warn('AutoSync background notice:', err);
+    if (showFeedback) showToast('Error al conectar con la base de datos', 'error');
+  } finally {
+    if (syncIcon) syncIcon.classList.remove('spin-icon');
   }
 }
+
+/* Sincronización manual desde el icono */
+async function manualSync() {
+  showLoadingOverlay();
+  await autoSyncSheets(true);
+  hideLoadingOverlay();
+}
+
+/* Auto-refresco periódico (cada 12 segundos) para captar cambios de otros dispositivos */
+setInterval(() => {
+  if (document.visibilityState === 'visible' && isSyncingToServer === 0) {
+    autoSyncSheets(false);
+  }
+}, 12000);
 
 let focusDebounceTimer;
 window.addEventListener('focus', () => {
   clearTimeout(focusDebounceTimer);
   focusDebounceTimer = setTimeout(() => {
     if (GOOGLE_SHEETS_URL && isSyncingToServer === 0) {
-      autoSyncSheets();
+      autoSyncSheets(false);
     }
   }, 1000);
 });
@@ -2981,12 +3235,20 @@ function showToast(msg, type='info') {
 }
 
 /* ═══════════════════════════════════════
-   INIT (DATOS INICIALES SEMILLA)
+   INIT (CARGA INICIAL FORZADA CON OVERLAY)
 ═══════════════════════════════════════ */
-function seedInitialData() {}
-updateHistoryButtons();
-render();
-if (GOOGLE_SHEETS_URL) autoSyncSheets();
+async function initApp() {
+  updateHistoryButtons();
+  render();
+
+  if (GOOGLE_SHEETS_URL) {
+    showLoadingOverlay();
+    await autoSyncSheets(false);
+    hideLoadingOverlay();
+  }
+}
+
+initApp();
 </script>
 </body>
 </html>
