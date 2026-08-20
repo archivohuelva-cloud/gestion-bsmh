@@ -1247,7 +1247,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
   <div class="header-actions">
     <!-- BOTÓN SINCRONIZACIÓN MANUAL -->
-    <button class="btn-action" id="btn-manual-sync" onclick="manualSync()" title="Forzar sincronización con Google Sheets">
+    <button class="btn-action" id="btn-manual-sync" onclick="manualSync()" title="Sincronizar datos">
       <svg id="sync-icon-svg" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
       </svg>
@@ -3137,7 +3137,10 @@ function setMode(mode) {
 
   // Mostrar u ocultar cajas según el modo
   boxSala.style.display = (mode === 'sala') ? '' : 'none';
-  boxActuacion.style.display = (mode === 'actuacion') ? '' : 'none';
+  
+  // Si estamos en Actuaciones, la caja de tipo de actuación solo se muestra si Festivo es 'no'
+  boxActuacion.style.display = (mode === 'actuacion' && isFestivo !== 'si') ? '' : 'none';
+  
   boxLogistica.style.display = (mode === 'logistica') ? '' : 'none';
 
   // Mostrar Autorizado por cultura SOLO en Ensayo
@@ -3146,7 +3149,7 @@ function setMode(mode) {
   // Mostrar Festivo SOLO en Actuaciones
   if (boxFestivo) boxFestivo.style.display = (mode === 'actuacion') ? '' : 'none';
 
-  // Visibilidad de horas: solo se ocultan si estamos en Actuaciones y es festivo Si
+  // Visibilidad de horas: se ocultan si estamos en Actuaciones y es festivo Sí
   if (hoursWrapper) {
     hoursWrapper.style.display = (mode === 'actuacion' && isFestivo === 'si') ? 'none' : '';
   }
@@ -3227,17 +3230,38 @@ function setFestivoStatus(status) {
   const btnSi = document.getElementById('btn-festivo-si');
   const displayLbl = document.getElementById('festivo-status-display');
   const hoursWrapper = document.getElementById('hours-config-wrapper');
+  const boxActuacion = document.getElementById('box-actuacion');
 
   if (status === 'si') {
     btnSi.classList.add('active-si');
     btnNo.classList.remove('active-no');
     displayLbl.innerHTML = `<span style="color:#16a34a;font-weight:700;">Día Festivo (Libre todo el día)</span>`;
+    
+    // 1. Ocultar horas
     if (hoursWrapper && currentMode === 'actuacion') hoursWrapper.style.display = 'none';
+    
+    // 2. Ocultar bloque completo de tipo de actuación
+    if (boxActuacion) boxActuacion.style.display = 'none';
+
+    // 3. Deseleccionar opciones
+    document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('actuacion-input').value = '';
+    selectedActuacion = '';
   } else {
     btnNo.classList.add('active-no');
     btnSi.classList.remove('active-si');
     displayLbl.innerHTML = `<span style="color:var(--text-dim);">No festivo</span>`;
+    
+    // 1. Volver a mostrar horas
     if (hoursWrapper) hoursWrapper.style.display = '';
+    
+    // 2. Volver a mostrar bloque completo de tipo de actuación si estamos en Actuaciones
+    if (boxActuacion && currentMode === 'actuacion') {
+      boxActuacion.style.display = '';
+      if (!selectedActuacion) {
+        setActuacion('CONCIERTO');
+      }
+    }
   }
 }
 
@@ -3388,6 +3412,12 @@ function setSala(sala) {
 document.getElementById('actuacion-presets').addEventListener('click', (e) => {
   const btn = e.target.closest('.sala-preset-btn');
   if (!btn) return;
+
+  // Si estaba en Festivo Sí y se hace clic en una actuación, se desactiva el festivo
+  if (isFestivo === 'si') {
+    setFestivoStatus('no');
+  }
+
   const act = btn.dataset.actuacion;
   if (act === '_CUSTOM_') {
     document.getElementById('actuacion-input').value = '';
@@ -3401,6 +3431,11 @@ document.getElementById('actuacion-presets').addEventListener('click', (e) => {
 });
 
 document.getElementById('actuacion-input').addEventListener('input', (e) => {
+  // Si se escribe en el input y estaba en Festivo Sí, se desactiva el festivo
+  if (isFestivo === 'si') {
+    setFestivoStatus('no');
+  }
+
   selectedActuacion = e.target.value.trim().toUpperCase();
   document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => {
     b.classList.toggle('selected', b.dataset.actuacion === selectedActuacion);
@@ -3688,10 +3723,12 @@ async function executeExportPDF() {
   btn.disabled = false;
 }
 
-/* ═══════════════════════════════════════════════════════
+   /* ═══════════════════════════════════════════════════════
    GOOGLE SHEETS AUTOMATIC BACKGROUND SYNC & POLLING
 ═══════════════════════════════════════════════════════ */
 let isSyncingToServer = 0;
+// Conjunto para retener temporalmente los IDs eliminados y evitar el "rebote"
+const pendingDeletions = new Set();
 
 function showLoadingOverlay() {
   const overlay = document.getElementById('loading-overlay');
@@ -3704,8 +3741,13 @@ function hideLoadingOverlay() {
 }
 
 async function syncEvent(action, ev) {
-  if (!GOOGLE_SHEETS_URL) return;
+  if (!GOOGLE_SHEETS_URL || !ev) return;
   isSyncingToServer++;
+
+  if (action === 'delete') {
+    pendingDeletions.add(ev.id);
+  }
+
   try {
     await fetch(GOOGLE_SHEETS_URL, {
       method: 'POST',
@@ -3725,6 +3767,13 @@ async function syncEvent(action, ev) {
     setTimeout(() => {
       isSyncingToServer = Math.max(0, isSyncingToServer - 1);
     }, 1500);
+
+    // Tras 6 segundos, Google Sheets ya procesó el borrado de sobra; liberamos el ID
+    if (action === 'delete') {
+      setTimeout(() => {
+        pendingDeletions.delete(ev.id);
+      }, 6000);
+    }
   }
 }
 
@@ -3743,11 +3792,15 @@ async function autoSyncSheets(showFeedback = false) {
       const mergedMap = new Map();
 
       serverEvents.forEach(se => {
-        mergedMap.set(se.id, { ...se, synced: true });
+        // Bloquear cualquier evento que esté en la lista de eliminados recientemente
+        if (!pendingDeletions.has(se.id)) {
+          mergedMap.set(se.id, { ...se, synced: true });
+        }
       });
 
+      // Conservar eventos locales que aún no hayan terminado de subir
       events.forEach(localEv => {
-        if (!mergedMap.has(localEv.id) && localEv.synced === false) {
+        if (!pendingDeletions.has(localEv.id) && !mergedMap.has(localEv.id) && localEv.synced === false) {
           mergedMap.set(localEv.id, localEv);
         }
       });
