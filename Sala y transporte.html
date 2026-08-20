@@ -347,8 +347,23 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   BOTÓN FLOTANTE ELIMINAR (HOVER 'X')
+   INDICADOR NOTAS Y BOTÓN ELIMINAR (HOVER 'X')
 ═══════════════════════════════════════ */
+.note-indicator-dot {
+  width: 7px;
+  height: 7px;
+  min-width: 7px;
+  min-height: 7px;
+  background-color: #eab308;
+  border: 1px solid #ca8a04;
+  border-radius: 50%;
+  box-shadow: 0 0 3px rgba(234, 179, 8, 0.6);
+  display: inline-block;
+  margin-left: auto;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
 .btn-event-quick-delete {
   position: absolute;
   top: 2px;
@@ -1305,7 +1320,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
 
       </div>
- <div class="section-box" style="background:#fdfdfe;border-color:var(--border);">
+
+      <div class="section-box" style="background:#fdfdfe;border-color:var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <label style="font-weight:700;color:var(--text);">🏛️ Autorizado por Cultura</label>
@@ -1456,11 +1472,38 @@ function pushState() {
   updateHistoryButtons();
 }
 
+function syncHistoryStateDiff(oldList, newList) {
+  const oldMap = new Map(oldList.map(e => [e.id, e]));
+  const newMap = new Map(newList.map(e => [e.id, e]));
+
+  // 1. Elementos que fueron eliminados -> ordenar borrado a Google Sheets
+  oldList.forEach(oldEv => {
+    if (!newMap.has(oldEv.id)) {
+      syncEvent('delete', oldEv);
+    }
+  });
+
+  // 2. Elementos añadidos o modificados -> ordenar guardado/actualización a Google Sheets
+  newList.forEach(newEv => {
+    const oldEv = oldMap.get(newEv.id);
+    if (!oldEv) {
+      syncEvent('add', newEv);
+    } else if (JSON.stringify(oldEv) !== JSON.stringify(newEv)) {
+      syncEvent('update', newEv);
+    }
+  });
+}
+
 function undo() {
   if (undoStack.length === 0) return;
+  const currentEventsBeforeUndo = JSON.parse(JSON.stringify(events));
   redoStack.push(JSON.stringify(events));
   const prevState = undoStack.pop();
   events = JSON.parse(prevState);
+  
+  // Sincronizar los cambios con Google Sheets
+  syncHistoryStateDiff(currentEventsBeforeUndo, events);
+  
   saveEvents(false);
   updateHistoryButtons();
   render();
@@ -1469,9 +1512,14 @@ function undo() {
 
 function redo() {
   if (redoStack.length === 0) return;
+  const currentEventsBeforeRedo = JSON.parse(JSON.stringify(events));
   undoStack.push(JSON.stringify(events));
   const nextState = redoStack.pop();
   events = JSON.parse(nextState);
+  
+  // Sincronizar los cambios con Google Sheets
+  syncHistoryStateDiff(currentEventsBeforeRedo, events);
+  
   saveEvents(false);
   updateHistoryButtons();
   render();
@@ -1641,7 +1689,7 @@ function getEventStyle(ev) {
 
 function getEventTitle(ev) {
   let titleParts = [];
-  if (ev.sala) titleParts.push(ev.sala);
+  if (ev.sala) titleParts.push(`🏛️ ${ev.sala}`);
   if (ev.transport === 'si') titleParts.push('🚚 TRANSPORTE');
   if (ev.montaje) titleParts.push('🛒 MONTAJE');
   if (ev.desmontaje) titleParts.push('🛒 DESMONTAJE');
@@ -1668,11 +1716,20 @@ function eventsOnDate(dateS) {
     return e.dateStart === dateS;
   });
 
-  return filtered.sort((a, b) => {
-    const timeA = a.timeStart || '00:00';
-    const timeB = b.timeStart || '00:00';
-    return timeA.localeCompare(timeB);
-  });
+  // Función auxiliar para convertir "9:15", "09:15", "22:00" a minutos totales (0-1439)
+  const getMinutes = (ev) => {
+    let t = ev.timeStart || '00:00';
+    // Si es logística con vuelta previa, la hora más temprana es la secundaria
+    if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+      t = ev.secondaryTime;
+    }
+    const parts = String(t).replace(/h$/i, '').trim().split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return (h * 60) + m;
+  };
+
+  return filtered.sort((a, b) => getMinutes(a) - getMinutes(b));
 }
 
 function saveEvents(recordHistory = true) {
@@ -1786,10 +1843,11 @@ searchInput.addEventListener('input', (e) => {
       const title = getEventTitle(ev);
       const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
       const hours = formatTimeRangeDisplay(ev);
+      const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:6px;"></span>` : '';
 
       html += `<div class="search-result-item" data-date="${ev.dateStart}" data-id="${ev.id}">
         <div class="search-result-title">
-          <span style="color:${style.color};">${title}</span>
+          <span style="color:${style.color};display:flex;align-items:center;">${title} ${noteDot}</span>
           <span style="font-size:11px;font-weight:500;color:var(--text-dim);">${hours}</span>
         </div>
         <div class="search-result-sub">
@@ -1920,8 +1978,11 @@ function renderMonthCell(d, otherMonth) {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
     const timeLabel = ev.timeStart ? ` ${formatTimeH(ev.timeStart)}` : '';
+    const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas"></span>` : '';
+
     evHTML += `<div class="event-chip" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
-      <span style="overflow:hidden;text-overflow:ellipsis;padding-right:16px;">${title}${timeLabel}</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;">${title}${timeLabel}</span>
+      ${noteDot}
       <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
     </div>`;
   });
@@ -2007,11 +2068,13 @@ function renderWeek() {
       const style = getEventStyle(ev);
       const title = getEventTitle(ev);
       const timeDisplay = formatTimeRangeDisplay(ev);
+      const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="position:absolute;top:5px;right:22px;"></span>` : '';
 
       html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
-        <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:18px;">${title}</div>
+        <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:24px;">${title}</div>
         <div style="font-size:10px;font-weight:600;opacity:0.9;">${timeDisplay}</div>
         ${ev.notes ? `<div style="font-size:9.5px;opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:auto;">${ev.notes}</div>` : ''}
+        ${noteDot}
         <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
       </div>`;
     });
@@ -2086,10 +2149,11 @@ function renderDay() {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
     const timeDisplay = formatTimeRangeDisplay(ev);
+    const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:4px;"></span>` : '';
 
     html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color}; padding:8px 12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:18px;">
-        <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</strong>
+        <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;">${title} ${noteDot}</strong>
         <span style="font-size:12px;font-weight:700;">${timeDisplay}</span>
       </div>
       ${ev.notes ? `<div style="font-size:12px;opacity:0.9;margin-top:4px;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${ev.notes}</div>` : ''}
@@ -2159,10 +2223,13 @@ function renderAgenda() {
       dayEvs.forEach(ev => {
         const style = getEventStyle(ev);
         const timeDisplay = formatTimeRangeDisplay(ev);
+        const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:8px;margin-right:10px;"></span>` : '';
+
         html += `<div class="agenda-event" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
           <span class="agenda-time" style="color:${style.color};font-weight:600">${timeDisplay}</span>
           <span class="agenda-title" style="color:${style.color}">${getEventTitle(ev)}</span>
           ${ev.notes?`<span class="agenda-notes" style="color:${style.color};">${ev.notes}</span>`:''}
+          ${noteDot}
           <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
         </div>`;
       });
@@ -2477,7 +2544,7 @@ function openViewModal(id, contextDate) {
     </div>
   `;
 
-  // 6. REGISTRO (Sin 'full-width' para que ocupe media columna junto a Autorización)
+  // 6. REGISTRO
   html += `
     <div class="view-detail-row" style="background:#f8fafc;border:1px dashed var(--border);">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -2486,12 +2553,12 @@ function openViewModal(id, contextDate) {
     </div>
   `;
 
-  // NOTAS (Mantiene su tamaño completo abajo)
+  // NOTAS (Estilo Post-it amarillo pastel)
   if (ev.notes) {
     html += `
-      <div class="view-detail-row full-width">
-        <div class="view-detail-label">Notas</div>
-        <div class="view-detail-value" style="font-weight:normal;line-height:1.6;white-space:pre-wrap;min-height:90px;max-height:55vh;overflow-y:auto;background:var(--surface);padding:10px 12px;border-radius:8px;border:1px solid var(--border);">${ev.notes}</div>
+      <div class="view-detail-row full-width" style="background:#e3e3e3;border:1px solid #fde047;border-left:4px solid #eab308;">
+        <div class="view-detail-label" style="color:#000000;">Notas</div>
+        <div class="view-detail-value" style="font-weight:normal;line-height:1.6;white-space:pre-wrap;min-height:90px;max-height:55vh;overflow-y:auto;background:#fffbeb;color:#451a03;padding:10px 12px;border-radius:8px;border:1px solid #fde047;box-shadow:0 1px 3px rgba(0,0,0,0.05);">${ev.notes}</div>
       </div>
     `;
   }
@@ -2766,10 +2833,8 @@ function setAuthStatus(status, preservedTimestamp = null) {
     btnSi.classList.add('active-si');
     btnNo.classList.remove('active-no');
     
-    // Si ya existe una fecha guardada la usamos; si no, ponemos la fecha/hora actual
     const targetDate = preservedTimestamp ? new Date(preservedTimestamp) : new Date();
     
-    // Formateo para input tipo datetime-local (YYYY-MM-DDTHH:mm)
     const yyyy = targetDate.getFullYear();
     const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
     const dd = String(targetDate.getDate()).padStart(2, '0');
@@ -2778,14 +2843,14 @@ function setAuthStatus(status, preservedTimestamp = null) {
     
     dtInput.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
     dtContainer.style.display = 'block';
-    displayLbl.innerHTML = `<span style="color:#16a34a;font-weight:700;">Autorizado (editable abajo)</span>`;
+    displayLbl.innerHTML = `<span style="color:#16a34a;font-weight:700;">Autorizado</span>`;
   } else {
     btnNo.classList.add('active-no');
     btnSi.classList.remove('active-si');
     dtContainer.style.display = 'none';
     dtInput.value = '';
     currentAuthDate = null;
-    displayLbl.innerHTML = `<span style="color:#dc2626;font-weight:600;">No autorizado</span>`;
+    displayLbl.innerHTML = `<span style="color:#dc2626;font-weight:600;">Pendiente de autorizar</span>`;
   }
 }
 
@@ -2836,7 +2901,6 @@ function openEditModal(id) {
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
   }
 
-  // Cargar estado de autorización
   setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
 
   document.getElementById('date-start').value = ev.dateStart;
@@ -2953,7 +3017,6 @@ function saveEvent() {
   const timeEnd = isHourRange ? document.getElementById('time-end').value : null;
   const notes = document.getElementById('event-notes').value.trim();
 
-  // 1. Leemos la fecha y hora manual del selector de autorización:
   const customAuthVal = document.getElementById('auth-datetime-input').value;
   const finalAuthDate = (currentAuth === 'si' && customAuthVal) 
     ? new Date(customAuthVal).toISOString() 
@@ -2980,7 +3043,7 @@ function saveEvent() {
     ubicacion: isSalaMode ? '' : ubicacion,
     secondaryTime: isSalaMode ? null : secondaryTime,
     autorizadoCultura: currentAuth,
-    autorizadoFecha: finalAuthDate, // 2. Guardamos la fecha/hora que tú hayas editado
+    autorizadoFecha: finalAuthDate,
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
@@ -3229,7 +3292,6 @@ async function autoSyncSheets(showFeedback = false) {
         mergedMap.set(se.id, { ...se, synced: true });
       });
 
-      // Conservamos solo eventos locales no sincronizados aún (synced === false)
       events.forEach(localEv => {
         if (!mergedMap.has(localEv.id) && localEv.synced === false) {
           mergedMap.set(localEv.id, localEv);
