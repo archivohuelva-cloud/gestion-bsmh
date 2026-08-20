@@ -436,11 +436,31 @@ body {
 .month-day.drag-over { background: #e8f0fe !important; }
 .month-day.other-month { background: #fafafa; opacity: 0.55; }
 .month-day.other-month.is-weekend { background: #fcf5f8; opacity: 0.65; }
+/* Contorno rojo para el cuadro del día de hoy en el Mes */
+.month-day.today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  z-index: 2;
+}
+
 .month-day.today .day-num {
   background: var(--accent);
   color: #ffffff;
   border-radius: 50%;
   width: 24px; height: 24px;
+}
+
+/* Contorno rojo para la columna del día de hoy en la vista de Semana */
+.week-day-col.today-col {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  z-index: 5;
+}
+
+/* Contorno rojo para el bloque del día de hoy en la vista de Agenda */
+.agenda-group.today-group {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: var(--radius-sm);
+  margin: 4px;
+  overflow: hidden;
 }
 
 .day-num {
@@ -1237,7 +1257,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-      <!-- SECCIÓN: LOGÍSTICA / SERVICIOS (SELECCIÓN EXCLUSIVA) -->
+<!-- SECCIÓN: LOGÍSTICA / SERVICIOS (SELECCIÓN EXCLUSIVA) -->
       <div class="section-box" id="box-logistica" style="display:none;">
         <label><strong>Logística, Transporte y Servicios</strong></label>
         
@@ -1246,6 +1266,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <div class="radiobox" id="radio-transporte"></div>
             🚚 TRANSPORTE
           </label>
+          <label onclick="selectLogisticsOption('mochila')" class="range-toggle">
+            <div class="radiobox" id="radio-mochila"></div>
+            🎒 MOCHILA
+          </label>
           <label onclick="selectLogisticsOption('montaje')" class="range-toggle">
             <div class="radiobox" id="radio-montaje"></div>
             🛒 MONTAJE
@@ -1253,6 +1277,18 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
           <label onclick="selectLogisticsOption('desmontaje')" class="range-toggle">
             <div class="radiobox" id="radio-desmontaje"></div>
             🛒 DESMONTAJE
+          </label>
+          <label onclick="selectLogisticsOption('montar_desmontar')" class="range-toggle">
+            <div class="radiobox" id="radio-montar_desmontar"></div>
+            🔄 MONTAR &gt; DESMONTAR
+          </label>
+          <label onclick="selectLogisticsOption('desmontar_montar')" class="range-toggle">
+            <div class="radiobox" id="radio-desmontar_montar"></div>
+            🔄 DESMONTAR &gt; MONTAR
+          </label>
+          <label onclick="selectLogisticsOption('retranquear')" class="range-toggle">
+            <div class="radiobox" id="radio-retranquear"></div>
+            ↔️ RETRANQUEAR
           </label>
         </div>
 
@@ -1682,17 +1718,34 @@ function getEventStyle(ev) {
   if (ev.sala) {
     return { color: 'var(--ensayo-blue)', bg: 'var(--bg-ensayo-blue)' };
   }
-  if (ev.transport === 'si') return { color: 'var(--transport-color)', bg: 'var(--bg-transport)' };
-  if (ev.montaje || ev.desmontaje) return { color: 'var(--montaje-color)', bg: 'var(--bg-montaje)' };
-  return { color: '#333333', bg: '#e5e5ea' };
+  // Transporte (naranja)
+  if (ev.transport === 'si' || ev.tipoLogistica === 'transporte') {
+    return { color: 'var(--transport-color)', bg: 'var(--bg-transport)' };
+  }
+  // Montaje, Desmontaje, Mochila, Montar > Desmontar, Desmontar > Montar y Retranquear (Amarillo)
+  return { color: 'var(--montaje-color)', bg: 'var(--bg-montaje)' };
 }
 
 function getEventTitle(ev) {
   let titleParts = [];
-  if (ev.sala) titleParts.push(`${ev.sala}`);
-  if (ev.transport === 'si') titleParts.push('🚚 TRANSPORTE');
-  if (ev.montaje) titleParts.push('🛒 MONTAJE');
-  if (ev.desmontaje) titleParts.push('🛒 DESMONTAJE');
+  if (ev.sala) {
+    titleParts.push(`${ev.sala}`);
+  } else {
+    const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+    if (t === 'transporte') titleParts.push('🚚 TRANSPORTE');
+    else if (t === 'mochila') titleParts.push('🎒 MOCHILA');
+    else if (t === 'montaje') titleParts.push('🛒 MONTAJE');
+    else if (t === 'desmontaje') titleParts.push('🛒 DESMONTAJE');
+    else if (t === 'montar_desmontar') titleParts.push('🔄 MONTAR > DESMONTAR');
+    else if (t === 'desmontar_montar') titleParts.push('🔄 DESMONTAR > MONTAR');
+    else if (t === 'retranquear') titleParts.push('↔️ RETRANQUEAR');
+    else {
+      // Compatibilidad con eventos antiguos
+      if (ev.transport === 'si') titleParts.push('🚚 TRANSPORTE');
+      if (ev.montaje) titleParts.push('🛒 MONTAJE');
+      if (ev.desmontaje) titleParts.push('🛒 DESMONTAJE');
+    }
+  }
   
   if (ev.ubicacion && !ev.sala) {
     titleParts.push(`[${ev.ubicacion}]`);
@@ -1997,23 +2050,46 @@ function renderMonthCell(d, otherMonth) {
    CÁLCULOS DE POSICIÓN PARA FRANJA HORARIA
 ═══════════════════════════════════════ */
 function calculateSpanPosition(ev) {
-  const rowHeight = 52;
-  const startStr = ev.timeStart || '09:00';
-  const [sH, sM] = startStr.split(':').map(Number);
-  const startMinutes = (sH * 60) + (sM || 0);
+  // Altura exacta de cada fila (52px de celda + 1px del gap de la cuadrícula)
+  const rowTotalHeight = 53;
 
-  let endMinutes = startMinutes + 60;
+  // Determinar la hora de inicio efectiva limpiando espacios y la letra 'h'
+  let rawStart = ev.timeStart || '09:00';
+  if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+    rawStart = ev.secondaryTime;
+  }
+  
+  const cleanStart = String(rawStart).replace(/h$/i, '').trim();
+  const startParts = cleanStart.split(':');
+  const sH = parseInt(startParts[0], 10) || 0;
+  const sM = parseInt(startParts[1], 10) || 0;
+  const startMinutes = (sH * 60) + sM;
+
+  // Determinar la hora de fin
+  let endMinutes;
   if (ev.timeEnd) {
-    const [eH, eM] = ev.timeEnd.split(':').map(Number);
-    let calcEnd = (eH * 60) + (eM || 0);
-    if (calcEnd > startMinutes) {
-      endMinutes = calcEnd;
-    }
+    const cleanEnd = String(ev.timeEnd).replace(/h$/i, '').trim();
+    const endParts = cleanEnd.split(':');
+    const eH = parseInt(endParts[0], 10) || 0;
+    const eM = parseInt(endParts[1], 10) || 0;
+    const calcEnd = (eH * 60) + eM;
+    endMinutes = (calcEnd > startMinutes) ? calcEnd : (startMinutes + 60);
+  } else if (!ev.sala && ev.secondaryTime && (!ev.ubicacion || !ev.ubicacion.startsWith('Vuelta a'))) {
+    const cleanSec = String(ev.secondaryTime).replace(/h$/i, '').trim();
+    const secParts = cleanSec.split(':');
+    const secH = parseInt(secParts[0], 10) || 0;
+    const secM = parseInt(secParts[1], 10) || 0;
+    const calcSec = (secH * 60) + secM;
+    endMinutes = (calcSec > startMinutes) ? calcSec : (startMinutes + 60);
+  } else {
+    // Por defecto, sin rango de horas ocupa 1 hora completa (60 minutos)
+    endMinutes = startMinutes + 60;
   }
 
-  const topPx = (startMinutes / 60) * rowHeight;
+  // Posición vertical exacta y altura proporcional a 1 hora (o duración manual)
+  const topPx = (startMinutes / 60) * rowTotalHeight;
   const durationMinutes = Math.max(30, endMinutes - startMinutes);
-  const heightPx = Math.max(28, (durationMinutes / 60) * rowHeight - 2);
+  const heightPx = Math.max(26, (durationMinutes / 60) * rowTotalHeight - 2);
 
   return { topPx, heightPx };
 }
@@ -2082,7 +2158,7 @@ function renderWeek() {
     if (isToday(d)) {
       const now = new Date();
       const curMinutes = (now.getHours() * 60) + now.getMinutes();
-      const lineTop = (curMinutes / 60) * 52;
+      const lineTop = (curMinutes / 60) * 53;
       html += `<div class="red-time-line-horizontal" style="top:${lineTop}px"></div>`;
     }
 
@@ -2161,10 +2237,10 @@ function renderDay() {
     </div>`;
   });
 
-  if (isToday(currentDate)) {
+if (isToday(currentDate)) {
     const now = new Date();
     const curMinutes = (now.getHours() * 60) + now.getMinutes();
-    const lineTop = (curMinutes / 60) * 52;
+    const lineTop = (curMinutes / 60) * 53;
     html += `<div class="red-time-line-horizontal" style="top:${lineTop}px"></div>`;
   }
 
@@ -2304,7 +2380,7 @@ function renderYear() {
       const wkClass = isWeekendDay(curD) ? 'is-weekend' : '';
 
       const hasEnsayo = evs.some(e => !!e.sala);
-      const hasLogistica = evs.some(e => e.transport === 'si' || e.montaje || e.desmontaje);
+      const hasLogistica = evs.some(e => !e.sala && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
 
       let dotsHtml = '<div class="year-dots-wrap">';
       if (yearFilterEnsayos && hasEnsayo) {
@@ -2472,15 +2548,22 @@ function openViewModal(id, contextDate) {
   const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
   const horario = formatTimeRangeDisplay(ev);
 
-  let typeBadge = '';
+let typeBadge = '';
   if (ev.sala) {
     typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:4px 10px;border-radius:6px;font-weight:700">🎵 ${ev.sala}</span>`;
   } else {
-    let parts = [];
-    if (ev.transport === 'si') parts.push('🚚 TRANSPORTE');
-    if (ev.montaje) parts.push('🛒 MONTAJE');
-    if (ev.desmontaje) parts.push('🛒 DESMONTAJE');
-    typeBadge = `<span style="background:var(--bg-transport);color:var(--transport-color);padding:4px 10px;border-radius:6px;font-weight:700">${parts.join(' • ') || 'Logística'}</span>`;
+    const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+    let lbl = 'Logística';
+    if (t === 'transporte') lbl = '🚚 TRANSPORTE';
+    else if (t === 'mochila') lbl = '🎒 MOCHILA';
+    else if (t === 'montaje') lbl = '🛒 MONTAJE';
+    else if (t === 'desmontaje') lbl = '🛒 DESMONTAJE';
+    else if (t === 'montar_desmontar') lbl = '🔄 MONTAR > DESMONTAR';
+    else if (t === 'desmontar_montar') lbl = '🔄 DESMONTAR > MONTAR';
+    else if (t === 'retranquear') lbl = '↔️ RETRANQUEAR';
+    
+    const style = getEventStyle(ev);
+    typeBadge = `<span style="background:${style.bg};color:${style.color};padding:4px 10px;border-radius:6px;font-weight:700">${lbl}</span>`;
   }
 
   // Autorización badge & timestamp
@@ -2626,7 +2709,7 @@ function handleTrayectoTipoChange() {
     secGroup.style.display = 'none';
     document.getElementById('has-secondary-checkbox').classList.remove('checked');
     document.getElementById('secondary-inputs').style.display = 'none';
-    lblMainTime.textContent = currentMode === 'sala' ? 'Hora inicio' : 'Hora';
+    lblMainTime.textContent = currentMode === 'sala' ? 'Hora inicio' : 'Hora inicio';
   }
 }
 
@@ -2813,9 +2896,11 @@ function setMode(mode) {
 
 function selectLogisticsOption(type) {
   selectedLogisticsType = type;
-  document.getElementById('radio-transporte').classList.toggle('checked', type === 'transporte');
-  document.getElementById('radio-montaje').classList.toggle('checked', type === 'montaje');
-  document.getElementById('radio-desmontaje').classList.toggle('checked', type === 'desmontaje');
+  const options = ['transporte', 'mochila', 'montaje', 'desmontaje', 'montar_desmontar', 'desmontar_montar', 'retranquear'];
+  options.forEach(opt => {
+    const el = document.getElementById(`radio-${opt}`);
+    if (el) el.classList.toggle('checked', type === opt);
+  });
 }
 
 /* ═══════════════════════════════════════
@@ -2893,11 +2978,10 @@ function openEditModal(id) {
     setSala(ev.sala);
     document.getElementById('sala-input').value = ev.sala;
     setFormattedUbicacion('', null);
-  } else {
+    } else {
     setMode('logistica');
-    if (ev.desmontaje) selectLogisticsOption('desmontaje');
-    else if (ev.montaje) selectLogisticsOption('montaje');
-    else selectLogisticsOption('transporte');
+    const t = ev.tipoLogistica || (ev.desmontaje ? 'desmontaje' : (ev.montaje ? 'montaje' : 'transporte'));
+    selectLogisticsOption(t);
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
   }
 
@@ -3003,9 +3087,10 @@ function toggleRange() {
 function saveEvent() {
   const isSalaMode = currentMode === 'sala';
   const sala = isSalaMode ? document.getElementById('sala-input').value.trim().toUpperCase() : null;
+  const tipoLogistica = !isSalaMode ? selectedLogisticsType : null;
   const transport = !isSalaMode && selectedLogisticsType === 'transporte' ? 'si' : 'no';
-  const montaje = !isSalaMode && selectedLogisticsType === 'montaje';
-  const desmontaje = !isSalaMode && selectedLogisticsType === 'desmontaje';
+  const montaje = !isSalaMode && (selectedLogisticsType === 'montaje' || selectedLogisticsType === 'montar_desmontar');
+  const desmontaje = !isSalaMode && (selectedLogisticsType === 'desmontaje' || selectedLogisticsType === 'desmontar_montar');
   const ubicacion = isSalaMode ? '' : getFormattedUbicacion();
 
   const hasSec = !isSalaMode && document.getElementById('has-secondary-checkbox').classList.contains('checked');
@@ -3026,8 +3111,8 @@ function saveEvent() {
     showToast('Indica el nombre de la sala', 'error');
     return;
   }
-  if (!isSalaMode && transport === 'no' && !montaje && !desmontaje && !notes && !ubicacion) {
-    showToast('Selecciona al menos una opción de logística o una ubicación', 'error');
+  if (!isSalaMode && !tipoLogistica && !notes && !ubicacion) {
+    showToast('Selecciona una opción de logística o una ubicación', 'error');
     return;
   }
   if (!dateStart) { showToast('Indica la fecha', 'error'); return; }
@@ -3035,8 +3120,9 @@ function saveEvent() {
 
   pushState();
 
-  const payload = {
+    const payload = {
     sala: isSalaMode ? (sala || '') : '',
+    tipoLogistica: isSalaMode ? null : tipoLogistica,
     transport: isSalaMode ? 'no' : transport,
     montaje: isSalaMode ? false : montaje,
     desmontaje: isSalaMode ? false : desmontaje,
@@ -3110,7 +3196,7 @@ function filterEventsByType(evList, filterType) {
     return evList.filter(e => !!e.sala);
   }
   if (filterType === 'logistica') {
-    return evList.filter(e => e.transport === 'si' || e.montaje || e.desmontaje);
+    return evList.filter(e => !e.sala && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
   }
   return evList;
 }
@@ -3132,22 +3218,34 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
     const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
     const horario = formatTimeRangeDisplay(ev);
     const salaCol = ev.sala || '—';
-    const transCol = ev.transport === 'si' ? '🚚 Sí' : 'No';
-    const montCol = (ev.montaje ? '🛒 Montaje ' : '') + (ev.desmontaje ? '🛒 Desmontaje' : '') || '—';
+    
+    // Tipo de logística / Servicio en el PDF
+    let logCol = '—';
+    if (!ev.sala) {
+      const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+      if (t === 'transporte') logCol = '🚚 Transporte';
+      else if (t === 'mochila') logCol = '🎒 Mochila';
+      else if (t === 'montaje') logCol = '🛒 Montaje';
+      else if (t === 'desmontaje') logCol = '🛒 Desmontaje';
+      else if (t === 'montar_desmontar') logCol = '🔄 Montar > Desmontar';
+      else if (t === 'desmontar_montar') logCol = '🔄 Desmontar > Montar';
+      else if (t === 'retranquear') logCol = '↔️ Retranquear';
+    }
+
     const ubiCol = ev.ubicacion || '—';
     const authCol = ev.autorizadoCultura === 'si' ? 'Sí' : 'No';
     const notesCol = ev.notes || '';
 
-    tableData.push([dates, salaCol, transCol, montCol, ubiCol, horario, authCol, notesCol]);
+    tableData.push([dates, salaCol, logCol, ubiCol, horario, authCol, notesCol]);
   });
 
   if (tableData.length === 0) {
     tableData.push(['—', '—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
   }
 
-  doc.autoTable({
+    doc.autoTable({
     startY: 20,
-    head: [['Fecha', 'Sala', 'Transporte', 'Montaje / Desm.', 'Ubicación / Trayecto', 'Horario', 'Autoriz.', 'Notas']],
+    head: [['Fecha', 'Sala', 'Servicio / Logística', 'Ubicación / Trayecto', 'Horario', 'Autoriz.', 'Notas']],
     body: tableData,
     theme: 'grid',
     styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
@@ -3332,7 +3430,23 @@ setInterval(() => {
 }, 12000);
 
 let focusDebounceTimer;
+let lastKnownDay = new Date().getDate();
+
+// Re-renderizar si cambia el día automáticamente mientras la aplicación está abierta
+setInterval(() => {
+  const currentRealDay = new Date().getDate();
+  if (currentRealDay !== lastKnownDay) {
+    lastKnownDay = currentRealDay;
+    render();
+  }
+}, 60000); // Comprueba cada minuto
+
 window.addEventListener('focus', () => {
+  const currentRealDay = new Date().getDate();
+  if (currentRealDay !== lastKnownDay) {
+    lastKnownDay = currentRealDay;
+    render();
+  }
   clearTimeout(focusDebounceTimer);
   focusDebounceTimer = setTimeout(() => {
     if (GOOGLE_SHEETS_URL && isSyncingToServer === 0) {
