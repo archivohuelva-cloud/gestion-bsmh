@@ -72,7 +72,7 @@ body {
   color: var(--text);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
-  padding-bottom: 30px;
+  padding-bottom: 6px;
   user-select: none;
 }
 
@@ -338,12 +338,12 @@ body {
 .btn-action.primary:hover { opacity: 0.9; }
 
 /* ═══════════════════════════════════════
-   CALENDAR CONTAINER
+   CALENDAR CONTAINER (ANCHO TOTAL Y MÁRGENES MÍNIMOS)
 ═══════════════════════════════════════ */
 #calendar-container {
-  padding: 16px 20px;
-  max-width: 1400px;
-  margin: 0 auto;
+  padding: 6px 10px;
+  max-width: 100%;
+  margin: 0;
 }
 
 /* ═══════════════════════════════════════
@@ -507,8 +507,8 @@ body {
 .week-grid-wrapper {
   background: var(--border);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  max-height: calc(100vh - 140px);
+  border-radius: var(--radius-sm);
+  max-height: calc(100vh - 72px);
   overflow-y: auto;
   position: relative;
   box-shadow: var(--shadow-sm);
@@ -642,9 +642,9 @@ body {
 .day-view-wrapper {
   background: var(--border);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   overflow-y: auto;
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 72px);
   box-shadow: var(--shadow-sm);
 }
 
@@ -1570,14 +1570,39 @@ function updateHistoryButtons() {
 }
 
 window.addEventListener('keydown', (e) => {
+  // Evitar que los atajos interfieran cuando se escribe en campos de formulario o selectores
+  const isTyping = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
+
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
-    if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+    if (isTyping) return;
     e.preventDefault();
     undo();
   } else if ((e.ctrlKey || e.metaKey) && ((!e.shiftKey && e.key.toLowerCase() === 'y') || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
-    if (document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+    if (isTyping) return;
     e.preventDefault();
     redo();
+  } else if (e.key === 'ArrowLeft') {
+    if (isTyping) return;
+    e.preventDefault();
+    navigate(-1); // Navega hacia atrás según la vista
+  } else if (e.key === 'ArrowRight') {
+    if (isTyping) return;
+    e.preventDefault();
+    navigate(1);  // Navega hacia adelante según la vista
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    if (isTyping) return;
+    e.preventDefault();
+    
+    const scrollAmount = e.key === 'ArrowDown' ? 100 : -100;
+    
+    // Detectar si hay un contenedor interno de scroll activo (Semana o Día)
+    const activeScroller = document.getElementById('week-scroll-wrapper') || document.getElementById('day-scroll-wrapper');
+    
+    if (activeScroller) {
+      activeScroller.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+    } else {
+      window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+    }
   }
 });
 
