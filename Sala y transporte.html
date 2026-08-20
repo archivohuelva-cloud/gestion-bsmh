@@ -26,11 +26,19 @@
   --text-dim: #8e8e93;
   --text-muted: #c7c7cc;
   
-  /* Azul Unificado para todas las salas en el calendario */
+/* Azul Unificado para todas las salas en el calendario */
   --ensayo-blue: #0062cc;
   --bg-ensayo-blue: #dbeafe;
+
+  /* Actuaciones (Azul Marino) */
+  --actuacion-navy: #1e3a8a;
+  --bg-actuacion-navy: #dbeafe;
+
+  /* Festivos (Verde) */
+  --festivo-color: #166534;
+  --bg-festivo: #dcfce7;
   
-  /* Colores formulario selección */
+  /* Colores formulario selección - Salas */
   --sala-b: #0062cc;
   --casa colón: #7b2cbf;
   --gran-teatro: #d90429;
@@ -38,13 +46,23 @@
   --santa-fe: #d46000;
   --custom: #c2185b;
 
-  /* Fondos Formulario */
+  /* Fondos Formulario - Salas */
   --bg-sala-b: #dbeafe;
   --bg-casa colón: #f3e8ff;
   --bg-gran-teatro: #ffe4e6;
   --bg-lazareto: #dcfce7;
   --bg-santa-fe: #ffedd5;
   --bg-custom: #fce7f3;
+
+  /* Colores formulario selección - Actuaciones */
+  --btn-concierto: #7c3aed;
+  --bg-btn-concierto: #ede9fe;
+  --btn-acto: #0284c7;
+  --bg-btn-acto: #e0f2fe;
+  --btn-procesion: #b45309;
+  --bg-btn-procesion: #fef3c7;
+  --btn-grabacion: #be123c;
+  --bg-btn-grabacion: #ffe4e6;
   
   /* Logística y Servicios */
   --transport-color: #e65100;
@@ -1271,10 +1289,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     </div>
     <div class="modal-body">
 
-      <!-- SELECTOR DE MODO: SALA vs LOGÍSTICA (EXCLUSIVIDAD Y OCULTACIÓN MUTUA) -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
-        <button type="button" class="btn-action" id="btn-tab-sala" onclick="setMode('sala')" style="justify-content:center;border-radius:8px;font-weight:700;">🎵 Sala de Ensayo</button>
-        <button type="button" class="btn-action" id="btn-tab-logistica" onclick="setMode('logistica')" style="justify-content:center;border-radius:8px;font-weight:700;">🚚 Logística / Servicios</button>
+      <!-- SELECTOR DE MODO (3 PESTAÑAS) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
+        <button type="button" class="btn-action" id="btn-tab-sala" onclick="setMode('sala')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11.5px;padding:6px 4px;">🎵 Sala de Ensayo</button>
+        <button type="button" class="btn-action" id="btn-tab-logistica" onclick="setMode('logistica')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11.5px;padding:6px 4px;">🚚 Logística</button>
+        <button type="button" class="btn-action" id="btn-tab-actuacion" onclick="setMode('actuacion')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11.5px;padding:6px 4px;">🎺 Actuaciones</button>
       </div>
 
       <!-- SECCIÓN: SALA DE ENSAYO -->
@@ -1293,7 +1312,22 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-<!-- SECCIÓN: LOGÍSTICA / SERVICIOS (SELECCIÓN EXCLUSIVA) -->
+      <!-- SECCIÓN: ACTUACIONES -->
+      <div class="section-box" id="box-actuacion" style="display:none;">
+        <label><strong>Tipo de Actuación</strong></label>
+        <div id="actuacion-config-group">
+          <div class="sala-presets" id="actuacion-presets">
+            <button type="button" class="sala-preset-btn" data-actuacion="CONCIERTO" style="background:var(--bg-btn-concierto);color:var(--btn-concierto)">CONCIERTO</button>
+            <button type="button" class="sala-preset-btn" data-actuacion="ACTO" style="background:var(--bg-btn-acto);color:var(--btn-acto)">ACTO</button>
+            <button type="button" class="sala-preset-btn" data-actuacion="PROCESIÓN" style="background:var(--bg-btn-procesion);color:var(--btn-procesion)">PROCESIÓN</button>
+            <button type="button" class="sala-preset-btn" data-actuacion="GRABACIÓN" style="background:var(--bg-btn-grabacion);color:var(--btn-grabacion)">GRABACIÓN</button>
+            <button type="button" class="sala-preset-btn" data-actuacion="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">+ Otra</button>
+          </div>
+          <input type="text" id="actuacion-input" placeholder="Nombre o detalle de la actuación…" style="margin-top:6px" />
+        </div>
+      </div>
+
+      <!-- SECCIÓN: LOGÍSTICA / SERVICIOS (SELECCIÓN EXCLUSIVA) -->
       <div class="section-box" id="box-logistica" style="display:none;">
         <label><strong>Logística, Transporte y Servicios</strong></label>
         
@@ -1320,7 +1354,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
           </label>
           <label onclick="selectLogisticsOption('desmontar_montar')" class="range-toggle">
             <div class="radiobox" id="radio-desmontar_montar"></div>
-            🔄 DESMONTAR &gt; MONTAR
+            🔄 DESMONTAAR &gt; MONTAR
           </label>
           <label onclick="selectLogisticsOption('retranquear')" class="range-toggle">
             <div class="radiobox" id="radio-retranquear"></div>
@@ -1393,7 +1427,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
       </div>
 
-      <div class="section-box" style="background:#fdfdfe;border-color:var(--border);">
+<!-- SECCIÓN: AUTORIZADO POR CULTURA (SOLO PARA ENSAYO) -->
+      <div class="section-box" id="box-auth-cultura" style="background:#fdfdfe;border-color:var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <label style="font-weight:700;color:var(--text);">🏛️ Autorizado por Cultura</label>
@@ -1409,6 +1444,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         <div id="auth-datetime-container" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
           <label style="font-size:11px;color:#16a34a;margin-bottom:4px;display:block;">Fecha y hora en que fue autorizado:</label>
           <input type="datetime-local" id="auth-datetime-input" style="font-size:13px;padding:8px 10px;" />
+        </div>
+      </div>
+
+      <!-- SECCIÓN: FESTIVO (SOLO PARA ACTUACIONES) -->
+      <div class="section-box" id="box-festivo" style="display:none;background:#fdfdfe;border-color:var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <label style="font-weight:700;color:var(--text);">🎉 ¿Es día festivo?</label>
+            <div id="festivo-status-display" style="font-size:12px;color:var(--text-dim);margin-top:2px;">No festivo</div>
+          </div>
+          <div class="auth-toggle-group">
+            <button type="button" class="btn-auth-option active-no" id="btn-festivo-no" onclick="setFestivoStatus('no')">No</button>
+            <button type="button" class="btn-auth-option" id="btn-festivo-si" onclick="setFestivoStatus('si')">Sí</button>
+          </div>
         </div>
       </div>
 
@@ -1432,23 +1481,26 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-      <!-- RANGO DE HORAS -->
-      <div class="form-group">
-        <label onclick="toggleHourRange()" class="range-toggle">
-          <div class="checkbox" id="hour-range-checkbox"></div>
-          <span id="hour-range-label">Aplicar a rango de horas</span>
-        </label>
-      </div>
-
-      <!-- HORAS -->
-      <div class="form-row">
+      <!-- CONTENEDOR DE HORAS (SE OCULTA EN MODO FESTIVO) -->
+      <div id="hours-config-wrapper">
+        <!-- RANGO DE HORAS -->
         <div class="form-group">
-          <label id="lbl-main-time-start">Hora inicio</label>
-          <input type="time" id="time-start" value="09:15" />
+          <label onclick="toggleHourRange()" class="range-toggle">
+            <div class="checkbox" id="hour-range-checkbox"></div>
+            <span id="hour-range-label">Aplicar a rango de horas</span>
+          </label>
         </div>
-        <div class="form-group" id="time-end-group">
-          <label>Hora fin</label>
-          <input type="time" id="time-end" value="13:15" />
+
+        <!-- HORAS -->
+        <div class="form-row">
+          <div class="form-group">
+            <label id="lbl-main-time-start">Hora inicio</label>
+            <input type="time" id="time-start" value="09:15" />
+          </div>
+          <div class="form-group" id="time-end-group">
+            <label>Hora fin</label>
+            <input type="time" id="time-end" value="13:15" />
+          </div>
         </div>
       </div>
 
@@ -1500,9 +1552,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       <div class="form-group">
         <label>Filtrar Tipo de Elementos</label>
         <select id="export-filter">
-          <option value="all">Todo (Salas + Transporte + Logística)</option>
+          <option value="all">Todo (Ensayos + Actuaciones + Logística + Festivos)</option>
           <option value="salas">Solo Ensayos / Salas</option>
-          <option value="logistica">Solo Transporte y Montajes</option>
+          <option value="actuaciones">Solo Actuaciones</option>
+          <option value="logistica">Solo Transporte y Logística</option>
+          <option value="festivos">Solo Festivos</option>
         </select>
       </div>
 
@@ -1606,7 +1660,20 @@ function updateHistoryButtons() {
 }
 
 window.addEventListener('keydown', (e) => {
-  // Evitar que los atajos interfieran cuando se escribe en campos de formulario o selectores
+  // Detectar si el modal de añadir/editar está abierto
+  const isAddModalOpen = document.getElementById('add-modal')?.classList.contains('open');
+
+  // Si se pulsa Enter dentro del modal (excepto si estás escribiendo en el área de notas)
+  if (e.key === 'Enter' && isAddModalOpen) {
+    if (document.activeElement && document.activeElement.id === 'event-notes') {
+      return; // Permite saltos de línea en el campo de notas
+    }
+    e.preventDefault();
+    saveEvent();
+    return;
+  }
+
+  // Evitar que los demás atajos interfieran cuando se escribe en campos de formulario o selectores
   const isTyping = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
 
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
@@ -1645,15 +1712,15 @@ window.addEventListener('keydown', (e) => {
 let editingEventId = null;
 let viewingEventId = null;
 let viewingContextDate = null;
-let currentMode = 'sala'; // 'sala' o 'logistica'
-let selectedLogisticsType = 'transporte'; // 'transporte' | 'montaje' | 'desmontaje'
+let currentMode = 'sala'; // 'sala', 'actuacion' o 'logistica'
+let selectedLogisticsType = 'transporte';
 let isRange = false;
 let isHourRange = true;
 let selectedSala = 'SALA B';
+let selectedActuacion = 'CONCIERTO';
 
-/* AUTORIZACIÓN POR CULTURA */
-let currentAuth = 'no';
-let currentAuthDate = null;
+/* FESTIVO */
+let isFestivo = 'no';
 
 let yearFilterEnsayos = true;
 let yearFilterLogistica = true;
@@ -1719,12 +1786,16 @@ function formatTimestampFull(isoOrStr) {
 }
 
 function formatTimeRangeDisplay(ev) {
-  if (typeof ev === 'string') {
-    return formatTimeH(ev);
-  }
+  if (typeof ev === 'string') return formatTimeH(ev);
   if (!ev) return 'Sin horario especificado';
   
-  if (!ev.sala && ev.secondaryTime) {
+  // 1. Si es festivo, mostramos texto especial de todo el día
+  if (ev.festivo === 'si') {
+    return 'Libre todo el día';
+  }
+  
+  // 2. Si es logística con viaje secundario (Ida/Vuelta)
+  if (!ev.sala && !ev.actuacion && ev.secondaryTime) {
     const mainTime = formatTimeH(ev.timeStart || '08:30');
     const secTime = formatTimeH(ev.secondaryTime);
     if (ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
@@ -1733,9 +1804,10 @@ function formatTimeRangeDisplay(ev) {
     return `Ida: ${mainTime} • Vuelta: ${secTime}`;
   }
 
+  // 3. Horario estándar inicio - fin
   const start = ev.timeStart;
   const end = ev.timeEnd;
-  if (!start) return 'Sin horario especificado';
+  if (!start) return 'Todo el día';
   const sH = formatTimeH(start);
   if (end && end !== start) {
     return `${sH} - ${formatTimeH(end)}`;
@@ -1776,20 +1848,37 @@ function formatDisplayRange(start, end) {
 }
 
 function getEventStyle(ev) {
+  // Festivo -> Verde
+  if (ev.festivo === 'si') {
+    return { color: 'var(--festivo-color)', bg: 'var(--bg-festivo)' };
+  }
+  // Actuación -> Azul Marino
+  if (ev.actuacion) {
+    return { color: 'var(--actuacion-navy)', bg: 'var(--bg-actuacion-navy)' };
+  }
+  // Sala de Ensayo -> Azul
   if (ev.sala) {
     return { color: 'var(--ensayo-blue)', bg: 'var(--bg-ensayo-blue)' };
   }
-  // Transporte (naranja)
+  // Transporte -> Naranja
   if (ev.transport === 'si' || ev.tipoLogistica === 'transporte') {
     return { color: 'var(--transport-color)', bg: 'var(--bg-transport)' };
   }
-  // Montaje, Desmontaje, Mochila, Montar > Desmontar, Desmontar > Montar y Retranquear (Amarillo)
+  // Montajes, mochilas, etc. -> Amarillo
   return { color: 'var(--montaje-color)', bg: 'var(--bg-montaje)' };
 }
 
 function getEventTitle(ev) {
+  // Si está marcado como Festivo, muestra ÚNICA Y EXCLUSIVAMENTE '🎉 FESTIVO'
+  if (ev.festivo === 'si') {
+    return '🎉 FESTIVO';
+  }
+
   let titleParts = [];
-  if (ev.sala) {
+  
+  if (ev.actuacion) {
+    titleParts.push(`🎺 ${ev.actuacion}`);
+  } else if (ev.sala) {
     titleParts.push(`${ev.sala}`);
   } else {
     const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
@@ -1800,16 +1889,10 @@ function getEventTitle(ev) {
     else if (t === 'montar_desmontar') titleParts.push('🔄 MONTAR > DESMONTAR');
     else if (t === 'desmontar_montar') titleParts.push('🔄 DESMONTAR > MONTAR');
     else if (t === 'retranquear') titleParts.push('↔️ RETRANQUEAR');
-    else {
-      // Compatibilidad con eventos antiguos
-      if (ev.transport === 'si') titleParts.push('🚚 TRANSPORTE');
-      if (ev.montaje) titleParts.push('🛒 MONTAJE');
-      if (ev.desmontaje) titleParts.push('🛒 DESMONTAJE');
+    
+    if (ev.ubicacion) {
+      titleParts.push(`[${ev.ubicacion}]`);
     }
-  }
-  
-  if (ev.ubicacion && !ev.sala) {
-    titleParts.push(`[${ev.ubicacion}]`);
   }
   
   if (titleParts.length === 0) return 'EVENTO';
@@ -1884,6 +1967,9 @@ function getNextUpcomingEvent() {
   let candidateEvents = [];
 
   events.forEach(ev => {
+    // Si es Festivo, se ignora completamente para la cuenta atrás
+    if (ev.festivo === 'si') return;
+
     const s = ev.dateStart;
     const e = ev.dateEnd || ev.dateStart;
     let cur = s;
@@ -1897,10 +1983,8 @@ function getNextUpcomingEvent() {
   });
 
   if (candidateEvents.length === 0) return null;
-
   candidateEvents.sort((a, b) => a.startObj - b.startObj);
 
-  // Si estamos durante un evento activo, el próximo es el que empiece después
   const nextEv = candidateEvents.find(item => item.startObj > now);
   return nextEv || null;
 }
@@ -2208,12 +2292,15 @@ function renderMonthCell(d, otherMonth) {
    CÁLCULOS DE POSICIÓN PARA FRANJA HORARIA
 ═══════════════════════════════════════ */
 function calculateSpanPosition(ev) {
-  // Altura exacta de cada fila (52px de celda + 1px del gap de la cuadrícula)
   const rowTotalHeight = 53;
 
-  // Determinar la hora de inicio efectiva limpiando espacios y la letra 'h'
+  // Si es festivo, abarca las 24 horas completas
+  if (ev.festivo === 'si') {
+    return { topPx: 0, heightPx: (24 * rowTotalHeight) - 2 };
+  }
+
   let rawStart = ev.timeStart || '09:00';
-  if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+  if (!ev.sala && !ev.actuacion && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
     rawStart = ev.secondaryTime;
   }
   
@@ -2223,7 +2310,6 @@ function calculateSpanPosition(ev) {
   const sM = parseInt(startParts[1], 10) || 0;
   const startMinutes = (sH * 60) + sM;
 
-  // Determinar la hora de fin
   let endMinutes;
   if (ev.timeEnd) {
     const cleanEnd = String(ev.timeEnd).replace(/h$/i, '').trim();
@@ -2232,7 +2318,7 @@ function calculateSpanPosition(ev) {
     const eM = parseInt(endParts[1], 10) || 0;
     const calcEnd = (eH * 60) + eM;
     endMinutes = (calcEnd > startMinutes) ? calcEnd : (startMinutes + 60);
-  } else if (!ev.sala && ev.secondaryTime && (!ev.ubicacion || !ev.ubicacion.startsWith('Vuelta a'))) {
+  } else if (!ev.sala && !ev.actuacion && ev.secondaryTime && (!ev.ubicacion || !ev.ubicacion.startsWith('Vuelta a'))) {
     const cleanSec = String(ev.secondaryTime).replace(/h$/i, '').trim();
     const secParts = cleanSec.split(':');
     const secH = parseInt(secParts[0], 10) || 0;
@@ -2240,11 +2326,9 @@ function calculateSpanPosition(ev) {
     const calcSec = (secH * 60) + secM;
     endMinutes = (calcSec > startMinutes) ? calcSec : (startMinutes + 60);
   } else {
-    // Por defecto, sin rango de horas ocupa 1 hora completa (60 minutos)
     endMinutes = startMinutes + 60;
   }
 
-  // Posición vertical exacta y altura proporcional a 1 hora (o duración manual)
   const topPx = (startMinutes / 60) * rowTotalHeight;
   const durationMinutes = Math.max(30, endMinutes - startMinutes);
   const heightPx = Math.max(26, (durationMinutes / 60) * rowTotalHeight - 2);
@@ -2710,8 +2794,12 @@ function openViewModal(id, contextDate) {
   const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
   const horario = formatTimeRangeDisplay(ev);
 
-let typeBadge = '';
-  if (ev.sala) {
+  let typeBadge = '';
+  if (ev.festivo === 'si') {
+    typeBadge = `<span style="background:var(--bg-festivo);color:var(--festivo-color);padding:4px 10px;border-radius:6px;font-weight:700">🎉 FESTIVO</span>`;
+  } else if (ev.actuacion) {
+    typeBadge = `<span style="background:var(--bg-actuacion-navy);color:var(--actuacion-navy);padding:4px 10px;border-radius:6px;font-weight:700">🎺 ${ev.actuacion}</span>`;
+  } else if (ev.sala) {
     typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:4px 10px;border-radius:6px;font-weight:700">🎵 ${ev.sala}</span>`;
   } else {
     const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
@@ -2728,7 +2816,7 @@ let typeBadge = '';
     typeBadge = `<span style="background:${style.bg};color:${style.color};padding:4px 10px;border-radius:6px;font-weight:700">${lbl}</span>`;
   }
 
-  // Autorización badge & timestamp
+  // Autorización badge para Ensayos
   let authBadge = '';
   if (ev.autorizadoCultura === 'si') {
     const authDateFormatted = ev.autorizadoFecha ? formatTimestampFull(ev.autorizadoFecha) : '';
@@ -2737,13 +2825,14 @@ let typeBadge = '';
     authBadge = `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
   }
 
-  // Fecha y hora de creación/registro
+  // Festivo badge para Actuaciones
+  const festivoBadge = (ev.festivo === 'si') 
+    ? `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
+    : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
+
   const createdFormatted = ev.createdAt ? formatTimestampFull(ev.createdAt) : 'No disponible';
 
-  let html = '';
-
-  // 1. TIPO
-  html += `
+  let html = `
     <div class="view-detail-row">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 15 2 2 4-4"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
       <div class="view-detail-label">Tipo</div>
@@ -2751,8 +2840,7 @@ let typeBadge = '';
     </div>
   `;
 
-  // 2. UBICACIÓN
-  if (ev.ubicacion && !ev.sala) {
+  if (ev.ubicacion && !ev.sala && !ev.actuacion) {
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -2762,17 +2850,13 @@ let typeBadge = '';
     `;
   }
 
-  // 3. FECHA
   html += `
     <div class="view-detail-row">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg>
       <div class="view-detail-label">Fecha:</div>
       <div class="view-detail-value">${dates}</div>
     </div>
-  `;
 
-  // 4. HORARIO
-  html += `
     <div class="view-detail-row">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
       <div class="view-detail-label">Horario:</div>
@@ -2780,16 +2864,28 @@ let typeBadge = '';
     </div>
   `;
 
-  // 5. AUTORIZACIÓN
-  html += `
-    <div class="view-detail-row">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284"/><path d="M3 21h18"/></svg>
-      <div class="view-detail-label">Autorización</div>
-      <div class="view-detail-value">${authBadge}</div>
-    </div>
-  `;
+  // Mostrar Autorización solo si es Ensayo (sala)
+  if (ev.sala) {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284"/><path d="M3 21h18"/></svg>
+        <div class="view-detail-label">Autorización</div>
+        <div class="view-detail-value">${authBadge}</div>
+      </div>
+    `;
+  }
 
-  // 6. REGISTRO
+  // Mostrar Festivo solo si es Actuación o está marcado como Festivo
+  if (ev.actuacion || ev.festivo === 'si') {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+        <div class="view-detail-label">Festivo</div>
+        <div class="view-detail-value">${festivoBadge}</div>
+      </div>
+    `;
+  }
+
   html += `
     <div class="view-detail-row" style="background:#f8fafc;border:1px dashed var(--border);">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -2798,7 +2894,6 @@ let typeBadge = '';
     </div>
   `;
 
-  // NOTAS (Estilo Post-it amarillo pastel)
   if (ev.notes) {
     html += `
       <div class="view-detail-row full-width" style="background:#e3e3e3;border:1px solid #fde047;border-left:4px solid #eab308;">
@@ -3019,33 +3114,57 @@ function setFormattedUbicacion(val, secTimeVal) {
 }
 
 /* ═══════════════════════════════════════
-   CONTROL DE MODOS
+   /* VARIABLES DE ESTADO GLOBALES */
+let currentAuth = 'no';
+let currentAuthDate = null;
+
+/* ═══════════════════════════════════════
+   CONTROL DE MODOS (SALA, ACTUACIÓN, LOGÍSTICA)
 ═══════════════════════════════════════ */
 function setMode(mode) {
   currentMode = mode;
   const boxSala = document.getElementById('box-sala');
+  const boxActuacion = document.getElementById('box-actuacion');
   const boxLogistica = document.getElementById('box-logistica');
+  const boxAuthCultura = document.getElementById('box-auth-cultura');
+  const boxFestivo = document.getElementById('box-festivo');
+
   const tabSala = document.getElementById('btn-tab-sala');
+  const tabActuacion = document.getElementById('btn-tab-actuacion');
   const tabLogistica = document.getElementById('btn-tab-logistica');
   const lblMainTime = document.getElementById('lbl-main-time-start');
+  const hoursWrapper = document.getElementById('hours-config-wrapper');
 
-  if (mode === 'sala') {
-    boxSala.style.display = '';
-    boxLogistica.style.display = 'none';
-    tabSala.style.borderColor = 'var(--ensayo-blue)';
-    tabSala.style.color = 'var(--ensayo-blue)';
-    tabLogistica.style.borderColor = 'var(--border)';
-    tabLogistica.style.color = 'var(--text)';
+  // Mostrar u ocultar cajas según el modo
+  boxSala.style.display = (mode === 'sala') ? '' : 'none';
+  boxActuacion.style.display = (mode === 'actuacion') ? '' : 'none';
+  boxLogistica.style.display = (mode === 'logistica') ? '' : 'none';
+
+  // Mostrar Autorizado por cultura SOLO en Ensayo
+  if (boxAuthCultura) boxAuthCultura.style.display = (mode === 'sala') ? '' : 'none';
+
+  // Mostrar Festivo SOLO en Actuaciones
+  if (boxFestivo) boxFestivo.style.display = (mode === 'actuacion') ? '' : 'none';
+
+  // Visibilidad de horas: solo se ocultan si estamos en Actuaciones y es festivo Si
+  if (hoursWrapper) {
+    hoursWrapper.style.display = (mode === 'actuacion' && isFestivo === 'si') ? 'none' : '';
+  }
+
+  // Estilos de botones superiores
+  tabSala.style.borderColor = (mode === 'sala') ? 'var(--ensayo-blue)' : 'var(--border)';
+  tabSala.style.color = (mode === 'sala') ? 'var(--ensayo-blue)' : 'var(--text)';
+
+  tabActuacion.style.borderColor = (mode === 'actuacion') ? 'var(--actuacion-navy)' : 'var(--border)';
+  tabActuacion.style.color = (mode === 'actuacion') ? 'var(--actuacion-navy)' : 'var(--text)';
+
+  tabLogistica.style.borderColor = (mode === 'logistica') ? 'var(--transport-color)' : 'var(--border)';
+  tabLogistica.style.color = (mode === 'logistica') ? 'var(--transport-color)' : 'var(--text)';
+
+  if (mode === 'sala' || mode === 'actuacion') {
     lblMainTime.textContent = 'Hora inicio';
   } else {
-    boxSala.style.display = 'none';
-    boxLogistica.style.display = '';
-    tabLogistica.style.borderColor = 'var(--transport-color)';
-    tabLogistica.style.color = 'var(--transport-color)';
-    tabSala.style.borderColor = 'var(--border)';
-    tabSala.style.color = 'var(--text)';
     lblMainTime.textContent = 'Hora';
-
     if (!editingEventId) {
       selectLogisticsOption('transporte');
       document.getElementById('time-start').value = '08:30';
@@ -3053,7 +3172,6 @@ function setMode(mode) {
       updateHourRangeUI();
     }
   }
-  handleTrayectoTipoChange();
 }
 
 function selectLogisticsOption(type) {
@@ -3066,7 +3184,7 @@ function selectLogisticsOption(type) {
 }
 
 /* ═══════════════════════════════════════
-   CONTROL DE AUTORIZACIÓN POR CULTURA
+   CONTROL DE AUTORIZACIÓN POR CULTURA (ENSAYOS)
 ═══════════════════════════════════════ */
 function setAuthStatus(status, preservedTimestamp = null) {
   currentAuth = status;
@@ -3081,7 +3199,6 @@ function setAuthStatus(status, preservedTimestamp = null) {
     btnNo.classList.remove('active-no');
     
     const targetDate = preservedTimestamp ? new Date(preservedTimestamp) : new Date();
-    
     const yyyy = targetDate.getFullYear();
     const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
     const dd = String(targetDate.getDate()).padStart(2, '0');
@@ -3098,6 +3215,29 @@ function setAuthStatus(status, preservedTimestamp = null) {
     dtInput.value = '';
     currentAuthDate = null;
     displayLbl.innerHTML = `<span style="color:#dc2626;font-weight:600;">Pendiente de autorizar</span>`;
+  }
+}
+
+/* ═══════════════════════════════════════
+   CONTROL DE FESTIVO (ACTUACIONES)
+═══════════════════════════════════════ */
+function setFestivoStatus(status) {
+  isFestivo = status;
+  const btnNo = document.getElementById('btn-festivo-no');
+  const btnSi = document.getElementById('btn-festivo-si');
+  const displayLbl = document.getElementById('festivo-status-display');
+  const hoursWrapper = document.getElementById('hours-config-wrapper');
+
+  if (status === 'si') {
+    btnSi.classList.add('active-si');
+    btnNo.classList.remove('active-no');
+    displayLbl.innerHTML = `<span style="color:#16a34a;font-weight:700;">Día Festivo (Libre todo el día)</span>`;
+    if (hoursWrapper && currentMode === 'actuacion') hoursWrapper.style.display = 'none';
+  } else {
+    btnNo.classList.add('active-no');
+    btnSi.classList.remove('active-si');
+    displayLbl.innerHTML = `<span style="color:var(--text-dim);">No festivo</span>`;
+    if (hoursWrapper) hoursWrapper.style.display = '';
   }
 }
 
@@ -3135,23 +3275,24 @@ function openEditModal(id) {
   document.getElementById('modal-title').textContent = 'Editar evento';
   document.getElementById('btn-delete-event').style.display = '';
 
-  if (ev.sala) {
+  if (ev.actuacion) {
+    setMode('actuacion');
+    setActuacion(ev.actuacion);
+    setFestivoStatus(ev.festivo || 'no');
+  } else if (ev.sala) {
     setMode('sala');
     setSala(ev.sala);
-    document.getElementById('sala-input').value = ev.sala;
-    setFormattedUbicacion('', null);
-    } else {
+    setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
+  } else {
     setMode('logistica');
     const t = ev.tipoLogistica || (ev.desmontaje ? 'desmontaje' : (ev.montaje ? 'montaje' : 'transporte'));
     selectLogisticsOption(t);
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
   }
 
-  setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
-
   document.getElementById('date-start').value = ev.dateStart;
   document.getElementById('date-end').value = ev.dateEnd || ev.dateStart;
-  document.getElementById('time-start').value = ev.timeStart || (ev.sala ? '09:15' : '08:30');
+  document.getElementById('time-start').value = ev.timeStart || '09:15';
   document.getElementById('time-end').value = ev.timeEnd || '';
   document.getElementById('event-notes').value = ev.notes || '';
 
@@ -3181,13 +3322,18 @@ function resetForm() {
   document.getElementById('range-checkbox').classList.remove('checked');
   document.getElementById('date-end-group').style.display = 'none';
   document.getElementById('date-label-start').textContent = 'Fecha';
+
   setSala('SALA B');
   document.getElementById('sala-input').value = 'SALA B';
-  
+
+  setActuacion('CONCIERTO');
+  document.getElementById('actuacion-input').value = 'CONCIERTO';
+
   selectLogisticsOption('transporte');
   setFormattedUbicacion('', null);
 
   setAuthStatus('no');
+  setFestivoStatus('no');
 
   document.getElementById('time-start').value = '09:15';
   document.getElementById('time-end').value = '13:15';
@@ -3206,6 +3352,9 @@ function updateHourRangeUI() {
   endGrp.style.display = isHourRange ? '' : 'none';
 }
 
+/* ═══════════════════════════════════════
+   PRESETS DE SALAS Y ACTUACIONES
+═══════════════════════════════════════ */
 document.getElementById('sala-presets').addEventListener('click', (e) => {
   const btn = e.target.closest('.sala-preset-btn');
   if (!btn) return;
@@ -3213,7 +3362,7 @@ document.getElementById('sala-presets').addEventListener('click', (e) => {
   if (sala === '_CUSTOM_') {
     document.getElementById('sala-input').value = '';
     document.getElementById('sala-input').focus();
-    document.querySelectorAll('.sala-preset-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('#sala-presets .sala-preset-btn').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
     selectedSala = '';
   } else {
@@ -3223,7 +3372,7 @@ document.getElementById('sala-presets').addEventListener('click', (e) => {
 
 document.getElementById('sala-input').addEventListener('input', (e) => {
   selectedSala = e.target.value.trim().toUpperCase();
-  document.querySelectorAll('.sala-preset-btn').forEach(b => {
+  document.querySelectorAll('#sala-presets .sala-preset-btn').forEach(b => {
     b.classList.toggle('selected', b.dataset.sala === selectedSala);
   });
 });
@@ -3231,8 +3380,38 @@ document.getElementById('sala-input').addEventListener('input', (e) => {
 function setSala(sala) {
   selectedSala = sala;
   document.getElementById('sala-input').value = sala;
-  document.querySelectorAll('.sala-preset-btn').forEach(b => {
+  document.querySelectorAll('#sala-presets .sala-preset-btn').forEach(b => {
     b.classList.toggle('selected', b.dataset.sala === sala);
+  });
+}
+
+document.getElementById('actuacion-presets').addEventListener('click', (e) => {
+  const btn = e.target.closest('.sala-preset-btn');
+  if (!btn) return;
+  const act = btn.dataset.actuacion;
+  if (act === '_CUSTOM_') {
+    document.getElementById('actuacion-input').value = '';
+    document.getElementById('actuacion-input').focus();
+    document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedActuacion = '';
+  } else {
+    setActuacion(act);
+  }
+});
+
+document.getElementById('actuacion-input').addEventListener('input', (e) => {
+  selectedActuacion = e.target.value.trim().toUpperCase();
+  document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.actuacion === selectedActuacion);
+  });
+});
+
+function setActuacion(act) {
+  selectedActuacion = act;
+  document.getElementById('actuacion-input').value = act;
+  document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.actuacion === act);
   });
 }
 
@@ -3246,26 +3425,38 @@ function toggleRange() {
   startLbl.textContent = isRange ? 'Fecha inicio' : 'Fecha';
 }
 
+/* ═══════════════════════════════════════
+   GUARDAR EVENTO
+═══════════════════════════════════════ */
 function saveEvent() {
   const isSalaMode = currentMode === 'sala';
-  const sala = isSalaMode ? document.getElementById('sala-input').value.trim().toUpperCase() : null;
-  const tipoLogistica = !isSalaMode ? selectedLogisticsType : null;
-  const transport = !isSalaMode && selectedLogisticsType === 'transporte' ? 'si' : 'no';
-  const montaje = !isSalaMode && (selectedLogisticsType === 'montaje' || selectedLogisticsType === 'montar_desmontar');
-  const desmontaje = !isSalaMode && (selectedLogisticsType === 'desmontaje' || selectedLogisticsType === 'desmontar_montar');
-  const ubicacion = isSalaMode ? '' : getFormattedUbicacion();
+  const isActMode = currentMode === 'actuacion';
+  const isLogMode = currentMode === 'logistica';
 
-  const hasSec = !isSalaMode && document.getElementById('has-secondary-checkbox').classList.contains('checked');
+  const sala = isSalaMode ? document.getElementById('sala-input').value.trim().toUpperCase() : '';
+  const actuacion = isActMode ? document.getElementById('actuacion-input').value.trim().toUpperCase() : '';
+
+  const tipoLogistica = isLogMode ? selectedLogisticsType : null;
+  const transport = isLogMode && selectedLogisticsType === 'transporte' ? 'si' : 'no';
+  const montaje = isLogMode && (selectedLogisticsType === 'montaje' || selectedLogisticsType === 'montar_desmontar');
+  const desmontaje = isLogMode && (selectedLogisticsType === 'desmontaje' || selectedLogisticsType === 'desmontar_montar');
+  const ubicacion = isLogMode ? getFormattedUbicacion() : '';
+
+  const hasSec = isLogMode && document.getElementById('has-secondary-checkbox').classList.contains('checked');
   const secondaryTime = hasSec ? document.getElementById('secondary-time').value : null;
 
   const dateStart = document.getElementById('date-start').value;
   const dateEnd = isRange ? document.getElementById('date-end').value : dateStart;
-  const timeStart = document.getElementById('time-start').value;
-  const timeEnd = isHourRange ? document.getElementById('time-end').value : null;
+  
+  // Si estamos en Actuaciones y es Festivo 'si', las horas son nulas
+  const isCurrentlyFestivo = isActMode && (isFestivo === 'si');
+  const timeStart = isCurrentlyFestivo ? null : document.getElementById('time-start').value;
+  const timeEnd = (isCurrentlyFestivo || !isHourRange) ? null : document.getElementById('time-end').value;
   const notes = document.getElementById('event-notes').value.trim();
 
-  const customAuthVal = document.getElementById('auth-datetime-input').value;
-  const finalAuthDate = (currentAuth === 'si' && customAuthVal) 
+  // Guardar fecha de autorización en Ensayo
+  const customAuthVal = document.getElementById('auth-datetime-input')?.value;
+  const finalAuthDate = (isSalaMode && currentAuth === 'si' && customAuthVal) 
     ? new Date(customAuthVal).toISOString() 
     : null;
 
@@ -3273,7 +3464,11 @@ function saveEvent() {
     showToast('Indica el nombre de la sala', 'error');
     return;
   }
-  if (!isSalaMode && !tipoLogistica && !notes && !ubicacion) {
+  if (isActMode && !actuacion && !isCurrentlyFestivo) {
+    showToast('Indica el nombre o tipo de actuación', 'error');
+    return;
+  }
+  if (isLogMode && !tipoLogistica && !notes && !ubicacion) {
     showToast('Selecciona una opción de logística o una ubicación', 'error');
     return;
   }
@@ -3282,16 +3477,18 @@ function saveEvent() {
 
   pushState();
 
-    const payload = {
-    sala: isSalaMode ? (sala || '') : '',
-    tipoLogistica: isSalaMode ? null : tipoLogistica,
-    transport: isSalaMode ? 'no' : transport,
-    montaje: isSalaMode ? false : montaje,
-    desmontaje: isSalaMode ? false : desmontaje,
-    ubicacion: isSalaMode ? '' : ubicacion,
-    secondaryTime: isSalaMode ? null : secondaryTime,
-    autorizadoCultura: currentAuth,
-    autorizadoFecha: finalAuthDate,
+  const payload = {
+    sala: isSalaMode ? sala : '',
+    actuacion: isActMode ? actuacion : '',
+    tipoLogistica,
+    transport,
+    montaje,
+    desmontaje,
+    ubicacion,
+    secondaryTime,
+    autorizadoCultura: isSalaMode ? currentAuth : 'no',
+    autorizadoFecha: isSalaMode ? finalAuthDate : null,
+    festivo: isActMode ? isFestivo : 'no',
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
@@ -3354,12 +3551,10 @@ function handleExportScopeChange() {
 }
 
 function filterEventsByType(evList, filterType) {
-  if (filterType === 'salas') {
-    return evList.filter(e => !!e.sala);
-  }
-  if (filterType === 'logistica') {
-    return evList.filter(e => !e.sala && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
-  }
+  if (filterType === 'salas') return evList.filter(e => !!e.sala);
+  if (filterType === 'actuaciones') return evList.filter(e => !!e.actuacion);
+  if (filterType === 'logistica') return evList.filter(e => !e.sala && !e.actuacion && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
+  if (filterType === 'festivos') return evList.filter(e => e.festivo === 'si');
   return evList;
 }
 
@@ -3379,11 +3574,10 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
   listEvents.forEach(ev => {
     const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
     const horario = formatTimeRangeDisplay(ev);
-    const salaCol = ev.sala || '—';
+    const salaCol = ev.sala || (ev.actuacion ? `🎺 ${ev.actuacion}` : '—');
     
-    // Tipo de logística / Servicio en el PDF
     let logCol = '—';
-    if (!ev.sala) {
+    if (!ev.sala && !ev.actuacion) {
       const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
       if (t === 'transporte') logCol = '🚚 Transporte';
       else if (t === 'mochila') logCol = '🎒 Mochila';
@@ -3395,19 +3589,19 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
     }
 
     const ubiCol = ev.ubicacion || '—';
-    const authCol = ev.autorizadoCultura === 'si' ? 'Sí' : 'No';
+    const festivoCol = ev.festivo === 'si' ? 'Sí' : 'No';
     const notesCol = ev.notes || '';
 
-    tableData.push([dates, salaCol, logCol, ubiCol, horario, authCol, notesCol]);
+    tableData.push([dates, salaCol, logCol, ubiCol, horario, festivoCol, notesCol]);
   });
 
   if (tableData.length === 0) {
-    tableData.push(['—', '—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
+    tableData.push(['—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
   }
 
-    doc.autoTable({
+  doc.autoTable({
     startY: 20,
-    head: [['Fecha', 'Sala', 'Servicio / Logística', 'Ubicación / Trayecto', 'Horario', 'Autoriz.', 'Notas']],
+    head: [['Fecha', 'Sala / Actuación', 'Servicio / Logística', 'Ubicación / Trayecto', 'Horario', 'Festivo', 'Notas']],
     body: tableData,
     theme: 'grid',
     styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
