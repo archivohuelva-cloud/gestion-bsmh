@@ -1889,10 +1889,6 @@ function getEventTitle(ev) {
     else if (t === 'montar_desmontar') titleParts.push('🔄 MONTAR > DESMONTAR');
     else if (t === 'desmontar_montar') titleParts.push('🔄 DESMONTAR > MONTAR');
     else if (t === 'retranquear') titleParts.push('↔️ RETRANQUEAR');
-    
-    if (ev.ubicacion) {
-      titleParts.push(`[${ev.ubicacion}]`);
-    }
   }
   
   if (titleParts.length === 0) return 'EVENTO';
@@ -2263,7 +2259,13 @@ function renderMonthCell(d, otherMonth) {
   dayEvents.forEach(ev => {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
-    const timeLabel = ev.timeStart ? ` ${formatTimeH(ev.timeStart)}` : '';
+
+    // En mes: mostrar hora limpia solo si no es festivo
+    let timeLabel = '';
+    if (ev.festivo !== 'si' && ev.timeStart) {
+      timeLabel = ` ${formatTimeH(ev.timeStart)}`;
+    }
+
     const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas"></span>` : '';
 
     evHTML += `<div class="event-chip" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
@@ -2388,10 +2390,24 @@ function renderWeek() {
       const timeDisplay = formatTimeRangeDisplay(ev);
       const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="position:absolute;top:5px;right:22px;"></span>` : '';
 
+      // Ubicación en línea separada para logística
+      const ubiHtml = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si') 
+        ? `<div style="font-size:10px;font-weight:700;opacity:0.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${ev.ubicacion}</div>` 
+        : '';
+
       html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
+        <!-- 1. Tipo de transporte / evento -->
         <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:24px;">${title}</div>
+        
+        <!-- 2. Lugar / Ubicación debajo -->
+        ${ubiHtml}
+        
+        <!-- 3. Horario debajo del lugar -->
         <div style="font-size:10px;font-weight:600;opacity:0.9;">${timeDisplay}</div>
-        ${ev.notes ? `<div style="font-size:9.5px;opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:auto;">${ev.notes}</div>` : ''}
+        
+        <!-- 4. Notas debajo -->
+        ${ev.notes ? `<div style="font-size:9.5px;opacity:0.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;">${ev.notes}</div>` : ''}
+        
         ${noteDot}
         <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
       </div>`;
@@ -2471,9 +2487,16 @@ function renderDay() {
     const timeDisplay = formatTimeRangeDisplay(ev);
     const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:4px;"></span>` : '';
 
+    // Si tiene ubicación de logística, mostrarla con un badge o icono al lado del título
+    const ubiBadge = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si')
+      ? `<span style="font-size:12px;font-weight:700;opacity:0.9;margin-left:8px;">(${ev.ubicacion})</span>`
+      : '';
+
     html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color}; padding:8px 12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:18px;">
-        <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;">${title} ${noteDot}</strong>
+        <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;">
+          ${title} ${ubiBadge} ${noteDot}
+        </strong>
         <span style="font-size:12px;font-weight:700;">${timeDisplay}</span>
       </div>
       ${ev.notes ? `<div style="font-size:12px;opacity:0.9;margin-top:4px;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${ev.notes}</div>` : ''}
@@ -2547,9 +2570,14 @@ function renderAgenda() {
         const timeDisplay = formatTimeRangeDisplay(ev);
         const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:8px;margin-right:10px;"></span>` : '';
 
+        // Si tiene ubicación de logística, mostrarla junto al título en la agenda
+        const ubiHtml = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si')
+          ? `<span style="font-size:14px;font-weight:700;opacity:0.9;margin-left:8px;">(${ev.ubicacion})</span>`
+          : '';
+
         html += `<div class="agenda-event" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
           <span class="agenda-time" style="color:${style.color};font-weight:600">${timeDisplay}</span>
-          <span class="agenda-title" style="color:${style.color}">${getEventTitle(ev)}</span>
+          <span class="agenda-title" style="color:${style.color}">${getEventTitle(ev)} ${ubiHtml}</span>
           ${ev.notes?`<span class="agenda-notes" style="color:${style.color};">${ev.notes}</span>`:''}
           ${noteDot}
           <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
