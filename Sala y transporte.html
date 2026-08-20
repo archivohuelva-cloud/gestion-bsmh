@@ -1689,7 +1689,7 @@ function getEventStyle(ev) {
 
 function getEventTitle(ev) {
   let titleParts = [];
-  if (ev.sala) titleParts.push(`🏛️ ${ev.sala}`);
+  if (ev.sala) titleParts.push(`${ev.sala}`);
   if (ev.transport === 'si') titleParts.push('🚚 TRANSPORTE');
   if (ev.montaje) titleParts.push('🛒 MONTAJE');
   if (ev.desmontaje) titleParts.push('🛒 DESMONTAJE');
@@ -2474,12 +2474,12 @@ function openViewModal(id, contextDate) {
 
   let typeBadge = '';
   if (ev.sala) {
-    typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:4px 10px;border-radius:6px;font-weight:700">🎵 Ensayo: ${ev.sala}</span>`;
+    typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:4px 10px;border-radius:6px;font-weight:700">🎵 ${ev.sala}</span>`;
   } else {
     let parts = [];
-    if (ev.transport === 'si') parts.push('🚚 Transporte');
-    if (ev.montaje) parts.push('🛒 Montaje');
-    if (ev.desmontaje) parts.push('🛒 Desmontaje');
+    if (ev.transport === 'si') parts.push('🚚 TRANSPORTE');
+    if (ev.montaje) parts.push('🛒 MONTAJE');
+    if (ev.desmontaje) parts.push('🛒 DESMONTAJE');
     typeBadge = `<span style="background:var(--bg-transport);color:var(--transport-color);padding:4px 10px;border-radius:6px;font-weight:700">${parts.join(' • ') || 'Logística'}</span>`;
   }
 
