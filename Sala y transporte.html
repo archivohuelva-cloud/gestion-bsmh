@@ -463,16 +463,37 @@ body {
   overflow: hidden;
 }
 
+/* Contenedor horizontal que alinea el número a la izquierda y la cuenta atrás a la derecha */
+.month-day-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
 .day-num {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 5px;
   display: inline-flex;
   min-width: 24px;
   height: 24px;
   align-items: center;
   justify-content: center;
+}
+
+/* La etiqueta roja discreta de cuenta atrás que irá en el espacio verde */
+.month-countdown-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(255, 59, 48, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  white-space: nowrap;
+  letter-spacing: -0.2px;
 }
 
 .day-events {
@@ -634,6 +655,21 @@ body {
   background: var(--accent);
   border-radius: 50%;
   box-shadow: 0 0 4px rgba(255,59,48,0.5);
+}
+
+/* Etiqueta flotante que va pegada arriba a la derecha de la línea roja en Semana/Día */
+.timeline-countdown-label {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.18);
+  white-space: nowrap;
 }
 
 /* ═══════════════════════════════════════
@@ -1810,6 +1846,94 @@ function eventsOnDate(dateS) {
   return filtered.sort((a, b) => getMinutes(a) - getMinutes(b));
 }
 
+/* ═══════════════════════════════════════
+   LÓGICA DE CUENTA ATRÁS DEL PRÓXIMO EVENTO
+═══════════════════════════════════════ */
+function getEventStartAndEndDates(ev, targetDateStr) {
+  const dStr = targetDateStr || ev.dateStart;
+  
+  let rawStart = ev.timeStart || '09:00';
+  if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+    rawStart = ev.secondaryTime;
+  }
+  const cleanStart = String(rawStart).replace(/h$/i, '').trim();
+  const [sH, sM] = cleanStart.split(':').map(Number);
+  
+  const [y, m, d] = dStr.split('-').map(Number);
+  const startObj = new Date(y, m - 1, d, sH || 0, sM || 0, 0, 0);
+
+  let endObj;
+  if (ev.timeEnd) {
+    const cleanEnd = String(ev.timeEnd).replace(/h$/i, '').trim();
+    const [eH, eM] = cleanEnd.split(':').map(Number);
+    endObj = new Date(y, m - 1, d, eH || 0, eM || 0, 0, 0);
+  } else if (!ev.sala && ev.secondaryTime && (!ev.ubicacion || !ev.ubicacion.startsWith('Vuelta a'))) {
+    const cleanSec = String(ev.secondaryTime).replace(/h$/i, '').trim();
+    const [secH, secM] = cleanSec.split(':').map(Number);
+    endObj = new Date(y, m - 1, d, secH || 0, secM || 0, 0, 0);
+  } else {
+    // Si no tiene fin, dura 1 hora por defecto
+    endObj = new Date(startObj.getTime() + 60 * 60 * 1000);
+  }
+
+  return { startObj, endObj };
+}
+
+function getNextUpcomingEvent() {
+  const now = new Date();
+  let candidateEvents = [];
+
+  events.forEach(ev => {
+    const s = ev.dateStart;
+    const e = ev.dateEnd || ev.dateStart;
+    let cur = s;
+    while (cur <= e) {
+      const { startObj, endObj } = getEventStartAndEndDates(ev, cur);
+      if (endObj > now) {
+        candidateEvents.push({ ev, startObj, endObj });
+      }
+      cur = addDays(cur, 1);
+    }
+  });
+
+  if (candidateEvents.length === 0) return null;
+
+  candidateEvents.sort((a, b) => a.startObj - b.startObj);
+
+  // Si estamos durante un evento activo, el próximo es el que empiece después
+  const nextEv = candidateEvents.find(item => item.startObj > now);
+  return nextEv || null;
+}
+
+function formatTimeRemaining(ms) {
+  if (ms <= 0) return '';
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return `Faltan ${days}d ${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (hours > 0) {
+    return `Faltan ${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (minutes > 0) {
+    return `Faltan ${minutes}m ${seconds}s`;
+  }
+  return `Faltan ${seconds}s`;
+}
+
+function getCountdownText() {
+  const next = getNextUpcomingEvent();
+  if (!next) return '';
+  const now = new Date();
+  const diff = next.startObj - now;
+  if (diff <= 0) return '';
+  return formatTimeRemaining(diff);
+}
+
 function saveEvents(recordHistory = true) {
   localStorage.setItem('banda_events', JSON.stringify(events));
 }
@@ -2065,8 +2189,17 @@ function renderMonthCell(d, otherMonth) {
     </div>`;
   });
 
+  let countdownHTML = '';
+  if (isToday(d)) {
+    const cdText = getCountdownText();
+    countdownHTML = `<span class="month-countdown-badge" id="month-live-countdown" style="${cdText ? '' : 'display:none;'}">${cdText}</span>`;
+  }
+
   return `<div class="month-day ${todayClass} ${otherClass} ${weekendClass}" data-date="${ds}">
-    <div class="day-num">${d.getDate()}</div>
+    <div class="month-day-top-bar">
+      <div class="day-num">${d.getDate()}</div>
+      ${countdownHTML}
+    </div>
     <div class="day-events">${evHTML}</div>
   </div>`;
 }
@@ -2180,11 +2313,13 @@ function renderWeek() {
       </div>`;
     });
 
-    if (isToday(d)) {
+      if (isToday(d)) {
       const now = new Date();
       const curMinutes = (now.getHours() * 60) + now.getMinutes();
       const lineTop = (curMinutes / 60) * 53;
-      html += `<div class="red-time-line-horizontal" style="top:${lineTop}px"></div>`;
+      const cdText = getCountdownText();
+      const cdLabel = cdText ? `<span class="timeline-countdown-label">${cdText}</span>` : '';
+      html += `<div class="red-time-line-horizontal" id="timeline-indicator" style="top:${lineTop}px">${cdLabel}</div>`;
     }
 
     html += `</div>`;
@@ -2266,7 +2401,9 @@ if (isToday(currentDate)) {
     const now = new Date();
     const curMinutes = (now.getHours() * 60) + now.getMinutes();
     const lineTop = (curMinutes / 60) * 53;
-    html += `<div class="red-time-line-horizontal" style="top:${lineTop}px"></div>`;
+    const cdText = getCountdownText();
+    const cdLabel = cdText ? `<span class="timeline-countdown-label">${cdText}</span>` : '';
+    html += `<div class="red-time-line-horizontal" id="timeline-indicator" style="top:${lineTop}px">${cdLabel}</div>`;
   }
 
   html += `</div></div></div>`;
@@ -3479,6 +3616,46 @@ window.addEventListener('focus', () => {
     }
   }, 1000);
 });
+
+/* ═══════════════════════════════════════
+   TEMPORIZADOR EN VIVO (SEGUNDO A SEGUNDO)
+   Actualiza la cuenta atrás y la línea roja
+═══════════════════════════════════════ */
+setInterval(() => {
+  const cdText = getCountdownText();
+
+  // 1. Actualizar texto en el badge de la vista de Mes
+  const monthBadge = document.getElementById('month-live-countdown');
+  if (monthBadge) {
+    if (cdText) {
+      monthBadge.textContent = cdText;
+      monthBadge.style.display = '';
+    } else {
+      monthBadge.style.display = 'none';
+    }
+  }
+
+  // 2. Actualizar posición de la línea roja y el label en vistas Semana / Día
+  const timelineEl = document.getElementById('timeline-indicator');
+  if (timelineEl) {
+    const now = new Date();
+    const curMinutes = (now.getHours() * 60) + now.getMinutes();
+    const lineTop = (curMinutes / 60) * 53;
+    timelineEl.style.top = `${lineTop}px`;
+
+    let labelEl = timelineEl.querySelector('.timeline-countdown-label');
+    if (cdText) {
+      if (!labelEl) {
+        labelEl = document.createElement('span');
+        labelEl.className = 'timeline-countdown-label';
+        timelineEl.appendChild(labelEl);
+      }
+      labelEl.textContent = cdText;
+    } else if (labelEl) {
+      labelEl.remove();
+    }
+  }
+}, 1000);
 
 /* ═══════════════════════════════════════
    TOAST
