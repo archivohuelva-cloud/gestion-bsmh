@@ -34,9 +34,13 @@
   --actuacion-navy: #000000;
   --bg-actuacion-navy: #e5e5ea;
 
-  /* Festivos (Verde) */
+/* Festivos (Verde) */
   --festivo-color: #166534;
   --bg-festivo: #dcfce7;
+
+  /* Vacaciones (Morado) */
+  --vacaciones-color: #6b21a8;
+  --bg-vacaciones: #f3e8ff;
   
   /* Colores formulario selección - Salas */
   --sala-b: #0062cc;
@@ -1464,6 +1468,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
+      <!-- SECCIÓN: VACACIONES (SOLO PARA ACTUACIONES) -->
+      <div class="section-box" id="box-vacaciones" style="display:none;background:#fdfdfe;border-color:var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <label style="font-weight:700;color:var(--text);">🏖️ ¿Vacaciones?</label>
+            <div id="vacaciones-status-display" style="font-size:12px;color:var(--text-dim);margin-top:2px;">No vacaciones</div>
+          </div>
+          <div class="auth-toggle-group">
+            <button type="button" class="btn-auth-option active-no" id="btn-vacaciones-no" onclick="setVacacionesStatus('no')">No</button>
+            <button type="button" class="btn-auth-option" id="btn-vacaciones-si" onclick="setVacacionesStatus('si')">Sí</button>
+          </div>
+        </div>
+      </div>
+
       <!-- RANGO DE DÍAS -->
       <div class="form-group">
         <label onclick="toggleRange()" class="range-toggle">
@@ -1552,14 +1570,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-      <div class="form-group">
+<div class="form-group">
         <label>Filtrar Tipo de Elementos</label>
         <select id="export-filter">
-          <option value="all">Todo (Ensayos + Actuaciones + Logística + Festivos)</option>
+          <option value="all">Todo (Ensayos + Actuaciones + Logística + Festivos + Vacaciones)</option>
           <option value="salas">Solo Ensayos / Salas</option>
           <option value="actuaciones">Solo Actuaciones</option>
           <option value="logistica">Solo Transporte y Logística</option>
           <option value="festivos">Solo Festivos</option>
+          <option value="vacaciones">Solo Vacaciones</option>
         </select>
       </div>
 
@@ -1722,8 +1741,9 @@ let isHourRange = true;
 let selectedSala = 'SALA B';
 let selectedActuacion = 'CONCIERTO';
 
-/* FESTIVO */
+/* FESTIVO Y VACACIONES */
 let isFestivo = 'no';
+let isVacaciones = 'no';
 
 let yearFilterEnsayos = true;
 let yearFilterActuaciones = true;
@@ -1793,8 +1813,8 @@ function formatTimeRangeDisplay(ev) {
   if (typeof ev === 'string') return formatTimeH(ev);
   if (!ev) return 'Sin horario especificado';
   
-  // 1. Si es festivo, mostramos texto especial de todo el día
-  if (ev.festivo === 'si') {
+  // 1. Si es festivo o vacaciones, mostramos texto especial de todo el día
+  if (ev.festivo === 'si' || ev.vacaciones === 'si') {
     return 'Libre todo el día';
   }
   
@@ -1852,6 +1872,10 @@ function formatDisplayRange(start, end) {
 }
 
 function getEventStyle(ev) {
+  // Vacaciones -> Morado
+  if (ev.vacaciones === 'si') {
+    return { color: 'var(--vacaciones-color)', bg: 'var(--bg-vacaciones)' };
+  }
   // Festivo -> Verde
   if (ev.festivo === 'si') {
     return { color: 'var(--festivo-color)', bg: 'var(--bg-festivo)' };
@@ -1873,6 +1897,10 @@ function getEventStyle(ev) {
 }
 
 function getEventTitle(ev) {
+  // Si está marcado como Vacaciones, muestra ÚNICA Y EXCLUSIVAMENTE '🏖️ VACACIONES'
+  if (ev.vacaciones === 'si') {
+    return '🏖️ VACACIONES';
+  }
   // Si está marcado como Festivo, muestra ÚNICA Y EXCLUSIVAMENTE '🎉 FESTIVO'
   if (ev.festivo === 'si') {
     return '🎉 FESTIVO';
@@ -1966,9 +1994,9 @@ function getNextUpcomingEvent() {
   const now = new Date();
   let candidateEvents = [];
 
-  events.forEach(ev => {
-    // Si es Festivo, se ignora completamente para la cuenta atrás
-    if (ev.festivo === 'si') return;
+events.forEach(ev => {
+    // Si es Festivo o Vacaciones, se ignora completamente para la cuenta atrás
+    if (ev.festivo === 'si' || ev.vacaciones === 'si') return;
 
     const s = ev.dateStart;
     const e = ev.dateEnd || ev.dateStart;
@@ -2264,9 +2292,9 @@ function renderMonthCell(d, otherMonth) {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
 
-    // En mes: mostrar hora limpia solo si no es festivo
+// En mes: mostrar hora limpia solo si no es festivo ni vacaciones
     let timeLabel = '';
-    if (ev.festivo !== 'si' && ev.timeStart) {
+    if (ev.festivo !== 'si' && ev.vacaciones !== 'si' && ev.timeStart) {
       timeLabel = ` ${formatTimeH(ev.timeStart)}`;
     }
 
@@ -2300,8 +2328,8 @@ function renderMonthCell(d, otherMonth) {
 function calculateSpanPosition(ev) {
   const rowTotalHeight = 53;
 
-  // Si es festivo, abarca las 24 horas completas
-  if (ev.festivo === 'si') {
+  // Si es festivo o vacaciones, abarca las 24 horas completas
+  if (ev.festivo === 'si' || ev.vacaciones === 'si') {
     return { topPx: 0, heightPx: (24 * rowTotalHeight) - 2 };
   }
 
@@ -2835,8 +2863,10 @@ function openViewModal(id, contextDate) {
   const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
   const horario = formatTimeRangeDisplay(ev);
 
-  let typeBadge = '';
-  if (ev.festivo === 'si') {
+let typeBadge = '';
+  if (ev.vacaciones === 'si') {
+    typeBadge = `<span style="background:var(--bg-vacaciones);color:var(--vacaciones-color);padding:4px 10px;border-radius:6px;font-weight:700">🏖️ VACACIONES</span>`;
+  } else if (ev.festivo === 'si') {
     typeBadge = `<span style="background:var(--bg-festivo);color:var(--festivo-color);padding:4px 10px;border-radius:6px;font-weight:700">🎉 FESTIVO</span>`;
   } else if (ev.actuacion) {
     typeBadge = `<span style="background:var(--bg-actuacion-navy);color:var(--actuacion-navy);padding:4px 10px;border-radius:6px;font-weight:700">🎺 ${ev.actuacion}</span>`;
@@ -2866,9 +2896,14 @@ function openViewModal(id, contextDate) {
     authBadge = `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
   }
 
-  // Festivo badge para Actuaciones
+// Festivo badge para Actuaciones
   const festivoBadge = (ev.festivo === 'si') 
     ? `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
+    : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
+
+  // Vacaciones badge para Actuaciones
+  const vacacionesBadge = (ev.vacaciones === 'si')
+    ? `<span style="background:#f3e8ff;color:#6b21a8;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
     : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
 
   const createdFormatted = ev.createdAt ? formatTimestampFull(ev.createdAt) : 'No disponible';
@@ -2916,13 +2951,24 @@ function openViewModal(id, contextDate) {
     `;
   }
 
-  // Mostrar Festivo solo si es Actuación o está marcado como Festivo
+// Mostrar Festivo solo si es Actuación o está marcado como Festivo
   if (ev.actuacion || ev.festivo === 'si') {
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
         <div class="view-detail-label">Festivo</div>
         <div class="view-detail-value">${festivoBadge}</div>
+      </div>
+    `;
+  }
+
+  // Mostrar Vacaciones solo si es Actuación o está marcado como Vacaciones
+  if (ev.actuacion || ev.vacaciones === 'si') {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <div class="view-detail-label">Vacaciones</div>
+        <div class="view-detail-value">${vacacionesBadge}</div>
       </div>
     `;
   }
@@ -3169,6 +3215,7 @@ function setMode(mode) {
   const boxLogistica = document.getElementById('box-logistica');
   const boxAuthCultura = document.getElementById('box-auth-cultura');
   const boxFestivo = document.getElementById('box-festivo');
+  const boxVacaciones = document.getElementById('box-vacaciones');
 
   const tabSala = document.getElementById('btn-tab-sala');
   const tabActuacion = document.getElementById('btn-tab-actuacion');
@@ -3179,20 +3226,21 @@ function setMode(mode) {
   // Mostrar u ocultar cajas según el modo
   boxSala.style.display = (mode === 'sala') ? '' : 'none';
   
-  // Si estamos en Actuaciones, la caja de tipo de actuación solo se muestra si Festivo es 'no'
-  boxActuacion.style.display = (mode === 'actuacion' && isFestivo !== 'si') ? '' : 'none';
+  // Si estamos en Actuaciones, la caja de tipo de actuación solo se muestra si Festivo y Vacaciones son 'no'
+  boxActuacion.style.display = (mode === 'actuacion' && isFestivo !== 'si' && isVacaciones !== 'si') ? '' : 'none';
   
   boxLogistica.style.display = (mode === 'logistica') ? '' : 'none';
 
   // Mostrar Autorizado por cultura SOLO en Ensayo
   if (boxAuthCultura) boxAuthCultura.style.display = (mode === 'sala') ? '' : 'none';
 
-  // Mostrar Festivo SOLO en Actuaciones
+  // Mostrar Festivo y Vacaciones SOLO en Actuaciones
   if (boxFestivo) boxFestivo.style.display = (mode === 'actuacion') ? '' : 'none';
+  if (boxVacaciones) boxVacaciones.style.display = (mode === 'actuacion') ? '' : 'none';
 
-  // Visibilidad de horas: se ocultan si estamos en Actuaciones y es festivo Sí
+  // Visibilidad de horas: se ocultan si estamos en Actuaciones y es Festivo o Vacaciones Sí
   if (hoursWrapper) {
-    hoursWrapper.style.display = (mode === 'actuacion' && isFestivo === 'si') ? 'none' : '';
+    hoursWrapper.style.display = (mode === 'actuacion' && (isFestivo === 'si' || isVacaciones === 'si')) ? 'none' : '';
   }
 
   // Estilos de botones superiores
@@ -3288,6 +3336,11 @@ function setFestivoStatus(status) {
   const boxActuacion = document.getElementById('box-actuacion');
 
   if (status === 'si') {
+    // Si se activa festivo, se desactiva vacaciones mutuamente
+    if (isVacaciones === 'si') {
+      setVacacionesStatus('no');
+    }
+
     btnSi.classList.add('active-si');
     btnNo.classList.remove('active-no');
     displayLbl.innerHTML = `<span style="color:#16a34a;font-weight:700;">Día Festivo (Libre todo el día)</span>`;
@@ -3307,20 +3360,79 @@ function setFestivoStatus(status) {
     btnSi.classList.remove('active-si');
     displayLbl.innerHTML = `<span style="color:var(--text-dim);">No festivo</span>`;
     
-    // 1. Volver a mostrar horas
-    if (hoursWrapper) hoursWrapper.style.display = '';
-    
-    // 2. Volver a mostrar bloque completo de tipo de actuación si estamos en Actuaciones
-    if (boxActuacion && currentMode === 'actuacion') {
-      boxActuacion.style.display = '';
-      if (!selectedActuacion) {
-        setActuacion('CONCIERTO');
+    if (isVacaciones !== 'si') {
+      // 1. Volver a mostrar horas
+      if (hoursWrapper) hoursWrapper.style.display = '';
+      
+      // 2. Volver a mostrar bloque completo de tipo de actuación si estamos en Actuaciones
+      if (boxActuacion && currentMode === 'actuacion') {
+        boxActuacion.style.display = '';
+        if (!selectedActuacion) {
+          setActuacion('CONCIERTO');
+        }
+        if (!editingEventId) {
+          document.getElementById('time-start').value = '20:00';
+          document.getElementById('time-end').value = '21:00';
+          isHourRange = true;
+          updateHourRangeUI();
+        }
       }
-      if (!editingEventId) {
-        document.getElementById('time-start').value = '20:00';
-        document.getElementById('time-end').value = '21:00';
-        isHourRange = true;
-        updateHourRangeUI();
+    }
+  }
+}
+
+/* ═══════════════════════════════════════
+   CONTROL DE VACACIONES (ACTUACIONES)
+═══════════════════════════════════════ */
+function setVacacionesStatus(status) {
+  isVacaciones = status;
+  const btnNo = document.getElementById('btn-vacaciones-no');
+  const btnSi = document.getElementById('btn-vacaciones-si');
+  const displayLbl = document.getElementById('vacaciones-status-display');
+  const hoursWrapper = document.getElementById('hours-config-wrapper');
+  const boxActuacion = document.getElementById('box-actuacion');
+
+  if (status === 'si') {
+    // Si se activa vacaciones, se desactiva festivo mutuamente
+    if (isFestivo === 'si') {
+      setFestivoStatus('no');
+    }
+
+    btnSi.classList.add('active-si');
+    btnNo.classList.remove('active-no');
+    displayLbl.innerHTML = `<span style="color:#6b21a8;font-weight:700;">Vacaciones (Libre todo el día)</span>`;
+    
+    // 1. Ocultar horas
+    if (hoursWrapper && currentMode === 'actuacion') hoursWrapper.style.display = 'none';
+    
+    // 2. Ocultar bloque completo de tipo de actuación
+    if (boxActuacion) boxActuacion.style.display = 'none';
+
+    // 3. Deseleccionar opciones
+    document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('actuacion-input').value = '';
+    selectedActuacion = '';
+  } else {
+    btnNo.classList.add('active-no');
+    btnSi.classList.remove('active-si');
+    displayLbl.innerHTML = `<span style="color:var(--text-dim);">No vacaciones</span>`;
+    
+    if (isFestivo !== 'si') {
+      // 1. Volver a mostrar horas
+      if (hoursWrapper) hoursWrapper.style.display = '';
+      
+      // 2. Volver a mostrar bloque completo de tipo de actuación si estamos en Actuaciones
+      if (boxActuacion && currentMode === 'actuacion') {
+        boxActuacion.style.display = '';
+        if (!selectedActuacion) {
+          setActuacion('CONCIERTO');
+        }
+        if (!editingEventId) {
+          document.getElementById('time-start').value = '20:00';
+          document.getElementById('time-end').value = '21:00';
+          isHourRange = true;
+          updateHourRangeUI();
+        }
       }
     }
   }
@@ -3360,10 +3472,11 @@ function openEditModal(id) {
   document.getElementById('modal-title').textContent = 'Editar evento';
   document.getElementById('btn-delete-event').style.display = '';
 
-  if (ev.actuacion) {
+  if (ev.actuacion || ev.festivo === 'si' || ev.vacaciones === 'si') {
     setMode('actuacion');
-    setActuacion(ev.actuacion);
+    setActuacion(ev.actuacion || '');
     setFestivoStatus(ev.festivo || 'no');
+    setVacacionesStatus(ev.vacaciones || 'no');
   } else if (ev.sala) {
     setMode('sala');
     setSala(ev.sala);
@@ -3419,6 +3532,7 @@ function resetForm() {
 
   setAuthStatus('no');
   setFestivoStatus('no');
+  setVacacionesStatus('no');
 
   document.getElementById('time-start').value = '09:15';
   document.getElementById('time-end').value = '13:15';
@@ -3487,10 +3601,9 @@ document.getElementById('actuacion-presets').addEventListener('click', (e) => {
   const btn = e.target.closest('.sala-preset-btn');
   if (!btn) return;
 
-  // Si estaba en Festivo Sí y se hace clic en una actuación, se desactiva el festivo
-  if (isFestivo === 'si') {
-    setFestivoStatus('no');
-  }
+  // Si estaba en Festivo o Vacaciones Sí y se hace clic en una actuación, se desactivan
+  if (isFestivo === 'si') setFestivoStatus('no');
+  if (isVacaciones === 'si') setVacacionesStatus('no');
 
   const act = btn.dataset.actuacion;
   if (act === '_CUSTOM_') {
@@ -3505,10 +3618,9 @@ document.getElementById('actuacion-presets').addEventListener('click', (e) => {
 });
 
 document.getElementById('actuacion-input').addEventListener('input', (e) => {
-  // Si se escribe en el input y estaba en Festivo Sí, se desactiva el festivo
-  if (isFestivo === 'si') {
-    setFestivoStatus('no');
-  }
+  // Si se escribe en el input y estaba en Festivo o Vacaciones Sí, se desactivan
+  if (isFestivo === 'si') setFestivoStatus('no');
+  if (isVacaciones === 'si') setVacacionesStatus('no');
 
   selectedActuacion = e.target.value.trim().toUpperCase();
   document.querySelectorAll('#actuacion-presets .sala-preset-btn').forEach(b => {
@@ -3557,10 +3669,13 @@ function saveEvent() {
   const dateStart = document.getElementById('date-start').value;
   const dateEnd = isRange ? document.getElementById('date-end').value : dateStart;
   
-  // Si estamos en Actuaciones y es Festivo 'si', las horas son nulas
+  // Si estamos en Actuaciones y es Festivo o Vacaciones 'si', las horas son nulas
   const isCurrentlyFestivo = isActMode && (isFestivo === 'si');
-  const timeStart = isCurrentlyFestivo ? null : document.getElementById('time-start').value;
-  const timeEnd = (isCurrentlyFestivo || !isHourRange) ? null : document.getElementById('time-end').value;
+  const isCurrentlyVacaciones = isActMode && (isVacaciones === 'si');
+  const isAllDaySpecial = isCurrentlyFestivo || isCurrentlyVacaciones;
+
+  const timeStart = isAllDaySpecial ? null : document.getElementById('time-start').value;
+  const timeEnd = (isAllDaySpecial || !isHourRange) ? null : document.getElementById('time-end').value;
   const notes = document.getElementById('event-notes').value.trim();
 
   // Guardar fecha de autorización en Ensayo
@@ -3573,7 +3688,7 @@ function saveEvent() {
     showToast('Indica el nombre de la sala', 'error');
     return;
   }
-  if (isActMode && !actuacion && !isCurrentlyFestivo) {
+  if (isActMode && !actuacion && !isAllDaySpecial) {
     showToast('Indica el nombre o tipo de actuación', 'error');
     return;
   }
@@ -3598,6 +3713,7 @@ function saveEvent() {
     autorizadoCultura: isSalaMode ? currentAuth : 'no',
     autorizadoFecha: isSalaMode ? finalAuthDate : null,
     festivo: isActMode ? isFestivo : 'no',
+    vacaciones: isActMode ? isVacaciones : 'no',
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
@@ -3664,6 +3780,7 @@ function filterEventsByType(evList, filterType) {
   if (filterType === 'actuaciones') return evList.filter(e => !!e.actuacion);
   if (filterType === 'logistica') return evList.filter(e => !e.sala && !e.actuacion && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
   if (filterType === 'festivos') return evList.filter(e => e.festivo === 'si');
+  if (filterType === 'vacaciones') return evList.filter(e => e.vacaciones === 'si');
   return evList;
 }
 
@@ -3699,18 +3816,19 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
 
     const ubiCol = ev.ubicacion || '—';
     const festivoCol = ev.festivo === 'si' ? 'Sí' : 'No';
+    const vacacionesCol = ev.vacaciones === 'si' ? 'Sí' : 'No';
     const notesCol = ev.notes || '';
 
-    tableData.push([dates, salaCol, logCol, ubiCol, horario, festivoCol, notesCol]);
+    tableData.push([dates, salaCol, logCol, ubiCol, horario, festivoCol, vacacionesCol, notesCol]);
   });
 
   if (tableData.length === 0) {
-    tableData.push(['—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
+    tableData.push(['—', '—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
   }
 
   doc.autoTable({
     startY: 20,
-    head: [['Fecha', 'Sala / Actuación', 'Servicio / Logística', 'Ubicación / Trayecto', 'Horario', 'Festivo', 'Notas']],
+    head: [['Fecha', 'Sala / Actuación', 'Servicio / Logística', 'Ubicación / Trayecto', 'Horario', 'Festivo', 'Vacaciones', 'Notas']],
     body: tableData,
     theme: 'grid',
     styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
