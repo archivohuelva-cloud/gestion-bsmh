@@ -30,9 +30,9 @@
   --ensayo-blue: #0062cc;
   --bg-ensayo-blue: #dbeafe;
 
-  /* Actuaciones (Azul Marino) */
-  --actuacion-navy: #1e3a8a;
-  --bg-actuacion-navy: #dbeafe;
+/* Actuaciones (Gris claro con contorno y texto negro) */
+  --actuacion-navy: #000000;
+  --bg-actuacion-navy: #e5e5ea;
 
   /* Festivos (Verde) */
   --festivo-color: #166534;
@@ -913,6 +913,9 @@ body {
 .year-dot.ensayo {
   background-color: var(--ensayo-blue);
 }
+.year-dot.actuacion {
+  background-color: var(--actuacion-navy);
+}
 .year-dot.logistica {
   background-color: var(--transport-color);
 }
@@ -1481,10 +1484,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-      <!-- CONTENEDOR DE HORAS (SE OCULTA EN MODO FESTIVO) -->
+<!-- CONTENEDOR DE HORAS (SE OCULTA EN MODO FESTIVO) -->
       <div id="hours-config-wrapper">
         <!-- RANGO DE HORAS -->
-        <div class="form-group">
+        <div class="form-group" style="margin-bottom: 14px;">
           <label onclick="toggleHourRange()" class="range-toggle">
             <div class="checkbox" id="hour-range-checkbox"></div>
             <span id="hour-range-label">Aplicar a rango de horas</span>
@@ -1723,6 +1726,7 @@ let selectedActuacion = 'CONCIERTO';
 let isFestivo = 'no';
 
 let yearFilterEnsayos = true;
+let yearFilterActuaciones = true;
 let yearFilterLogistica = true;
 
 let draggedEventId = null;
@@ -2612,15 +2616,19 @@ function renderYear() {
   document.getElementById('period-label').textContent = `${year}`;
 
   let html = `<div class="year-view-container">
-    <div class="year-filters">
-      <span class="filter-label">FILTRAR PUNTOS:</span>
+<div class="year-filters">
+      <span class="filter-label">FILTRAR POR CATEGORÍAS:</span>
       <label class="range-toggle" onclick="toggleYearFilter('ensayos')">
         <div class="checkbox ${yearFilterEnsayos ? 'checked' : ''}" id="filter-ensayos-cb"></div>
-        <span style="display:flex;align-items:center;gap:4px;"><span class="year-dot ensayo" style="display:inline-block;"></span> Ensayos</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span class="year-dot ensayo" style="display:inline-block;"></span> 🎵 Sala de Ensayo</span>
       </label>
       <label class="range-toggle" onclick="toggleYearFilter('logistica')">
         <div class="checkbox ${yearFilterLogistica ? 'checked' : ''}" id="filter-logistica-cb"></div>
-        <span style="display:flex;align-items:center;gap:4px;"><span class="year-dot logistica" style="display:inline-block;"></span> Logística y Servicios</span>
+        <span style="display:flex;align-items:center;gap:4px;"><span class="year-dot logistica" style="display:inline-block;"></span> 🚚 Logística</span>
+      </label>
+      <label class="range-toggle" onclick="toggleYearFilter('actuaciones')">
+        <div class="checkbox ${yearFilterActuaciones ? 'checked' : ''}" id="filter-actuaciones-cb"></div>
+        <span style="display:flex;align-items:center;gap:4px;"><span class="year-dot actuacion" style="display:inline-block;"></span> 🎺 Actuaciones</span>
       </label>
     </div>
     <div class="year-grid">`;
@@ -2654,7 +2662,8 @@ function renderYear() {
       const wkClass = isWeekendDay(curD) ? 'is-weekend' : '';
 
       const hasEnsayo = evs.some(e => !!e.sala);
-      const hasLogistica = evs.some(e => !e.sala && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
+      const hasActuacion = evs.some(e => !!e.actuacion);
+      const hasLogistica = evs.some(e => !e.sala && !e.actuacion && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
 
       let dotsHtml = '<div class="year-dots-wrap">';
       if (yearFilterEnsayos && hasEnsayo) {
@@ -2662,6 +2671,9 @@ function renderYear() {
       }
       if (yearFilterLogistica && hasLogistica) {
         dotsHtml += `<div class="year-dot logistica" title="Logística / Servicios"></div>`;
+      }
+      if (yearFilterActuaciones && hasActuacion) {
+        dotsHtml += `<div class="year-dot actuacion" title="Actuación"></div>`;
       }
       dotsHtml += '</div>';
 
@@ -2692,6 +2704,7 @@ function renderYear() {
 
 function toggleYearFilter(type) {
   if (type === 'ensayos') yearFilterEnsayos = !yearFilterEnsayos;
+  if (type === 'actuaciones') yearFilterActuaciones = !yearFilterActuaciones;
   if (type === 'logistica') yearFilterLogistica = !yearFilterLogistica;
   renderYear();
 }
@@ -3192,8 +3205,22 @@ function setMode(mode) {
   tabLogistica.style.borderColor = (mode === 'logistica') ? 'var(--transport-color)' : 'var(--border)';
   tabLogistica.style.color = (mode === 'logistica') ? 'var(--transport-color)' : 'var(--text)';
 
-  if (mode === 'sala' || mode === 'actuacion') {
+if (mode === 'sala') {
     lblMainTime.textContent = 'Hora inicio';
+    if (!editingEventId) {
+      document.getElementById('time-start').value = '09:15';
+      document.getElementById('time-end').value = '13:15';
+      isHourRange = true;
+      updateHourRangeUI();
+    }
+  } else if (mode === 'actuacion') {
+    lblMainTime.textContent = 'Hora inicio';
+    if (!editingEventId) {
+      document.getElementById('time-start').value = '20:00';
+      document.getElementById('time-end').value = '21:00';
+      isHourRange = true;
+      updateHourRangeUI();
+    }
   } else {
     lblMainTime.textContent = 'Hora';
     if (!editingEventId) {
@@ -3288,6 +3315,12 @@ function setFestivoStatus(status) {
       boxActuacion.style.display = '';
       if (!selectedActuacion) {
         setActuacion('CONCIERTO');
+      }
+      if (!editingEventId) {
+        document.getElementById('time-start').value = '20:00';
+        document.getElementById('time-end').value = '21:00';
+        isHourRange = true;
+        updateHourRangeUI();
       }
     }
   }
@@ -3400,8 +3433,21 @@ function toggleHourRange() {
 function updateHourRangeUI() {
   const cb = document.getElementById('hour-range-checkbox');
   const endGrp = document.getElementById('time-end-group');
+  const startLbl = document.getElementById('lbl-main-time-start');
+
   cb.classList.toggle('checked', isHourRange);
   endGrp.style.display = isHourRange ? '' : 'none';
+
+  if (startLbl) {
+    const trayectoTipo = document.getElementById('trayecto-tipo')?.value;
+    if (currentMode === 'logistica' && trayectoTipo === 'Ida a') {
+      startLbl.textContent = 'Hora de Ida';
+    } else if (currentMode === 'logistica' && trayectoTipo === 'Vuelta a') {
+      startLbl.textContent = 'Hora de Vuelta';
+    } else {
+      startLbl.textContent = isHourRange ? 'Hora inicio' : 'Hora';
+    }
+  }
 }
 
 /* ═══════════════════════════════════════
