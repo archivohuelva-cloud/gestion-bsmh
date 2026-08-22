@@ -3296,6 +3296,83 @@ function deleteFromViewModal() {
 /* ═══════════════════════════════════════
    UBICACIÓN DINÁMICA & TRAYECTOS HANDLERS
 ═══════════════════════════════════════ */
+const BASE_LOCATIONS = [
+  'ALMACÉN BANDA',
+  'CASA COLÓN',
+  'GRAN TEATRO',
+  'LAZARETO',
+  'SALA B',
+  'SANTA FE'
+];
+
+function getAllKnownLocations() {
+  const locSet = new Set(BASE_LOCATIONS);
+
+  events.forEach(ev => {
+    if (!ev.ubicacion) return;
+    let u = ev.ubicacion.trim();
+
+    // Limpiar prefijos de tipo de trayecto
+    u = u.replace(/^Ubicación\s+/i, '');
+
+    // Desglosar si contiene trayectos compuestos
+    if (u.startsWith('De ') && u.includes(' | Vuelta: De ')) {
+      const parts = u.split(' | Vuelta: De ');
+      const mainParts = parts[0].replace(/^De\s+/i, '').split(/\s+a\s+/i);
+      const retParts = parts[1].split(/\s+a\s+/i);
+      if (mainParts[0]) locSet.add(mainParts[0].trim().toUpperCase());
+      if (mainParts[1]) locSet.add(mainParts[1].trim().toUpperCase());
+      if (retParts[0]) locSet.add(retParts[0].trim().toUpperCase());
+      if (retParts[1]) locSet.add(retParts[1].trim().toUpperCase());
+    } else if (u.startsWith('De ') && u.includes(' a ')) {
+      const parts = u.replace(/^De\s+/i, '').split(/\s+a\s+/i);
+      if (parts[0]) locSet.add(parts[0].trim().toUpperCase());
+      if (parts[1]) locSet.add(parts[1].trim().toUpperCase());
+    } else if (u.toLowerCase().startsWith('ida a ') && u.toLowerCase().includes(' y vuelta a ')) {
+      const parts = u.replace(/^Ida a\s+/i, '').split(/\s+y vuelta a\s+/i);
+      if (parts[0]) locSet.add(parts[0].trim().toUpperCase());
+      if (parts[1]) locSet.add(parts[1].trim().toUpperCase());
+    } else if (u.toLowerCase().startsWith('ida a ')) {
+      locSet.add(u.replace(/^Ida a\s+/i, '').trim().toUpperCase());
+    } else if (u.toLowerCase().startsWith('vuelta a ')) {
+      locSet.add(u.replace(/^Vuelta a\s+/i, '').trim().toUpperCase());
+    } else {
+      if (u) locSet.add(u.toUpperCase());
+    }
+  });
+
+  return Array.from(locSet).filter(Boolean).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+}
+
+function populateLocationSelects() {
+  const list = getAllKnownLocations();
+
+  const selectsConfig = [
+    { id: 'ubicacion-select', defaultLabel: 'Selecciona ubicación...', customLabel: 'Añadir nueva ubicación...' },
+    { id: 'deab-origen-select', defaultLabel: 'Selecciona origen...', customLabel: 'Añadir origen específico...' },
+    { id: 'deab-destino-select', defaultLabel: 'Selecciona destino...', customLabel: 'Añadir destino específico...' },
+    { id: 'ubicacion-secondary-select', defaultLabel: 'Selecciona destino de vuelta...', customLabel: 'Añadir otro lugar específico...' },
+    { id: 'guardado-ubicacion-select', defaultLabel: 'Selecciona ubicación...', customLabel: 'Añadir otra ubicación...' }
+  ];
+
+  selectsConfig.forEach(cfg => {
+    const el = document.getElementById(cfg.id);
+    if (!el) return;
+    const currentVal = el.value;
+
+    let html = `<option value="">${cfg.defaultLabel}</option>`;
+    list.forEach(loc => {
+      html += `<option value="${loc}">${loc}</option>`;
+    });
+    html += `<option value="_CUSTOM_">${cfg.customLabel}</option>`;
+
+    el.innerHTML = html;
+    if (currentVal && (list.includes(currentVal) || currentVal === '_CUSTOM_')) {
+      el.value = currentVal;
+    }
+  });
+}
+
 function getDeAbSelectedDestino() {
   const sel = document.getElementById('deab-destino-select')?.value;
   const custom = document.getElementById('deab-destino-custom')?.value.trim();
@@ -3547,7 +3624,8 @@ function setFormattedUbicacion(val, secTimeVal) {
     return;
   }
 
-  const presets = ['ALMACÉN BANDA', 'CASA COLÓN', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
+populateLocationSelects();
+  const presets = getAllKnownLocations();
 
   // Sincronizar el campo de hora integrado de "De A a B" con el valor de timeStart
   const deabTimeStartInput = document.getElementById('deab-time-start');
@@ -4045,6 +4123,7 @@ function openAddModal(selectedDate, selectedHour) {
   document.getElementById('modal-title').textContent = 'Nuevo evento';
   document.getElementById('btn-delete-event').style.display = 'none';
 
+  populateLocationSelects();
   resetForm();
   const dateToSet = selectedDate || dateStr(new Date());
   document.getElementById('date-start').value = dateToSet;
@@ -4112,7 +4191,7 @@ function openEditModal(id) {
     if (ev.guardado === 'si' && ev.ubicacion) {
       const gSel = document.getElementById('guardado-ubicacion-select');
       const gCustom = document.getElementById('guardado-ubicacion-custom');
-      const presets = ['ALMACÉN BANDA', 'CASA COLÓN', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
+      const presets = getAllKnownLocations();
       const cleanUbi = ev.ubicacion.replace(/^Ubicación\s+/i, '').trim();
       
       if (presets.includes(cleanUbi.toUpperCase())) {
@@ -4159,6 +4238,7 @@ function openEditModal(id) {
 }
 
 function resetForm() {
+  populateLocationSelects();
   isRange = false;
   isHourRange = true;
   setMode('sala');
@@ -4683,6 +4763,7 @@ async function autoSyncSheets(showFeedback = false) {
       saveEvents(false);
 
       if (hasChanged) {
+        populateLocationSelects();
         render();
       }
       if (showFeedback) showToast('Base de datos sincronizada', 'success');
