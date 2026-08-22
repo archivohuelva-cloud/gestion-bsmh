@@ -41,6 +41,10 @@
   /* Vacaciones (Morado) */
   --vacaciones-color: #6b21a8;
   --bg-vacaciones: #f3e8ff;
+
+  /* Instrumental Guardado (Rojo) */
+  --guardado-color: #b91c1c;
+  --bg-guardado: #fee2e2;
   
   /* Colores formulario selección - Salas */
   --sala-b: #0062cc;
@@ -1381,6 +1385,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <div class="radiobox" id="radio-retranquear"></div>
             ↔️ RETRANQUEAR
           </label>
+          <label onclick="selectLogisticsOption('guardar')" class="range-toggle">
+            <div class="radiobox" id="radio-guardar"></div>
+            📦 GUARDAR
+          </label>
         </div>
 
 <!-- UBICACIÓN Y TRAYECTO DINÁMICO -->
@@ -1492,6 +1500,38 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
         </div>
 
+      </div>
+
+      <!-- SECCIÓN: INSTRUMENTAL GUARDADO (SOLO EN LOGÍSTICA) -->
+      <div class="section-box" id="box-guardado" style="display:none;background:#fdfdfe;border-color:var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div>
+            <label style="font-weight:700;color:var(--text);">📦 ¿Instrumental Guardado?</label>
+            <div id="guardado-status-display" style="font-size:12px;color:var(--text-dim);margin-top:2px;">No guardado</div>
+          </div>
+          <div class="auth-toggle-group">
+            <button type="button" class="btn-auth-option active-no" id="btn-guardado-no" onclick="setGuardadoStatus('no')">No</button>
+            <button type="button" class="btn-auth-option" id="btn-guardado-si" onclick="setGuardadoStatus('si')">Sí</button>
+          </div>
+        </div>
+
+        <!-- SELECTOR DE UBICACIÓN DONDE ESTÁ GUARDADO EL INSTRUMENTAL -->
+        <div id="guardado-ubicacion-container" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);">
+          <div class="form-group">
+            <label style="font-size:11px;color:#b91c1c;margin-bottom:4px;display:block;">📍 Lugar / Ubicación donde está guardado:</label>
+            <select id="guardado-ubicacion-select" onchange="handleGuardadoUbicacionSelectChange()">
+              <option value="">Selecciona ubicación...</option>
+              <option value="ALMACÉN BANDA">Almacén Banda</option>
+              <option value="CASA COLÓN">Casa Colón</option>
+              <option value="GRAN TEATRO">Gran Teatro</option>
+              <option value="LAZARETO">Lazareto</option>
+              <option value="SALA B">Sala B</option>
+              <option value="SANTA FE">Santa Fe</option>
+              <option value="_CUSTOM_">Añadir otra ubicación...</option> 
+            </select>
+          </div>
+          <input type="text" id="guardado-ubicacion-custom" placeholder="Escribe el lugar específico donde está guardado…" style="display:none;margin-top:4px;" />
+        </div>
       </div>
 
 <!-- SECCIÓN: AUTORIZADO POR CULTURA (PARA ENSAYO Y LOGÍSTICA) -->
@@ -1633,12 +1673,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 <div class="form-group">
         <label>Filtrar Tipo de Elementos</label>
         <select id="export-filter">
-          <option value="all">Todo (Ensayos + Actuaciones + Logística + Festivos + Vacaciones)</option>
+          <option value="all">Todo (Ensayos + Actuaciones + Logística + Festivos + Vacaciones + Instrumental Guardado)</option>
           <option value="salas">Solo Ensayos / Salas</option>
           <option value="actuaciones">Solo Actuaciones</option>
           <option value="logistica">Solo Transporte y Logística</option>
           <option value="festivos">Solo Festivos</option>
           <option value="vacaciones">Solo Vacaciones</option>
+          <option value="guardado">Solo Instrumental Guardado</option>
         </select>
       </div>
 
@@ -1742,8 +1783,26 @@ function updateHistoryButtons() {
 }
 
 window.addEventListener('keydown', (e) => {
-  // Detectar si el modal de añadir/editar está abierto
+  // Detectar modales abiertos
   const isAddModalOpen = document.getElementById('add-modal')?.classList.contains('open');
+  const isViewModalOpen = document.getElementById('view-modal')?.classList.contains('open');
+
+  // Atajo de tecla Suprimir (Delete o Backspace según teclado físico)
+  if (e.key === 'Delete' || e.key === 'Del') {
+    // 1. Si está abierto el modal de visualización de detalles
+    if (isViewModalOpen) {
+      e.preventDefault();
+      deleteFromViewModal();
+      return;
+    }
+    // 2. Si está abierto el modal de edición (solo si estamos editando y no escribiendo dentro de un texto)
+    const isTypingInField = document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
+    if (isAddModalOpen && editingEventId && !isTypingInField) {
+      e.preventDefault();
+      deleteCurrentEvent();
+      return;
+    }
+  }
 
   // Si se pulsa Enter dentro del modal (excepto si estás escribiendo en el área de notas)
   if (e.key === 'Enter' && isAddModalOpen) {
@@ -1801,9 +1860,10 @@ let isHourRange = true;
 let selectedSala = 'SALA B';
 let selectedActuacion = 'CONCIERTO';
 
-/* FESTIVO Y VACACIONES */
+/* FESTIVO, VACACIONES E INSTRUMENTAL GUARDADO */
 let isFestivo = 'no';
 let isVacaciones = 'no';
+let isGuardado = 'no';
 
 let yearFilterEnsayos = true;
 let yearFilterActuaciones = true;
@@ -1873,8 +1933,11 @@ function formatTimeRangeDisplay(ev) {
   if (typeof ev === 'string') return formatTimeH(ev);
   if (!ev) return 'Sin horario especificado';
   
-  // 1. Si es festivo o vacaciones, mostramos texto especial de todo el día
+  // 1. Si es festivo, vacaciones o instrumental guardado, mostramos texto especial de todo el día
   if (ev.festivo === 'si' || ev.vacaciones === 'si') {
+    return 'Libre todo el día';
+  }
+  if (ev.guardado === 'si') {
     return 'Libre todo el día';
   }
   
@@ -1932,6 +1995,10 @@ function formatDisplayRange(start, end) {
 }
 
 function getEventStyle(ev) {
+  // Instrumental Guardado -> Rojo (SOLO cuando se activa 'Sí')
+  if (ev.guardado === 'si') {
+    return { color: 'var(--guardado-color)', bg: 'var(--bg-guardado)' };
+  }
   // Vacaciones -> Morado
   if (ev.vacaciones === 'si') {
     return { color: 'var(--vacaciones-color)', bg: 'var(--bg-vacaciones)' };
@@ -1952,11 +2019,15 @@ function getEventStyle(ev) {
   if (ev.transport === 'si' || ev.tipoLogistica === 'transporte') {
     return { color: 'var(--transport-color)', bg: 'var(--bg-transport)' };
   }
-  // Montajes, mochilas, etc. -> Amarillo
+  // Guardar, montajes, mochilas, retranquear, etc. -> Amarillo
   return { color: 'var(--montaje-color)', bg: 'var(--bg-montaje)' };
 }
 
 function getEventTitle(ev) {
+  // Si está marcado como Instrumental Guardado
+  if (ev.guardado === 'si') {
+    return '📦 INSTRUMENTAL GUARDADO';
+  }
   // Si está marcado como Vacaciones, muestra ÚNICA Y EXCLUSIVAMENTE '🏖️ VACACIONES'
   if (ev.vacaciones === 'si') {
     return '🏖️ VACACIONES';
@@ -1981,6 +2052,7 @@ function getEventTitle(ev) {
     else if (t === 'montar_desmontar') titleParts.push('🔄 MONTAR > DESMONTAR');
     else if (t === 'desmontar_montar') titleParts.push('🔄 DESMONTAR > MONTAR');
     else if (t === 'retranquear') titleParts.push('↔️ RETRANQUEAR');
+    else if (t === 'guardar' || t === 'guardar_instrumental') titleParts.push('📦 GUARDAR');
   }
   
   if (titleParts.length === 0) return 'EVENTO';
@@ -2055,8 +2127,8 @@ function getNextUpcomingEvent() {
   let candidateEvents = [];
 
 events.forEach(ev => {
-    // Si es Festivo o Vacaciones, se ignora completamente para la cuenta atrás
-    if (ev.festivo === 'si' || ev.vacaciones === 'si') return;
+    // Si es Festivo, Vacaciones o Instrumental Guardado, se ignora completamente para la cuenta atrás
+    if (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si') return;
 
     const s = ev.dateStart;
     const e = ev.dateEnd || ev.dateStart;
@@ -2352,9 +2424,9 @@ function renderMonthCell(d, otherMonth) {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
 
-// En mes: mostrar hora limpia solo si no es festivo ni vacaciones
+// En mes: mostrar hora limpia solo si no es festivo, vacaciones o instrumental guardado
     let timeLabel = '';
-    if (ev.festivo !== 'si' && ev.vacaciones !== 'si' && ev.timeStart) {
+    if (ev.festivo !== 'si' && ev.vacaciones !== 'si' && ev.guardado !== 'si' && ev.timeStart) {
       timeLabel = ` ${formatTimeH(ev.timeStart)}`;
     }
 
@@ -2385,12 +2457,36 @@ function renderMonthCell(d, otherMonth) {
 /* ═══════════════════════════════════════
    CÁLCULOS DE POSICIÓN PARA FRANJA HORARIA
 ═══════════════════════════════════════ */
-function calculateSpanPosition(ev) {
+function calculateSpanPosition(ev, dayEvs = []) {
   const rowTotalHeight = 53;
+  const isAllDay = (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si');
 
-  // Si es festivo o vacaciones, abarca las 24 horas completas
-  if (ev.festivo === 'si' || ev.vacaciones === 'si') {
-    return { topPx: 0, heightPx: (24 * rowTotalHeight) - 2 };
+  // Si es festivo, vacaciones o instrumental guardado, abarca las 24 horas completas
+  if (isAllDay) {
+    // Filtrar todos los eventos de día completo que coinciden en este mismo día
+    const allDayEvents = dayEvs.filter(e => (e.festivo === 'si' || e.vacaciones === 'si' || e.guardado === 'si'));
+    const totalAllDay = allDayEvents.length;
+
+    if (totalAllDay > 1) {
+      const idx = allDayEvents.findIndex(e => e.id === ev.id);
+      const colIndex = idx >= 0 ? idx : 0;
+      const widthPercent = 100 / totalAllDay;
+      const leftPercent = colIndex * widthPercent;
+
+      return {
+        topPx: 0,
+        heightPx: (24 * rowTotalHeight) - 2,
+        isCustomWidth: true,
+        leftStyle: `calc(${leftPercent}% + 2px)`,
+        widthStyle: `calc(${widthPercent}% - 4px)`
+      };
+    }
+
+    return { 
+      topPx: 0, 
+      heightPx: (24 * rowTotalHeight) - 2, 
+      isCustomWidth: false 
+    };
   }
 
   let rawStart = ev.timeStart || '09:00';
@@ -2476,18 +2572,23 @@ function renderWeek() {
     });
 
     dayEvs.forEach(ev => {
-      const { topPx, heightPx } = calculateSpanPosition(ev);
+      const pos = calculateSpanPosition(ev, dayEvs);
       const style = getEventStyle(ev);
       const title = getEventTitle(ev);
       const timeDisplay = formatTimeRangeDisplay(ev);
       const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="position:absolute;top:5px;right:22px;"></span>` : '';
 
+      // Posicionamiento horizontal cuando comparte columna con otros eventos de día completo
+      const horizPosStyle = pos.isCustomWidth 
+        ? `left:${pos.leftStyle}; width:${pos.widthStyle}; right:auto;` 
+        : `left:2px; right:2px;`;
+
       // Ubicación en línea separada para logística
-      const ubiHtml = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si') 
+      const ubiHtml = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si' && ev.guardado !== 'si') 
         ? `<div style="font-size:10px;font-weight:700;opacity:0.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${ev.ubicacion}</div>` 
         : '';
 
-      html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
+      html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${pos.topPx}px; height:${pos.heightPx}px; ${horizPosStyle} background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
         <!-- 1. Tipo de transporte / evento -->
         <div style="font-weight:700;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:24px;">${title}</div>
         
@@ -2573,18 +2674,23 @@ function renderDay() {
   });
 
   dayEvs.forEach(ev => {
-    const { topPx, heightPx } = calculateSpanPosition(ev);
+    const pos = calculateSpanPosition(ev, dayEvs);
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
     const timeDisplay = formatTimeRangeDisplay(ev);
     const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:4px;"></span>` : '';
 
+    // Posicionamiento horizontal cuando comparte columna con otros eventos de día completo
+    const horizPosStyle = pos.isCustomWidth 
+      ? `left:${pos.leftStyle}; width:${pos.widthStyle}; right:auto;` 
+      : `left:2px; right:2px;`;
+
     // Si tiene ubicación de logística, mostrarla con un badge o icono al lado del título
-    const ubiBadge = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si')
+    const ubiBadge = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si' && ev.guardado !== 'si')
       ? `<span style="font-size:12px;font-weight:700;opacity:0.9;margin-left:8px;">(${ev.ubicacion})</span>`
       : '';
 
-    html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${topPx}px; height:${heightPx}px; background:${style.bg}; color:${style.color}; border:1px solid ${style.color}; padding:8px 12px;">
+    html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${pos.topPx}px; height:${pos.heightPx}px; ${horizPosStyle} background:${style.bg}; color:${style.color}; border:1px solid ${style.color}; padding:8px 12px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:18px;">
         <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;">
           ${title} ${ubiBadge} ${noteDot}
@@ -2924,14 +3030,16 @@ function openViewModal(id, contextDate) {
   const horario = formatTimeRangeDisplay(ev);
 
 let typeBadge = '';
-  if (ev.vacaciones === 'si') {
-    typeBadge = `<span style="background:var(--bg-vacaciones);color:var(--vacaciones-color);padding:4px 10px;border-radius:6px;font-weight:700">🏖️ VACACIONES</span>`;
+  if (ev.guardado === 'si') {
+    typeBadge = `<span style="background:var(--bg-guardado);color:var(--guardado-color);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">📦 INSTRUMENTAL GUARDADO</span>`;
+  } else if (ev.vacaciones === 'si') {
+    typeBadge = `<span style="background:var(--bg-vacaciones);color:var(--vacaciones-color);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🏖️ VACACIONES</span>`;
   } else if (ev.festivo === 'si') {
-    typeBadge = `<span style="background:var(--bg-festivo);color:var(--festivo-color);padding:4px 10px;border-radius:6px;font-weight:700">🎉 FESTIVO</span>`;
+    typeBadge = `<span style="background:var(--bg-festivo);color:var(--festivo-color);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🎉 FESTIVO</span>`;
   } else if (ev.actuacion) {
-    typeBadge = `<span style="background:var(--bg-actuacion-navy);color:var(--actuacion-navy);padding:4px 10px;border-radius:6px;font-weight:700">🎺 ${ev.actuacion}</span>`;
+    typeBadge = `<span style="background:var(--bg-actuacion-navy);color:var(--actuacion-navy);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🎺 ${ev.actuacion}</span>`;
   } else if (ev.sala) {
-    typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:4px 10px;border-radius:6px;font-weight:700">🎵 ${ev.sala}</span>`;
+    typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🎵 ${ev.sala}</span>`;
   } else {
     const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
     let lbl = 'Logística';
@@ -2942,10 +3050,16 @@ let typeBadge = '';
     else if (t === 'montar_desmontar') lbl = '🔄 MONTAR > DESMONTAR';
     else if (t === 'desmontar_montar') lbl = '🔄 DESMONTAR > MONTAR';
     else if (t === 'retranquear') lbl = '↔️ RETRANQUEAR';
+    else if (t === 'guardar' || t === 'guardar_instrumental') lbl = '📦 GUARDAR';
     
     const style = getEventStyle(ev);
-    typeBadge = `<span style="background:${style.bg};color:${style.color};padding:4px 10px;border-radius:6px;font-weight:700">${lbl}</span>`;
+    typeBadge = `<span style="background:${style.bg};color:${style.color};padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">${lbl}</span>`;
   }
+
+  // Guardado badge para Logística
+  const guardadoBadge = (ev.guardado === 'si')
+    ? `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
+    : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
 
   // Autorización badge para Ensayos
   let authBadge = '';
@@ -2977,11 +3091,12 @@ let typeBadge = '';
   `;
 
   if (ev.ubicacion && !ev.sala && !ev.actuacion) {
+    const cleanUbicacion = ev.ubicacion.replace(/^Ubicación\s+/i, '');
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         <div class="view-detail-label">Ubicación</div>
-        <div class="view-detail-value">${ev.ubicacion}</div>
+        <div class="view-detail-value">${cleanUbicacion}</div>
       </div>
     `;
   }
@@ -3030,6 +3145,16 @@ let typeBadge = '';
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         <div class="view-detail-label">Vacaciones</div>
         <div class="view-detail-value">${vacacionesBadge}</div>
+      </div>
+    `;
+  }
+
+  if (!ev.sala && !ev.actuacion && ev.festivo !== 'si' && ev.vacaciones !== 'si') {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <div class="view-detail-label">Guardado</div>
+        <div class="view-detail-value">${guardadoBadge}</div>
       </div>
     `;
   }
@@ -3200,6 +3325,17 @@ function handleUbicacionSelectChange() {
   }
 }
 
+function handleGuardadoUbicacionSelectChange() {
+  const val = document.getElementById('guardado-ubicacion-select').value;
+  const customInput = document.getElementById('guardado-ubicacion-custom');
+  if (val === '_CUSTOM_') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+}
+
 function toggleSecondaryTrayecto() {
   const cb = document.getElementById('has-secondary-checkbox');
   cb.classList.toggle('checked');
@@ -3223,6 +3359,15 @@ function handleSecondaryUbicacionChange() {
 
 function getFormattedUbicacion() {
   if (currentMode === 'sala') return '';
+
+  // Si está marcado como Instrumental Guardado, tomar del selector específico
+  if (currentMode === 'logistica' && isGuardado === 'si') {
+    const gSel = document.getElementById('guardado-ubicacion-select')?.value;
+    const gCustom = document.getElementById('guardado-ubicacion-custom')?.value.trim();
+    const lugar = gSel === '_CUSTOM_' ? gCustom : gSel;
+    return lugar ? lugar : '';
+  }
+
   const tipo = document.getElementById('trayecto-tipo').value;
 
   if (tipo === 'De A a B') {
@@ -3276,6 +3421,11 @@ function getFormattedUbicacion() {
 }
 
 function setFormattedUbicacion(val, secTimeVal) {
+  const gSel = document.getElementById('guardado-ubicacion-select');
+  const gCustom = document.getElementById('guardado-ubicacion-custom');
+  if (gSel) gSel.value = '';
+  if (gCustom) { gCustom.value = ''; gCustom.style.display = 'none'; }
+
   const tipoSel = document.getElementById('trayecto-tipo');
   const ubiSel = document.getElementById('ubicacion-select');
   const customInput = document.getElementById('ubicacion-custom');
@@ -3459,6 +3609,21 @@ function setFormattedUbicacion(val, secTimeVal) {
     customInput.value = val;
     customInput.style.display = 'block';
   }
+
+  // Pre-llenar también el selector de guardado en caso de que esté activo
+  const cleanVal = val.replace(/^Ubicación\s+/i, '').trim();
+  if (gSel) {
+    if (presets.includes(cleanVal.toUpperCase())) {
+      gSel.value = cleanVal.toUpperCase();
+    } else if (cleanVal) {
+      gSel.value = '_CUSTOM_';
+      if (gCustom) {
+        gCustom.value = cleanVal;
+        gCustom.style.display = 'block';
+      }
+    }
+  }
+
   handleTrayectoTipoChange();
 }
 
@@ -3478,6 +3643,7 @@ function setMode(mode) {
   const boxAuthCultura = document.getElementById('box-auth-cultura');
   const boxFestivo = document.getElementById('box-festivo');
   const boxVacaciones = document.getElementById('box-vacaciones');
+  const boxGuardado = document.getElementById('box-guardado');
 
   const tabSala = document.getElementById('btn-tab-sala');
   const tabActuacion = document.getElementById('btn-tab-actuacion');
@@ -3491,7 +3657,8 @@ function setMode(mode) {
   // Si estamos en Actuaciones, la caja de tipo de actuación solo se muestra si Festivo y Vacaciones son 'no'
   boxActuacion.style.display = (mode === 'actuacion' && isFestivo !== 'si' && isVacaciones !== 'si') ? '' : 'none';
   
-  boxLogistica.style.display = (mode === 'logistica') ? '' : 'none';
+  // En Logística, solo mostrar boxLogistica si NO está en modo Instrumental Guardado
+  boxLogistica.style.display = (mode === 'logistica' && isGuardado !== 'si') ? '' : 'none';
 
   // Mostrar Autorizado por cultura en Ensayo y en Logística
   if (boxAuthCultura) boxAuthCultura.style.display = (mode === 'sala' || mode === 'logistica') ? '' : 'none';
@@ -3500,9 +3667,18 @@ function setMode(mode) {
   if (boxFestivo) boxFestivo.style.display = (mode === 'actuacion') ? '' : 'none';
   if (boxVacaciones) boxVacaciones.style.display = (mode === 'actuacion') ? '' : 'none';
 
-  // Visibilidad de horas: se ocultan si estamos en Actuaciones y es Festivo o Vacaciones Sí
+  // Mostrar Instrumental Guardado SOLO en Logística
+  if (boxGuardado) boxGuardado.style.display = (mode === 'logistica') ? '' : 'none';
+
+  // Visibilidad de horas: se ocultan si estamos en Actuaciones (Festivo/Vacaciones Sí) o en Logística (Guardado Sí)
   if (hoursWrapper) {
-    hoursWrapper.style.display = (mode === 'actuacion' && (isFestivo === 'si' || isVacaciones === 'si')) ? 'none' : '';
+    if (mode === 'actuacion' && (isFestivo === 'si' || isVacaciones === 'si')) {
+      hoursWrapper.style.display = 'none';
+    } else if (mode === 'logistica' && isGuardado === 'si') {
+      hoursWrapper.style.display = 'none';
+    } else {
+      hoursWrapper.style.display = '';
+    }
   }
 
   // Estilos de botones superiores
@@ -3543,12 +3719,56 @@ if (mode === 'sala') {
 }
 
 function selectLogisticsOption(type) {
-  selectedLogisticsType = type;
-  const options = ['transporte', 'mochila', 'montaje', 'desmontaje', 'montar_desmontar', 'desmontar_montar', 'retranquear'];
+  selectedLogisticsType = (type === 'guardar_instrumental') ? 'guardar' : type;
+  const options = ['transporte', 'mochila', 'montaje', 'desmontaje', 'montar_desmontar', 'desmontar_montar', 'retranquear', 'guardar'];
   options.forEach(opt => {
     const el = document.getElementById(`radio-${opt}`);
-    if (el) el.classList.toggle('checked', type === opt);
+    if (el) el.classList.toggle('checked', selectedLogisticsType === opt);
   });
+}
+
+/* ═══════════════════════════════════════
+   CONTROL DE INSTRUMENTAL GUARDADO (LOGÍSTICA)
+═══════════════════════════════════════ */
+function setGuardadoStatus(status) {
+  isGuardado = status;
+  const btnNo = document.getElementById('btn-guardado-no');
+  const btnSi = document.getElementById('btn-guardado-si');
+  const displayLbl = document.getElementById('guardado-status-display');
+  const hoursWrapper = document.getElementById('hours-config-wrapper');
+  const boxLogistica = document.getElementById('box-logistica');
+  const guardadoUbiContainer = document.getElementById('guardado-ubicacion-container');
+
+  if (status === 'si') {
+    btnSi.classList.add('active-si');
+    btnNo.classList.remove('active-no');
+    displayLbl.innerHTML = `<span style="color:#b91c1c;font-weight:700;">Instrumental Guardado (Todo el día)</span>`;
+    
+    // 1. Ocultar bloque completo de Logística, Transporte y Servicios
+    if (boxLogistica) boxLogistica.style.display = 'none';
+
+    // 2. Mostrar selector de ubicación específico para Instrumental Guardado
+    if (guardadoUbiContainer) guardadoUbiContainer.style.display = 'block';
+
+    // 3. Ocultar horas
+    if (hoursWrapper && currentMode === 'logistica') hoursWrapper.style.display = 'none';
+  } else {
+    btnNo.classList.add('active-no');
+    btnSi.classList.remove('active-si');
+    displayLbl.innerHTML = `<span style="color:var(--text-dim);">No guardado</span>`;
+    
+    // 1. Volver a mostrar bloque de Logística si estamos en modo logística
+    if (boxLogistica && currentMode === 'logistica') boxLogistica.style.display = '';
+
+    // 2. Ocultar selector de ubicación de Instrumental Guardado
+    if (guardadoUbiContainer) guardadoUbiContainer.style.display = 'none';
+
+    // 3. Volver a mostrar horas si el trayecto no es De A a B
+    const trayectoTipo = document.getElementById('trayecto-tipo')?.value;
+    if (hoursWrapper && currentMode === 'logistica' && trayectoTipo !== 'De A a B') {
+      hoursWrapper.style.display = '';
+    }
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -3747,6 +3967,7 @@ function openEditModal(id) {
     setMode('logistica');
     const t = ev.tipoLogistica || (ev.desmontaje ? 'desmontaje' : (ev.montaje ? 'montaje' : 'transporte'));
     selectLogisticsOption(t);
+    setGuardadoStatus(ev.guardado || 'no');
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
     setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
   }
@@ -3803,6 +4024,12 @@ function resetForm() {
   setAuthStatus('no');
   setFestivoStatus('no');
   setVacacionesStatus('no');
+  setGuardadoStatus('no');
+
+  const gSel = document.getElementById('guardado-ubicacion-select');
+  const gCustom = document.getElementById('guardado-ubicacion-custom');
+  if (gSel) gSel.value = '';
+  if (gCustom) { gCustom.value = ''; gCustom.style.display = 'none'; }
 
   document.getElementById('time-start').value = '09:15';
   document.getElementById('time-end').value = '13:15';
@@ -3941,10 +4168,11 @@ function saveEvent() {
   const dateStart = document.getElementById('date-start').value;
   const dateEnd = isRange ? document.getElementById('date-end').value : dateStart;
   
-  // Si estamos en Actuaciones y es Festivo o Vacaciones 'si', las horas son nulas
+  // Si estamos en Actuaciones (Festivo/Vacaciones) o en Logística (Guardado 'si'), las horas son nulas
   const isCurrentlyFestivo = isActMode && (isFestivo === 'si');
   const isCurrentlyVacaciones = isActMode && (isVacaciones === 'si');
-  const isAllDaySpecial = isCurrentlyFestivo || isCurrentlyVacaciones;
+  const isCurrentlyGuardado = isLogMode && (isGuardado === 'si');
+  const isAllDaySpecial = isCurrentlyFestivo || isCurrentlyVacaciones || isCurrentlyGuardado;
 
   const trayectoTipoVal = document.getElementById('trayecto-tipo')?.value;
   let timeStart = isAllDaySpecial ? null : document.getElementById('time-start').value;
@@ -3994,6 +4222,7 @@ function saveEvent() {
     autorizadoFecha: allowsAuth ? finalAuthDate : null,
     festivo: isActMode ? isFestivo : 'no',
     vacaciones: isActMode ? isVacaciones : 'no',
+    guardado: isLogMode ? isGuardado : 'no',
     dateStart,
     dateEnd: isRange ? dateEnd : null,
     timeStart,
@@ -4061,6 +4290,7 @@ function filterEventsByType(evList, filterType) {
   if (filterType === 'logistica') return evList.filter(e => !e.sala && !e.actuacion && (e.transport === 'si' || e.montaje || e.desmontaje || !!e.tipoLogistica || !!e.ubicacion));
   if (filterType === 'festivos') return evList.filter(e => e.festivo === 'si');
   if (filterType === 'vacaciones') return evList.filter(e => e.vacaciones === 'si');
+  if (filterType === 'guardado') return evList.filter(e => e.guardado === 'si');
   return evList;
 }
 
@@ -4092,6 +4322,7 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
       else if (t === 'montar_desmontar') logCol = '🔄 Montar > Desmontar';
       else if (t === 'desmontar_montar') logCol = '🔄 Desmontar > Montar';
       else if (t === 'retranquear') logCol = '↔️ Retranquear';
+      else if (t === 'guardar' || t === 'guardar_instrumental') logCol = '📦 Guardar';
     }
 
     const ubiCol = ev.ubicacion || '—';
