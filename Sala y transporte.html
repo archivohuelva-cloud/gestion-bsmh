@@ -1361,10 +1361,31 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <div class="radiobox" id="radio-transporte"></div>
             🚚 TRANSPORTE
           </label>
-          <label onclick="selectLogisticsOption('mochila')" class="range-toggle">
-            <div class="radiobox" id="radio-mochila"></div>
-            🎒 MOCHILA
-          </label>
+          <!-- MOCHILA CON DESPLEGABLE DE CARPETILLAS A SU DERECHA -->
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <label onclick="selectLogisticsOption('mochila')" class="range-toggle" style="flex-shrink:0;">
+                <div class="radiobox" id="radio-mochila"></div>
+                🎒 MOCHILA
+              </label>
+              
+              <!-- DESPLEGABLE CARPETILLAS -->
+              <div id="mochila-carpetillas-container" style="display:none;align-items:center;gap:6px;flex:1;max-width:240px;">
+                <select id="carpetillas-select" onchange="handleCarpetillasSelectChange()" style="font-size:12px;padding:5px 8px;margin:0;">
+                  <option value="">Seleccionar carpetilla...</option>
+                  <option value="Atriles">Atriles</option>
+                  <option value="Marchas Militares">Marchas Militares</option>
+                  <option value="Marchas Procesionales">Marchas Procesionales</option>
+                  <option value="Música de Cámara">Música de Cámara</option>
+                  <option value="Pasodobles">Pasodobles</option>
+                  <option value="Nada">Nada</option>
+                  <option value="_CUSTOM_">+ Añadir personalizado...</option>
+                </select>
+              </div>
+            </div>
+            <!-- INPUT PERSONALIZADO SI SE ELIGE + Añadir personalizado -->
+            <input type="text" id="carpetillas-custom" placeholder="Escribe carpetilla personalizada…" style="display:none;font-size:12px;padding:6px 8px;margin-top:2px;" />
+          </div>
           <label onclick="selectLogisticsOption('montaje')" class="range-toggle">
             <div class="radiobox" id="radio-montaje"></div>
             🛒 MONTAJE
@@ -1379,7 +1400,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
           </label>
           <label onclick="selectLogisticsOption('desmontar_montar')" class="range-toggle">
             <div class="radiobox" id="radio-desmontar_montar"></div>
-            🔄 DESMONTAAR &gt; MONTAR
+            🔄 DESMONTAR &gt; MONTAR
           </label>
           <label onclick="selectLogisticsOption('retranquear')" class="range-toggle">
             <div class="radiobox" id="radio-retranquear"></div>
@@ -2102,7 +2123,7 @@ function getEventTitle(ev) {
   } else {
     const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
     if (t === 'transporte') titleParts.push('🚚 TRANSPORTE');
-    else if (t === 'mochila') titleParts.push('🎒 MOCHILA');
+    else if (t === 'mochila') titleParts.push(ev.carpetilla ? `🎒 MOCHILA (${ev.carpetilla.toUpperCase()})` : '🎒 MOCHILA');
     else if (t === 'montaje') titleParts.push('🛒 MONTAJE');
     else if (t === 'desmontaje') titleParts.push('🛒 DESMONTAJE');
     else if (t === 'montar_desmontar') titleParts.push('🔄 MONTAR > DESMONTAR');
@@ -3112,11 +3133,6 @@ let typeBadge = '';
     typeBadge = `<span style="background:${style.bg};color:${style.color};padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">${lbl}</span>`;
   }
 
-  // Guardado badge para Logística
-  const guardadoBadge = (ev.guardado === 'si')
-    ? `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
-    : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
-
   // Autorización badge para Ensayos
   let authBadge = '';
   if (ev.autorizadoCultura === 'si') {
@@ -3145,6 +3161,17 @@ let typeBadge = '';
       <div class="view-detail-value">${typeBadge}</div>
     </div>
   `;
+
+  // Mostrar Carpetilla seleccionada si es de tipo Mochila
+  if (ev.carpetilla && !ev.sala && !ev.actuacion) {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+        <div class="view-detail-label">Carpetilla</div>
+        <div class="view-detail-value">${ev.carpetilla}</div>
+      </div>
+    `;
+  }
 
   if (ev.ubicacion && !ev.sala && !ev.actuacion) {
     const cleanUbicacion = formatUbicacionDisplay(ev.ubicacion);
@@ -3205,12 +3232,13 @@ let typeBadge = '';
     `;
   }
 
-  if (!ev.sala && !ev.actuacion && ev.festivo !== 'si' && ev.vacaciones !== 'si') {
+  // Mostrar la fila de Guardado ÚNICA Y EXCLUSIVAMENTE cuando esté marcado en 'Sí' con estilo verde
+  if (ev.guardado === 'si') {
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
         <div class="view-detail-label">Guardado</div>
-        <div class="view-detail-value">${guardadoBadge}</div>
+        <div class="view-detail-value"><span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí (Todo el día)</span></div>
       </div>
     `;
   }
@@ -3774,6 +3802,24 @@ if (mode === 'sala') {
   }
 }
 
+function handleCarpetillasSelectChange() {
+  const val = document.getElementById('carpetillas-select').value;
+  const custom = document.getElementById('carpetillas-custom');
+  if (custom) {
+    custom.style.display = (val === '_CUSTOM_') ? 'block' : 'none';
+    if (val === '_CUSTOM_') custom.focus();
+  }
+}
+
+function getSelectedCarpetilla() {
+  if (selectedLogisticsType !== 'mochila') return '';
+  const sel = document.getElementById('carpetillas-select')?.value || '';
+  if (sel === '_CUSTOM_') {
+    return document.getElementById('carpetillas-custom')?.value.trim() || '';
+  }
+  return sel;
+}
+
 function selectLogisticsOption(type) {
   selectedLogisticsType = (type === 'guardar_instrumental') ? 'guardar' : type;
   const options = ['transporte', 'mochila', 'montaje', 'desmontaje', 'montar_desmontar', 'desmontar_montar', 'retranquear', 'guardar'];
@@ -3781,6 +3827,18 @@ function selectLogisticsOption(type) {
     const el = document.getElementById(`radio-${opt}`);
     if (el) el.classList.toggle('checked', selectedLogisticsType === opt);
   });
+
+  // Mostrar / ocultar desplegable de carpetillas a la derecha
+  const carpContainer = document.getElementById('mochila-carpetillas-container');
+  const carpCustom = document.getElementById('carpetillas-custom');
+  if (carpContainer) {
+    if (selectedLogisticsType === 'mochila') {
+      carpContainer.style.display = 'flex';
+    } else {
+      carpContainer.style.display = 'none';
+      if (carpCustom) carpCustom.style.display = 'none';
+    }
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -4022,6 +4080,29 @@ function openEditModal(id) {
   } else {
     const t = ev.tipoLogistica || (ev.desmontaje ? 'desmontaje' : (ev.montaje ? 'montaje' : 'transporte'));
     selectLogisticsOption(t);
+
+    // Restaurar selección de carpetillas si es mochila
+    const carpSelect = document.getElementById('carpetillas-select');
+    const carpCustom = document.getElementById('carpetillas-custom');
+    if (carpSelect) {
+      const presets = ['Atriles', 'Marchas Militares', 'Música de Cámara', 'Nada', 'Pasodobles', 'Marchas Procesionales'];
+      if (ev.carpetilla) {
+        if (presets.includes(ev.carpetilla)) {
+          carpSelect.value = ev.carpetilla;
+          if (carpCustom) carpCustom.style.display = 'none';
+        } else {
+          carpSelect.value = '_CUSTOM_';
+          if (carpCustom) {
+            carpCustom.value = ev.carpetilla;
+            carpCustom.style.display = 'block';
+          }
+        }
+      } else {
+        carpSelect.value = '';
+        if (carpCustom) carpCustom.style.display = 'none';
+      }
+    }
+
     setGuardadoStatus(ev.guardado || 'no');
     setMode('logistica');
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
@@ -4093,6 +4174,11 @@ function resetForm() {
   document.getElementById('actuacion-input').value = 'CONCIERTO';
 
   selectLogisticsOption('transporte');
+  const carpSelect = document.getElementById('carpetillas-select');
+  const carpCustom = document.getElementById('carpetillas-custom');
+  if (carpSelect) carpSelect.value = '';
+  if (carpCustom) { carpCustom.value = ''; carpCustom.style.display = 'none'; }
+
   setFormattedUbicacion('', null);
 
   const deabDestCustom = document.getElementById('deab-destino-custom');
@@ -4288,10 +4374,13 @@ function saveEvent() {
 
   pushState();
 
+  const carpetillaVal = isLogMode && selectedLogisticsType === 'mochila' ? getSelectedCarpetilla() : '';
+
   const payload = {
     sala: isSalaMode ? sala : '',
     actuacion: isActMode ? actuacion : '',
     tipoLogistica,
+    carpetilla: carpetillaVal,
     transport,
     montaje,
     desmontaje,
@@ -4395,7 +4484,7 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
     if (!ev.sala && !ev.actuacion) {
       const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
       if (t === 'transporte') logCol = '🚚 Transporte';
-      else if (t === 'mochila') logCol = '🎒 Mochila';
+      else if (t === 'mochila') logCol = ev.carpetilla ? `🎒 Mochila (${ev.carpetilla})` : '🎒 Mochila';
       else if (t === 'montaje') logCol = '🛒 Montaje';
       else if (t === 'desmontaje') logCol = '🛒 Desmontaje';
       else if (t === 'montar_desmontar') logCol = '🔄 Montar > Desmontar';
