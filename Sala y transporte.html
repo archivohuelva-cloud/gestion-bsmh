@@ -2004,6 +2004,52 @@ function formatDisplayRange(start, end) {
   return dStart;
 }
 
+function formatUbicacionDisplay(text) {
+  if (!text) return '';
+  let res = text.replace(/^Ubicación\s+/i, '');
+  
+  // 1. Caso: "De [Origen] a [Destino] | Vuelta: De [Origen] a [Destino]"
+  if (res.startsWith('De ') && res.includes(' | Vuelta: De ')) {
+    const parts = res.split(' | Vuelta: De ');
+    const mainParts = parts[0].replace(/^De\s+/i, '').split(/\s+a\s+/i);
+    const returnParts = parts[1].split(/\s+a\s+/i);
+    const o1 = (mainParts[0] || '').trim().toUpperCase();
+    const d1 = (mainParts[1] || '').trim().toUpperCase();
+    const o2 = (returnParts[0] || '').trim().toUpperCase();
+    const d2 = (returnParts[1] || '').trim().toUpperCase();
+    return `De ${o1} a ${d1} | Vuelta: De ${o2} a ${d2}`;
+  }
+
+  // 2. Caso: "De [Origen] a [Destino]"
+  if (res.startsWith('De ') && res.includes(' a ')) {
+    const mainParts = res.replace(/^De\s+/i, '').split(/\s+a\s+/i);
+    const o = (mainParts[0] || '').trim().toUpperCase();
+    const d = (mainParts[1] || '').trim().toUpperCase();
+    return `De ${o} a ${d}`;
+  }
+
+  // 3. Caso: "Ida a [Lugar] y vuelta a [Lugar]"
+  if (res.toLowerCase().startsWith('ida a ') && res.toLowerCase().includes(' y vuelta a ')) {
+    const parts = res.replace(/^Ida a\s+/i, '').split(/\s+y vuelta a\s+/i);
+    const ida = (parts[0] || '').trim().toUpperCase();
+    const vuelta = (parts[1] || '').trim().toUpperCase();
+    return `Ida a ${ida} y vuelta a ${vuelta}`;
+  }
+
+  // 4. Caso: "Ida a [Lugar]"
+  if (res.toLowerCase().startsWith('ida a ')) {
+    return `Ida a ${res.replace(/^Ida a\s+/i, '').trim().toUpperCase()}`;
+  }
+
+  // 5. Caso: "Vuelta a [Lugar]"
+  if (res.toLowerCase().startsWith('vuelta a ')) {
+    return `Vuelta a ${res.replace(/^Vuelta a\s+/i, '').trim().toUpperCase()}`;
+  }
+
+  // 6. Caso por defecto (lugar individual o personalizado)
+  return res.toUpperCase();
+}
+
 function getEventStyle(ev) {
   // Instrumental Guardado -> Rojo (SOLO cuando se activa 'Sí')
   if (ev.guardado === 'si') {
@@ -3101,7 +3147,7 @@ let typeBadge = '';
   `;
 
   if (ev.ubicacion && !ev.sala && !ev.actuacion) {
-    const cleanUbicacion = ev.ubicacion.replace(/^Ubicación\s+/i, '');
+    const cleanUbicacion = formatUbicacionDisplay(ev.ubicacion);
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -3382,11 +3428,11 @@ function getFormattedUbicacion() {
 
   if (tipo === 'De A a B') {
     const origSel = document.getElementById('deab-origen-select').value;
-    const origCustom = document.getElementById('deab-origen-custom').value.trim();
+    const origCustom = document.getElementById('deab-origen-custom').value.trim().toUpperCase();
     const origen = origSel === '_CUSTOM_' ? origCustom : origSel;
 
     const destSel = document.getElementById('deab-destino-select').value;
-    const destCustom = document.getElementById('deab-destino-custom').value.trim();
+    const destCustom = document.getElementById('deab-destino-custom').value.trim().toUpperCase();
     const destino = destSel === '_CUSTOM_' ? destCustom : destSel;
 
     if (!origen && !destino) return '';
@@ -3397,7 +3443,7 @@ function getFormattedUbicacion() {
     }
 
     const secSel = document.getElementById('ubicacion-secondary-select').value;
-    const secCustom = document.getElementById('ubicacion-secondary-custom').value.trim();
+    const secCustom = document.getElementById('ubicacion-secondary-custom').value.trim().toUpperCase();
     const returnDestino = secSel === '_CUSTOM_' ? secCustom : (secSel || origen);
 
     return `De ${origen} a ${destino} | Vuelta: De ${destino} a ${returnDestino}`;
