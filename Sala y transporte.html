@@ -816,9 +816,9 @@ body {
 
 .agenda-event {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px 12px 24px;
+  align-items: flex-start; /* Permite que el bloque se expanda hacia abajo de forma equilibrada */
+  gap: 14px;
+  padding: 10px 16px 10px 20px;
   cursor: pointer;
   border-left: 4px solid currentColor;
   border: 1px solid currentColor;
@@ -826,12 +826,40 @@ body {
   margin: 4px 16px;
   position: relative;
   transition: opacity 0.15s;
+  min-height: 44px;
 }
 .agenda-event:hover { opacity: 0.88; }
 
-.agenda-time { font-size: 12px; min-width: 100px; }
-.agenda-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-.agenda-notes { font-size: 12px; margin-left: auto; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 18px; }
+.agenda-time { 
+  font-size: 12px; 
+  min-width: 110px; 
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.agenda-title { 
+  font-size: 14px; 
+  font-weight: 700; 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  flex-shrink: 0; /* Evita que el título se encoja */
+  padding-top: 1px;
+}
+
+/* Las notas aprovechan todo el ancho sobrante a la izquierda y respetan saltos de línea */
+.agenda-notes { 
+  font-size: 12.5px; 
+  font-weight: 500;
+  margin-left: 10px; 
+  flex: 1; /* Ocupa todo el espacio central/derecho disponible */
+  text-align: right; 
+  white-space: pre-wrap; /* Muestra el texto completo y respeta los saltos de línea */
+  word-break: break-word; 
+  line-height: 1.45;
+  margin-right: 12px;
+  padding-top: 1px;
+}
 
 .agenda-add-btn {
   padding: 8px 16px 8px 24px;
