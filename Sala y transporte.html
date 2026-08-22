@@ -1451,7 +1451,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
               <div class="form-group">
                 <label style="font-size:11px">Lugar de Origen (A)</label>
                 <select id="deab-origen-select" onchange="handleDeAbOrigenChange()">
-                  <option value="">Selecciona origen...</option>
+                  <option value="">Seleccionar origen...</option>
                   <option value="ALMACÉN BANDA">Almacén Banda</option>
                   <option value="CASA COLÓN">Casa Colón</option>
                   <option value="GRAN TEATRO">Gran Teatro</option>
@@ -1465,7 +1465,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
               <div class="form-group">
                 <label style="font-size:11px">Lugar de Destino (B)</label>
                 <select id="deab-destino-select" onchange="handleDeAbDestinoChange()">
-                  <option value="">Selecciona destino...</option>
+                  <option value="">Seleccionar destino...</option>
                   <option value="ALMACÉN BANDA">Almacén Banda</option>
                   <option value="CASA COLÓN">Casa Colón</option>
                   <option value="GRAN TEATRO">Gran Teatro</option>
@@ -1500,7 +1500,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
                 <div class="form-group">
                   <label style="font-size:11px;" id="lbl-secondary-select">Lugar de destino final (B):</label>
                   <select id="ubicacion-secondary-select" onchange="handleSecondaryUbicacionChange()">
-                    <option value="">Selecciona destino de vuelta...</option>
+                    <option value="">Seleccionar destino de vuelta...</option>
                     <option value="ALMACÉN BANDA">Almacén Banda</option>
                     <option value="CASA COLÓN">Casa Colón</option>
                     <option value="GRAN TEATRO">Gran Teatro</option>
@@ -3348,11 +3348,11 @@ function populateLocationSelects() {
   const list = getAllKnownLocations();
 
   const selectsConfig = [
-    { id: 'ubicacion-select', defaultLabel: 'Selecciona ubicación...', customLabel: 'Añadir nueva ubicación...' },
-    { id: 'deab-origen-select', defaultLabel: 'Selecciona origen...', customLabel: 'Añadir origen específico...' },
-    { id: 'deab-destino-select', defaultLabel: 'Selecciona destino...', customLabel: 'Añadir destino específico...' },
-    { id: 'ubicacion-secondary-select', defaultLabel: 'Selecciona destino de vuelta...', customLabel: 'Añadir otro lugar específico...' },
-    { id: 'guardado-ubicacion-select', defaultLabel: 'Selecciona ubicación...', customLabel: 'Añadir otra ubicación...' }
+    { id: 'ubicacion-select', defaultLabel: 'Seleccionar ubicación...', customLabel: 'Añadir nueva ubicación...' },
+    { id: 'deab-origen-select', defaultLabel: 'Seleccionar origen...', customLabel: 'Añadir origen específico...' },
+    { id: 'deab-destino-select', defaultLabel: 'Seleccionar destino...', customLabel: 'Añadir destino específico...' },
+    { id: 'ubicacion-secondary-select', defaultLabel: 'Seleccionar destino de vuelta...', customLabel: 'Añadir otro lugar específico...' },
+    { id: 'guardado-ubicacion-select', defaultLabel: 'Seleccionar ubicación...', customLabel: 'Añadir otra ubicación...' }
   ];
 
   selectsConfig.forEach(cfg => {
