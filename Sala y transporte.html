@@ -1783,6 +1783,16 @@ function updateHistoryButtons() {
 }
 
 window.addEventListener('keydown', (e) => {
+  // Atajo tecla Escape (ESC) para cerrar cualquier modal abierto
+  if (e.key === 'Escape' || e.key === 'Esc') {
+    const openModals = document.querySelectorAll('.modal-overlay.open');
+    if (openModals.length > 0) {
+      e.preventDefault();
+      openModals.forEach(modal => modal.classList.remove('open'));
+      return;
+    }
+  }
+
   // Detectar modales abiertos
   const isAddModalOpen = document.getElementById('add-modal')?.classList.contains('open');
   const isViewModalOpen = document.getElementById('view-modal')?.classList.contains('open');
