@@ -221,6 +221,17 @@ body {
   flex: 1;
   min-width: 150px;
 }
+
+/* RELOJ EN TIEMPO REAL */
+.header-current-time {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000000;
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
 .search-input {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -1237,6 +1248,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     <div class="search-results-dropdown" id="search-results"></div>
   </div>
 
+  <!-- HORA ACTUAL EN TIEMPO REAL -->
+  <div class="header-current-time" id="header-live-clock">--:--h</div>
+
   <div class="header-nav">
     <button class="btn-nav" id="btn-prev">‹</button>
     <div class="period-label" id="period-label">—</div>
@@ -1369,20 +1383,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
           </label>
         </div>
 
-        <!-- UBICACIÓN Y TRAYECTO DINÁMICO -->
+<!-- UBICACIÓN Y TRAYECTO DINÁMICO -->
         <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px;">
           <label style="color:var(--transport-color)">📍 Ubicación y Trayecto de Logística</label>
           
-          <div class="form-row">
-            <div class="form-group">
-              <label style="font-size:11px">Tipo de Trayecto</label>
-              <select id="trayecto-tipo" onchange="handleTrayectoTipoChange()">
-                <option value="">(Sin especificar)</option>
-                <option value="Ida a">Ida a</option>
-                <option value="Vuelta a">Vuelta a</option>
-                <option value="Ubicación">Ubicación fija</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label style="font-size:11px">Tipo de Trayecto</label>
+            <select id="trayecto-tipo" onchange="handleTrayectoTipoChange()">
+              <option value="">(Sin especificar)</option>
+              <option value="De A a B">De A a B</option>
+              <option value="Ida a">Ida a</option>
+              <option value="Vuelta a">Vuelta a</option>
+              <option value="Ubicación">Ubicación fija</option>
+            </select>
+          </div>
+
+          <!-- BLOQUE 1: MODO ESTÁNDAR (Ida a, Vuelta a, Ubicación fija) -->
+          <div id="standard-trayecto-inputs" style="display:none;flex-direction:column;gap:6px;">
             <div class="form-group">
               <label style="font-size:11px" id="lbl-ubi-primaria">Lugar / Destino (A - Z)</label>
               <select id="ubicacion-select" onchange="handleUbicacionSelectChange()">
@@ -1396,10 +1413,48 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
                 <option value="_CUSTOM_">Añadir nueva ubicación...</option> 
               </select>
             </div>
+            <input type="text" id="ubicacion-custom" placeholder="Escribe el lugar o destino específico…" style="display:none;margin-top:2px;" />
           </div>
-          <input type="text" id="ubicacion-custom" placeholder="Escribe el lugar o destino específico…" style="display:none;margin-top:2px;" />
 
-          <!-- PREGUNTA Y SECCIÓN SECUNDARIA DE TRAYECTO -->
+          <!-- BLOQUE 2: MODO "DE A A B" (ORIGEN A + DESTINO B + HORA INTEGRADA) -->
+          <div id="de-a-b-trayecto-inputs" style="display:none;flex-direction:column;gap:6px;">
+            <div style="display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:8px;">
+              <div class="form-group">
+                <label style="font-size:11px">Lugar de Origen (A)</label>
+                <select id="deab-origen-select" onchange="handleDeAbOrigenChange()">
+                  <option value="">Selecciona origen...</option>
+                  <option value="ALMACÉN BANDA">Almacén Banda</option>
+                  <option value="CASA COLÓN">Casa Colón</option>
+                  <option value="GRAN TEATRO">Gran Teatro</option>
+                  <option value="LAZARETO">Lazareto</option>
+                  <option value="SALA B">Sala B</option>
+                  <option value="SANTA FE">Santa Fe</option>
+                  <option value="_CUSTOM_">Añadir origen específico...</option>
+                </select>
+                <input type="text" id="deab-origen-custom" placeholder="Origen específico..." style="display:none;margin-top:4px;" />
+              </div>
+              <div class="form-group">
+                <label style="font-size:11px">Lugar de Destino (B)</label>
+                <select id="deab-destino-select" onchange="handleDeAbDestinoChange()">
+                  <option value="">Selecciona destino...</option>
+                  <option value="ALMACÉN BANDA">Almacén Banda</option>
+                  <option value="CASA COLÓN">Casa Colón</option>
+                  <option value="GRAN TEATRO">Gran Teatro</option>
+                  <option value="LAZARETO">Lazareto</option>
+                  <option value="SALA B">Sala B</option>
+                  <option value="SANTA FE">Santa Fe</option>
+                  <option value="_CUSTOM_">Añadir destino específico...</option>
+                </select>
+                <input type="text" id="deab-destino-custom" placeholder="Destino específico..." style="display:none;margin-top:4px;" />
+              </div>
+              <div class="form-group">
+                <label style="font-size:11px">Hora Ida / Salida</label>
+                <input type="time" id="deab-time-start" value="08:30" />
+              </div>
+            </div>
+          </div>
+
+          <!-- PREGUNTA Y SECCIÓN SECUNDARIA DE TRAYECTO / VUELTA POSTERIOR -->
           <div id="secondary-trayecto-group" style="display:none;margin-top:6px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);border:1px dashed var(--border2);flex-direction:column;gap:8px;">
             <label class="range-toggle" onclick="toggleSecondaryTrayecto()">
               <div class="checkbox" id="has-secondary-checkbox"></div>
@@ -1407,11 +1462,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             </label>
 
             <div id="secondary-inputs" style="display:none;flex-direction:column;gap:8px;margin-top:4px;">
+              <!-- Tramo secundario automático para "De A a B" -->
+              <div id="deab-return-auto-info" style="display:none;font-size:11.5px;background:rgba(230,81,0,0.08);padding:6px 10px;border-radius:6px;color:var(--transport-color);line-height:1.4;">
+                🔄 <strong>Vuelta:</strong> Origen fijado automáticamente en <span id="deab-return-origin-name" style="font-weight:700;text-decoration:underline;">—</span>
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
-                  <label style="font-size:11px;" id="lbl-secondary-select">Lugar correspondiente:</label>
+                  <label style="font-size:11px;" id="lbl-secondary-select">Lugar de destino final (B):</label>
                   <select id="ubicacion-secondary-select" onchange="handleSecondaryUbicacionChange()">
-                    <option value="">Mismo lugar principal</option>
+                    <option value="">Selecciona destino de vuelta...</option>
                     <option value="ALMACÉN BANDA">Almacén Banda</option>
                     <option value="CASA COLÓN">Casa Colón</option>
                     <option value="GRAN TEATRO">Gran Teatro</option>
@@ -1422,11 +1482,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
                   </select>
                 </div>
                 <div class="form-group">
-                  <label style="font-size:11px;" id="lbl-secondary-time">Hora correspondiente:</label>
+                  <label style="font-size:11px;" id="lbl-secondary-time">Hora de Vuelta:</label>
                   <input type="time" id="secondary-time" value="13:30" />
                 </div>
               </div>
-              <input type="text" id="ubicacion-secondary-custom" placeholder="Escribe el lugar secundario…" style="display:none;margin-top:2px;" />
+              <input type="text" id="ubicacion-secondary-custom" placeholder="Escribe el lugar de vuelta…" style="display:none;margin-top:2px;" />
             </div>
           </div>
 
@@ -1434,7 +1494,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
       </div>
 
-<!-- SECCIÓN: AUTORIZADO POR CULTURA (SOLO PARA ENSAYO) -->
+<!-- SECCIÓN: AUTORIZADO POR CULTURA (PARA ENSAYO Y LOGÍSTICA) -->
       <div class="section-box" id="box-auth-cultura" style="background:#fdfdfe;border-color:var(--border);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
@@ -2940,8 +3000,9 @@ let typeBadge = '';
     </div>
   `;
 
-  // Mostrar Autorización solo si es Ensayo (sala)
-  if (ev.sala) {
+  // Mostrar Autorización en Ensayo (sala) o en Logística
+  const isLogisticaEv = !ev.sala && !ev.actuacion && (ev.festivo !== 'si') && (ev.vacaciones !== 'si');
+  if (ev.sala || isLogisticaEv) {
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284"/><path d="M3 21h18"/></svg>
@@ -3026,34 +3087,105 @@ function deleteFromViewModal() {
 /* ═══════════════════════════════════════
    UBICACIÓN DINÁMICA & TRAYECTOS HANDLERS
 ═══════════════════════════════════════ */
+function getDeAbSelectedDestino() {
+  const sel = document.getElementById('deab-destino-select')?.value;
+  const custom = document.getElementById('deab-destino-custom')?.value.trim();
+  return sel === '_CUSTOM_' ? custom : sel;
+}
+
+function updateDeAbReturnOriginDisplay() {
+  const dest = getDeAbSelectedDestino() || '(Destino no seleccionado)';
+  const lbl = document.getElementById('deab-return-origin-name');
+  if (lbl) lbl.textContent = dest;
+}
+
+function handleDeAbOrigenChange() {
+  const val = document.getElementById('deab-origen-select').value;
+  const custom = document.getElementById('deab-origen-custom');
+  custom.style.display = (val === '_CUSTOM_') ? 'block' : 'none';
+  if (val === '_CUSTOM_') custom.focus();
+}
+
+function handleDeAbDestinoChange() {
+  const val = document.getElementById('deab-destino-select').value;
+  const custom = document.getElementById('deab-destino-custom');
+  custom.style.display = (val === '_CUSTOM_') ? 'block' : 'none';
+  if (val === '_CUSTOM_') custom.focus();
+  updateDeAbReturnOriginDisplay();
+}
+
 function handleTrayectoTipoChange() {
   const tipo = document.getElementById('trayecto-tipo').value;
+  const stdInputs = document.getElementById('standard-trayecto-inputs');
+  const deabInputs = document.getElementById('de-a-b-trayecto-inputs');
   const secGroup = document.getElementById('secondary-trayecto-group');
   const secLabel = document.getElementById('secondary-toggle-label');
+  const deabAutoInfo = document.getElementById('deab-return-auto-info');
   const lblPrimary = document.getElementById('lbl-ubi-primaria');
   const lblMainTime = document.getElementById('lbl-main-time-start');
+  const lblSecSelect = document.getElementById('lbl-secondary-select');
   const lblSecTime = document.getElementById('lbl-secondary-time');
+  const hoursWrapper = document.getElementById('hours-config-wrapper');
 
-  if (tipo === 'Ida a') {
-    lblPrimary.textContent = 'Lugar de Ida:';
+  if (tipo === 'De A a B') {
+    stdInputs.style.display = 'none';
+    deabInputs.style.display = 'flex';
     secGroup.style.display = 'flex';
     secLabel.textContent = '¿Hay vuelta posterior?';
-    document.getElementById('lbl-secondary-select').textContent = 'Lugar de Vuelta:';
-    lblMainTime.textContent = 'Hora de Ida';
+    if (deabAutoInfo) deabAutoInfo.style.display = 'block';
+    if (lblSecSelect) lblSecSelect.textContent = 'Lugar de destino final (B):';
     if (lblSecTime) lblSecTime.textContent = 'Hora de Vuelta:';
-  } else if (tipo === 'Vuelta a') {
-    lblPrimary.textContent = 'Lugar de Vuelta:';
-    secGroup.style.display = 'flex';
-    secLabel.textContent = '¿Hay ida previa?';
-    document.getElementById('lbl-secondary-select').textContent = 'Lugar de Ida previa:';
-    lblMainTime.textContent = 'Hora de Vuelta';
-    if (lblSecTime) lblSecTime.textContent = 'Hora de Ida:';
+    
+    // Ocultar bloque de horas inferior (y su checkbox de rango)
+    if (hoursWrapper && currentMode === 'logistica') {
+      hoursWrapper.style.display = 'none';
+    }
+    
+    updateDeAbReturnOriginDisplay();
   } else {
-    lblPrimary.textContent = 'Lugar / Destino fijo:';
-    secGroup.style.display = 'none';
-    document.getElementById('has-secondary-checkbox').classList.remove('checked');
-    document.getElementById('secondary-inputs').style.display = 'none';
-    lblMainTime.textContent = currentMode === 'sala' ? 'Hora inicio' : 'Hora inicio';
+    // Restaurar bloque de horas inferior para otros tipos
+    if (hoursWrapper && currentMode === 'logistica') {
+      hoursWrapper.style.display = '';
+    }
+
+    if (tipo === 'Ida a') {
+      stdInputs.style.display = 'flex';
+      deabInputs.style.display = 'none';
+      secGroup.style.display = 'flex';
+      secLabel.textContent = '¿Hay vuelta posterior?';
+      if (deabAutoInfo) deabAutoInfo.style.display = 'none';
+      lblPrimary.textContent = 'Lugar de Ida:';
+      if (lblSecSelect) lblSecSelect.textContent = 'Lugar de Vuelta:';
+      if (lblMainTime) lblMainTime.textContent = 'Hora de Ida';
+      if (lblSecTime) lblSecTime.textContent = 'Hora de Vuelta:';
+    } else if (tipo === 'Vuelta a') {
+      stdInputs.style.display = 'flex';
+      deabInputs.style.display = 'none';
+      secGroup.style.display = 'flex';
+      secLabel.textContent = '¿Hay ida previa?';
+      if (deabAutoInfo) deabAutoInfo.style.display = 'none';
+      lblPrimary.textContent = 'Lugar de Vuelta:';
+      if (lblSecSelect) lblSecSelect.textContent = 'Lugar de Ida previa:';
+      if (lblMainTime) lblMainTime.textContent = 'Hora de Vuelta';
+      if (lblSecTime) lblSecTime.textContent = 'Hora de Ida:';
+    } else if (tipo === 'Ubicación') {
+      stdInputs.style.display = 'flex';
+      deabInputs.style.display = 'none';
+      lblPrimary.textContent = 'Lugar / Destino fijo:';
+      secGroup.style.display = 'none';
+      if (deabAutoInfo) deabAutoInfo.style.display = 'none';
+      document.getElementById('has-secondary-checkbox').classList.remove('checked');
+      document.getElementById('secondary-inputs').style.display = 'none';
+      if (lblMainTime) lblMainTime.textContent = 'Hora inicio';
+    } else {
+      stdInputs.style.display = 'none';
+      deabInputs.style.display = 'none';
+      secGroup.style.display = 'none';
+      if (deabAutoInfo) deabAutoInfo.style.display = 'none';
+      document.getElementById('has-secondary-checkbox').classList.remove('checked');
+      document.getElementById('secondary-inputs').style.display = 'none';
+      if (lblMainTime) lblMainTime.textContent = 'Hora inicio';
+    }
   }
 }
 
@@ -3073,6 +3205,9 @@ function toggleSecondaryTrayecto() {
   cb.classList.toggle('checked');
   const inputs = document.getElementById('secondary-inputs');
   inputs.style.display = cb.classList.contains('checked') ? 'flex' : 'none';
+  if (document.getElementById('trayecto-tipo').value === 'De A a B') {
+    updateDeAbReturnOriginDisplay();
+  }
 }
 
 function handleSecondaryUbicacionChange() {
@@ -3089,9 +3224,32 @@ function handleSecondaryUbicacionChange() {
 function getFormattedUbicacion() {
   if (currentMode === 'sala') return '';
   const tipo = document.getElementById('trayecto-tipo').value;
+
+  if (tipo === 'De A a B') {
+    const origSel = document.getElementById('deab-origen-select').value;
+    const origCustom = document.getElementById('deab-origen-custom').value.trim();
+    const origen = origSel === '_CUSTOM_' ? origCustom : origSel;
+
+    const destSel = document.getElementById('deab-destino-select').value;
+    const destCustom = document.getElementById('deab-destino-custom').value.trim();
+    const destino = destSel === '_CUSTOM_' ? destCustom : destSel;
+
+    if (!origen && !destino) return '';
+
+    const hasSecondary = document.getElementById('has-secondary-checkbox').classList.contains('checked');
+    if (!hasSecondary) {
+      return (origen && destino) ? `De ${origen} a ${destino}` : (origen ? `De ${origen}` : `A ${destino}`);
+    }
+
+    const secSel = document.getElementById('ubicacion-secondary-select').value;
+    const secCustom = document.getElementById('ubicacion-secondary-custom').value.trim();
+    const returnDestino = secSel === '_CUSTOM_' ? secCustom : (secSel || origen);
+
+    return `De ${origen} a ${destino} | Vuelta: De ${destino} a ${returnDestino}`;
+  }
+
   const ubiSel = document.getElementById('ubicacion-select').value;
   const customVal = document.getElementById('ubicacion-custom').value.trim();
-
   let lugar = ubiSel === '_CUSTOM_' ? customVal : ubiSel;
   if (!lugar && !tipo) return '';
 
@@ -3121,6 +3279,12 @@ function setFormattedUbicacion(val, secTimeVal) {
   const tipoSel = document.getElementById('trayecto-tipo');
   const ubiSel = document.getElementById('ubicacion-select');
   const customInput = document.getElementById('ubicacion-custom');
+  
+  const origSel = document.getElementById('deab-origen-select');
+  const origCustom = document.getElementById('deab-origen-custom');
+  const destSel = document.getElementById('deab-destino-select');
+  const destCustom = document.getElementById('deab-destino-custom');
+
   const secCb = document.getElementById('has-secondary-checkbox');
   const secSel = document.getElementById('ubicacion-secondary-select');
   const secCustom = document.getElementById('ubicacion-secondary-custom');
@@ -3131,6 +3295,12 @@ function setFormattedUbicacion(val, secTimeVal) {
   ubiSel.value = '';
   customInput.value = '';
   customInput.style.display = 'none';
+
+  if (origSel) origSel.value = '';
+  if (origCustom) { origCustom.value = ''; origCustom.style.display = 'none'; }
+  if (destSel) destSel.value = '';
+  if (destCustom) { destCustom.value = ''; destCustom.style.display = 'none'; }
+
   secCb.classList.remove('checked');
   secSel.value = '';
   secCustom.value = '';
@@ -3144,6 +3314,98 @@ function setFormattedUbicacion(val, secTimeVal) {
   }
 
   const presets = ['ALMACÉN BANDA', 'CASA COLÓN', 'GRAN TEATRO', 'LAZARETO', 'SALA B', 'SANTA FE'];
+
+  // Sincronizar el campo de hora integrado de "De A a B" con el valor de timeStart
+  const deabTimeStartInput = document.getElementById('deab-time-start');
+  if (deabTimeStartInput) {
+    const mainTimeVal = document.getElementById('time-start')?.value || '08:30';
+    deabTimeStartInput.value = mainTimeVal;
+  }
+
+  // 1. Caso: De A a B con Vuelta posterior
+  if (val.startsWith('De ') && val.includes(' | Vuelta: De ')) {
+    tipoSel.value = 'De A a B';
+    handleTrayectoTipoChange();
+    secCb.classList.add('checked');
+    secInputs.style.display = 'flex';
+
+    const mainAndReturn = val.split(' | Vuelta: De ');
+    const mainParts = mainAndReturn[0].replace('De ', '').split(' a ');
+    const orig = (mainParts[0] || '').trim();
+    const dest = (mainParts[1] || '').trim();
+
+    const returnParts = (mainAndReturn[1] || '').split(' a ');
+    const retDest = (returnParts[1] || '').trim();
+
+    if (presets.includes(orig.toUpperCase())) origSel.value = orig.toUpperCase();
+    else { origSel.value = '_CUSTOM_'; origCustom.value = orig; origCustom.style.display = 'block'; }
+
+    if (presets.includes(dest.toUpperCase())) destSel.value = dest.toUpperCase();
+    else { destSel.value = '_CUSTOM_'; destCustom.value = dest; destCustom.style.display = 'block'; }
+
+    if (presets.includes(retDest.toUpperCase())) secSel.value = retDest.toUpperCase();
+    else if (retDest) { secSel.value = '_CUSTOM_'; secCustom.value = retDest; secCustom.style.display = 'block'; }
+
+    updateDeAbReturnOriginDisplay();
+    return;
+  }
+
+  // 2. Caso: De A a B simple
+  if (val.startsWith('De ') && val.includes(' a ')) {
+    tipoSel.value = 'De A a B';
+    handleTrayectoTipoChange();
+
+    const mainParts = val.replace('De ', '').split(' a ');
+    const orig = (mainParts[0] || '').trim();
+    const dest = (mainParts[1] || '').trim();
+
+    if (presets.includes(orig.toUpperCase())) origSel.value = orig.toUpperCase();
+    else { origSel.value = '_CUSTOM_'; origCustom.value = orig; origCustom.style.display = 'block'; }
+
+    if (presets.includes(dest.toUpperCase())) destSel.value = dest.toUpperCase();
+    else { destSel.value = '_CUSTOM_'; destCustom.value = dest; destCustom.style.display = 'block'; }
+
+    updateDeAbReturnOriginDisplay();
+    return;
+  }
+
+  // 2. Caso: De A a B simple
+  if (val.startsWith('De ') && val.includes(' a ')) {
+    tipoSel.value = 'De A a B';
+    handleTrayectoTipoChange();
+
+    const mainParts = val.replace('De ', '').split(' a ');
+    const orig = (mainParts[0] || '').trim();
+    const dest = (mainParts[1] || '').trim();
+
+    if (presets.includes(orig.toUpperCase())) origSel.value = orig.toUpperCase();
+    else { origSel.value = '_CUSTOM_'; origCustom.value = orig; origCustom.style.display = 'block'; }
+
+    if (presets.includes(dest.toUpperCase())) destSel.value = dest.toUpperCase();
+    else { destSel.value = '_CUSTOM_'; destCustom.value = dest; destCustom.style.display = 'block'; }
+
+    updateDeAbReturnOriginDisplay();
+    return;
+  }
+
+  // 3. Caso: Ida y vuelta clásica
+  if (val.startsWith('Ida a ') && val.includes(' y vuelta a ')) {
+    tipoSel.value = 'Ida a';
+    handleTrayectoTipoChange();
+    secCb.classList.add('checked');
+    secInputs.style.display = 'flex';
+
+    const parts = val.replace('Ida a ', '').split(' y vuelta a ');
+    const p1 = parts[0].trim();
+    const p2 = (parts[1] || '').trim();
+
+    if (presets.includes(p1.toUpperCase())) ubiSel.value = p1.toUpperCase();
+    else { ubiSel.value = '_CUSTOM_'; customInput.value = p1; customInput.style.display = 'block'; }
+
+    if (presets.includes(p2.toUpperCase())) secSel.value = p2.toUpperCase();
+    else if (p2) { secSel.value = '_CUSTOM_'; secCustom.value = p2; secCustom.style.display = 'block'; }
+    return;
+  }
 
   if (val.startsWith('Ida a ') && val.includes(' y vuelta a ')) {
     tipoSel.value = 'Ida a';
@@ -3231,8 +3493,8 @@ function setMode(mode) {
   
   boxLogistica.style.display = (mode === 'logistica') ? '' : 'none';
 
-  // Mostrar Autorizado por cultura SOLO en Ensayo
-  if (boxAuthCultura) boxAuthCultura.style.display = (mode === 'sala') ? '' : 'none';
+  // Mostrar Autorizado por cultura en Ensayo y en Logística
+  if (boxAuthCultura) boxAuthCultura.style.display = (mode === 'sala' || mode === 'logistica') ? '' : 'none';
 
   // Mostrar Festivo y Vacaciones SOLO en Actuaciones
   if (boxFestivo) boxFestivo.style.display = (mode === 'actuacion') ? '' : 'none';
@@ -3486,11 +3748,14 @@ function openEditModal(id) {
     const t = ev.tipoLogistica || (ev.desmontaje ? 'desmontaje' : (ev.montaje ? 'montaje' : 'transporte'));
     selectLogisticsOption(t);
     setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
+    setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
   }
 
   document.getElementById('date-start').value = ev.dateStart;
   document.getElementById('date-end').value = ev.dateEnd || ev.dateStart;
   document.getElementById('time-start').value = ev.timeStart || '09:15';
+  const deabTimeStartEl = document.getElementById('deab-time-start');
+  if (deabTimeStartEl) deabTimeStartEl.value = ev.timeStart || '08:30';
   document.getElementById('time-end').value = ev.timeEnd || '';
   document.getElementById('event-notes').value = ev.notes || '';
 
@@ -3530,6 +3795,11 @@ function resetForm() {
   selectLogisticsOption('transporte');
   setFormattedUbicacion('', null);
 
+  const deabDestCustom = document.getElementById('deab-destino-custom');
+  if (deabDestCustom) {
+    deabDestCustom.oninput = updateDeAbReturnOriginDisplay;
+  }
+
   setAuthStatus('no');
   setFestivoStatus('no');
   setVacacionesStatus('no');
@@ -3554,7 +3824,9 @@ function updateHourRangeUI() {
 
   if (startLbl) {
     const trayectoTipo = document.getElementById('trayecto-tipo')?.value;
-    if (currentMode === 'logistica' && trayectoTipo === 'Ida a') {
+    if (currentMode === 'logistica' && trayectoTipo === 'De A a B') {
+      startLbl.textContent = 'Hora de Salida';
+    } else if (currentMode === 'logistica' && trayectoTipo === 'Ida a') {
       startLbl.textContent = 'Hora de Ida';
     } else if (currentMode === 'logistica' && trayectoTipo === 'Vuelta a') {
       startLbl.textContent = 'Hora de Vuelta';
@@ -3674,13 +3946,21 @@ function saveEvent() {
   const isCurrentlyVacaciones = isActMode && (isVacaciones === 'si');
   const isAllDaySpecial = isCurrentlyFestivo || isCurrentlyVacaciones;
 
-  const timeStart = isAllDaySpecial ? null : document.getElementById('time-start').value;
-  const timeEnd = (isAllDaySpecial || !isHourRange) ? null : document.getElementById('time-end').value;
+  const trayectoTipoVal = document.getElementById('trayecto-tipo')?.value;
+  let timeStart = isAllDaySpecial ? null : document.getElementById('time-start').value;
+
+  // Si está en Logística y es "De A a B", tomar la hora del campo integrado
+  if (isLogMode && trayectoTipoVal === 'De A a B') {
+    timeStart = document.getElementById('deab-time-start').value || '08:30';
+  }
+
+  const timeEnd = (isAllDaySpecial || !isHourRange || (isLogMode && trayectoTipoVal === 'De A a B')) ? null : document.getElementById('time-end').value;
   const notes = document.getElementById('event-notes').value.trim();
 
-  // Guardar fecha de autorización en Ensayo
+  // Guardar fecha de autorización en Ensayo o Logística
+  const allowsAuth = isSalaMode || isLogMode;
   const customAuthVal = document.getElementById('auth-datetime-input')?.value;
-  const finalAuthDate = (isSalaMode && currentAuth === 'si' && customAuthVal) 
+  const finalAuthDate = (allowsAuth && currentAuth === 'si' && customAuthVal) 
     ? new Date(customAuthVal).toISOString() 
     : null;
 
@@ -3710,8 +3990,8 @@ function saveEvent() {
     desmontaje,
     ubicacion,
     secondaryTime,
-    autorizadoCultura: isSalaMode ? currentAuth : 'no',
-    autorizadoFecha: isSalaMode ? finalAuthDate : null,
+    autorizadoCultura: allowsAuth ? currentAuth : 'no',
+    autorizadoFecha: allowsAuth ? finalAuthDate : null,
     festivo: isActMode ? isFestivo : 'no',
     vacaciones: isActMode ? isVacaciones : 'no',
     dateStart,
@@ -4057,10 +4337,23 @@ window.addEventListener('focus', () => {
 });
 
 /* ═══════════════════════════════════════
+   ACTUALIZACIÓN DE RELOJ EN TIEMPO REAL
+═══════════════════════════════════════ */
+function updateHeaderClock() {
+  const clockEl = document.getElementById('header-live-clock');
+  if (!clockEl) return;
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  clockEl.textContent = `${hh}:${mm}h`;
+}
+
+/* ═══════════════════════════════════════
    TEMPORIZADOR EN VIVO (SEGUNDO A SEGUNDO)
    Actualiza la cuenta atrás y la línea roja
 ═══════════════════════════════════════ */
 setInterval(() => {
+  updateHeaderClock();
   const cdText = getCountdownText();
 
   // 1. Actualizar texto en el badge de la vista de Mes
@@ -4112,6 +4405,7 @@ function showToast(msg, type='info') {
    INIT (CARGA INICIAL FORZADA CON OVERLAY)
 ═══════════════════════════════════════ */
 async function initApp() {
+  updateHeaderClock();
   updateHistoryButtons();
   render();
 
@@ -4121,6 +4415,8 @@ async function initApp() {
     hideLoadingOverlay();
   }
 }
+
+initApp();
 
 initApp();
 </script>
