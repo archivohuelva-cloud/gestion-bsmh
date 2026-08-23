@@ -1722,10 +1722,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         <label>Alcance de la exportación</label>
         <select id="export-scope" onchange="handleExportScopeChange()">
           <option value="all_views">📦 Paquete Completo (Todas las Vistas en ZIP)</option>
-          <option value="year">📅 Todo el Año actual</option>
+          <option value="year">📅 Año actual</option>
           <option value="month">🗓 Mes actual</option>
-          <option value="day">📌 Día seleccionado</option>
-          <option value="custom_range">📆 Rango de días personalizado</option>
+          <option value="day">📌 Día actual</option>
+          <option value="custom_range">📆 Rango de días</option>
         </select>
       </div>
 
@@ -1743,8 +1743,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 <div class="form-group">
         <label>Filtrar Tipo de Elementos</label>
         <select id="export-filter">
-          <option value="all">Todo (Ensayos + Actuaciones + Logística + Festivos + Vacaciones + Instrumental Guardado)</option>
-          <option value="salas">Solo Ensayos / Salas</option>
+          <option value="all">Todo</option>
+          <option value="salas">Solo Sala de Ensayo</option>
           <option value="actuaciones">Solo Actuaciones</option>
           <option value="logistica">Solo Transporte y Logística</option>
           <option value="festivos">Solo Festivos</option>
@@ -1754,7 +1754,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       </div>
 
       <div style="font-size:12px;color:var(--text-dim);background:var(--surface2);padding:10px;border-radius:8px;line-height:1.4">
-        💡 Se generará un archivo comprimido <strong>.ZIP</strong> nombrado con la fecha actual conteniendo los PDFs con el formato correspondiente.
+        💡 Se generará un archivo comprimido <strong>.ZIP</strong> nombrado con la fecha y hora actual conteniendo los PDFs del calendario seleccionado.
       </div>
     </div>
     <div class="modal-footer">
