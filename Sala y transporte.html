@@ -319,6 +319,13 @@ body {
   min-width: 170px;
   text-align: center;
   letter-spacing: -0.3px;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: background 0.15s;
+}
+.period-label:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Tabs de vistas */
@@ -1764,6 +1771,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   </div>
 </div>
 
+<!-- ═══════════════════ MODAL SELECTOR RÁPIDO DE FECHA ═══════════════════ -->
+<div class="modal-overlay" id="quick-jump-modal">
+  <div class="modal" style="width:340px;">
+    <div class="modal-header">
+      <div class="modal-title" id="quick-jump-title">Ir a fecha</div>
+      <button class="modal-close" onclick="closeModal('quick-jump-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="quick-jump-body">
+      <!-- Se genera dinámicamente según la vista activa -->
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-action" onclick="closeModal('quick-jump-modal')">Cancelar</button>
+      <button type="button" class="btn-action primary" onclick="applyQuickJump()">Ir</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -2450,10 +2474,87 @@ document.addEventListener('click', (e) => {
 });
 
 /* ═══════════════════════════════════════
-   NAVEGACIÓN
+   NAVEGACIÓN & SELECTOR RÁPIDO (DOBLE CLIC)
 ═══════════════════════════════════════ */
 document.getElementById('btn-prev').addEventListener('click', () => navigate(-1));
 document.getElementById('btn-next').addEventListener('click', () => navigate(1));
+
+// Evento Doble Clic en la etiqueta del periodo
+const periodLabelEl = document.getElementById('period-label');
+periodLabelEl.title = 'Haz doble clic para cambiar de fecha directamente';
+periodLabelEl.addEventListener('dblclick', () => {
+  openQuickJumpModal();
+});
+
+function openQuickJumpModal() {
+  const container = document.getElementById('quick-jump-body');
+  const title = document.getElementById('quick-jump-title');
+  const curYear = currentDate.getFullYear();
+  const curMonth = currentDate.getMonth();
+
+  if (currentView === 'mes' || currentView === 'agenda') {
+    title.textContent = 'Seleccionar Mes y Año';
+    container.innerHTML = `
+      <div class="form-row">
+        <div class="form-group">
+          <label>Mes</label>
+          <select id="jump-month">
+            ${MONTHS_ES.map((m, idx) => `<option value="${idx}" ${idx === curMonth ? 'selected' : ''}>${m}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <input type="number" id="jump-year" value="${curYear}" min="1900" max="2100" />
+        </div>
+      </div>
+    `;
+  } else if (currentView === 'ano') {
+    title.textContent = 'Seleccionar Año';
+    container.innerHTML = `
+      <div class="form-group">
+        <label>Año</label>
+        <input type="number" id="jump-year" value="${curYear}" min="1900" max="2100" />
+      </div>
+    `;
+  } else {
+    // Vista Día o Semana
+    title.textContent = currentView === 'semana' ? 'Seleccionar Semana (por día)' : 'Seleccionar Día';
+    const curDateStr = dateStr(currentDate);
+    container.innerHTML = `
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="jump-date" value="${curDateStr}" />
+      </div>
+    `;
+  }
+
+  openModal('quick-jump-modal');
+}
+
+function applyQuickJump() {
+  if (currentView === 'mes' || currentView === 'agenda') {
+    const m = parseInt(document.getElementById('jump-month').value, 10);
+    const y = parseInt(document.getElementById('jump-year').value, 10);
+    if (!isNaN(y) && !isNaN(m)) {
+      currentDate.setFullYear(y);
+      currentDate.setMonth(m);
+    }
+  } else if (currentView === 'ano') {
+    const y = parseInt(document.getElementById('jump-year').value, 10);
+    if (!isNaN(y)) {
+      currentDate.setFullYear(y);
+    }
+  } else {
+    // Vista Día o Semana
+    const val = document.getElementById('jump-date').value;
+    if (val) {
+      currentDate = parseDate(val);
+    }
+  }
+
+  closeModal('quick-jump-modal');
+  render();
+}
 
 function navigate(dir) {
   if (currentView === 'mes') { currentDate.setMonth(currentDate.getMonth()+dir); }
