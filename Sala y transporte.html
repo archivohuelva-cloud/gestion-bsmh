@@ -4620,58 +4620,243 @@ function filterEventsByType(evList, filterType) {
   return evList;
 }
 
-function generatePDFDocument(titleHeader, subTitleHeader, listEvents) {
+/* ═══════════════════════════════════════════════════════════════
+   EXPORTACIÓN PDF MEJORADA (DESGLOSE DÍA A DÍA, AGRUPACIÓN Y PAGINACIÓN)
+═══════════════════════════════════════════════════════════════ */
+function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRange = null) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text(`🎵 ${titleHeader}`, 10, 14);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(subTitleHeader, 280, 14, { align: 'right' });
+  // Desglosar eventos con rango de fechas en filas de días individuales
+  const flattenedList = [];
+  listEvents.forEach(ev => {
+    const s = ev.dateStart;
+    const e = ev.dateEnd || ev.dateStart;
+    let cur = s;
+    while (cur <= e) {
+      if (!explicitRange || (cur >= explicitRange.from && cur <= explicitRange.to)) {
+        flattenedList.push({
+          date: cur,
+          ev: ev
+        });
+      }
+      cur = addDays(cur, 1);
+    }
+  });
+
+  // Ordenar cronológicamente por día y luego por hora
+  flattenedList.sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    const getMins = (e) => {
+      let t = e.timeStart || '00:00';
+      if (!e.sala && e.secondaryTime && e.ubicacion && e.ubicacion.startsWith('Vuelta a')) {
+        t = e.secondaryTime;
+      }
+      const parts = String(t).replace(/h$/i, '').trim().split(':');
+      return ((parseInt(parts[0], 10) || 0) * 60) + (parseInt(parts[1], 10) || 0);
+    };
+    return getMins(a.ev) - getMins(b.ev);
+  });
 
   const tableData = [];
+  let currentMonthKey = '';
 
-  listEvents.forEach(ev => {
-    const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
+  flattenedList.forEach(item => {
+    const dObj = parseDate(item.date);
+    const mKey = `${dObj.getFullYear()}-${dObj.getMonth()}`;
+
+    // Insertar encabezado de mes cuando cambie (colSpan: 7 para abarcar todas las columnas)
+    if (mKey !== currentMonthKey) {
+      currentMonthKey = mKey;
+      const monthName = MONTHS_ES[dObj.getMonth()].toUpperCase();
+      tableData.push([
+        {
+          content: `${monthName} ${dObj.getFullYear()}`,
+          colSpan: 7,
+          styles: {
+            fillColor: [220, 226, 236],
+            textColor: [17, 24, 39],
+            fontStyle: 'bold',
+            fontSize: 10,
+            halign: 'left',
+            cellPadding: 3.5
+          }
+        }
+      ]);
+    }
+
+    const ev = item.ev;
+    const fechaCol = formatDisplayDateWithDay(item.date);
     const horario = formatTimeRangeDisplay(ev);
-    const salaCol = ev.sala || (ev.actuacion ? `🎺 ${ev.actuacion}` : '—');
-    
+
+    // Caso 1: Vacaciones -> Fecha + Bloque destacado en las 6 columnas restantes
+    if (ev.vacaciones === 'si') {
+      const extraNotes = ev.notes ? ` — ${ev.notes}` : '';
+      tableData.push([
+        {
+          content: fechaCol,
+          styles: { fontStyle: 'bold', fillColor: [249, 250, 251] }
+        },
+        {
+          content: `VACACIONES${extraNotes}`,
+          colSpan: 6,
+          styles: {
+            fillColor: [243, 244, 246],
+            textColor: [107, 33, 168],
+            fontStyle: 'bold',
+            fontSize: 11,
+            halign: 'center',
+            cellPadding: 3.5
+          }
+        }
+      ]);
+      return;
+    }
+
+    // Caso 2: Festivo -> Fecha + Bloque destacado en las 6 columnas restantes
+    if (ev.festivo === 'si') {
+      const extraNotes = ev.notes ? ` — ${ev.notes}` : '';
+      tableData.push([
+        {
+          content: fechaCol,
+          styles: { fontStyle: 'bold', fillColor: [249, 250, 251] }
+        },
+        {
+          content: `FESTIVO${extraNotes}`,
+          colSpan: 6,
+          styles: {
+            fillColor: [243, 244, 246],
+            textColor: [22, 101, 52],
+            fontStyle: 'bold',
+            fontSize: 11,
+            halign: 'center',
+            cellPadding: 3.5
+          }
+        }
+      ]);
+      return;
+    }
+
+    // Caso 3: "Libre todo el día" / Instrumental Guardado -> Fila destacada centrada en grande
+    const isLibreTodoElDia = (horario === 'Libre todo el día' || ev.guardado === 'si');
+    if (isLibreTodoElDia) {
+      let labelParts = [];
+      const ubi = ev.ubicacion ? formatUbicacionDisplay(ev.ubicacion) : '';
+      if (ubi) labelParts.push(ubi);
+
+      if (ev.guardado === 'si') {
+        labelParts.push('INSTRUMENTAL GUARDADO');
+      } else {
+        const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+        if (t === 'transporte') labelParts.push('Transporte');
+        else if (t === 'mochila') labelParts.push(ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila');
+        else if (t === 'montaje') labelParts.push('Montaje');
+        else if (t === 'desmontaje') labelParts.push('Desmontaje');
+        else if (t === 'montar_desmontar') labelParts.push('Montar > Desmontar');
+        else if (t === 'desmontar_montar') labelParts.push('Desmontar > Montar');
+        else if (t === 'retranquear') labelParts.push('Retranquear');
+        else if (t === 'guardar' || t === 'guardar_instrumental') labelParts.push('Guardar');
+        else if (ev.sala) labelParts.push(ev.sala);
+      }
+
+      let centerText = labelParts.filter(Boolean).join(' - ');
+      if (!centerText) centerText = 'LIBRE TODO EL DÍA';
+      if (ev.notes) centerText += ` — ${ev.notes}`;
+
+      tableData.push([
+        {
+          content: fechaCol,
+          styles: { fontStyle: 'bold', fillColor: [249, 250, 251] }
+        },
+        {
+          content: centerText,
+          colSpan: 6,
+          styles: {
+            fillColor: [243, 244, 246],
+            textColor: ev.guardado === 'si' ? [185, 28, 28] : [55, 65, 81],
+            fontStyle: 'bold',
+            fontSize: 10.5,
+            halign: 'center',
+            cellPadding: 3.5
+          }
+        }
+      ]);
+      return;
+    }
+
+    // Caso 4: Evento con horario estándar (7 Columnas)
+    const salaCol = ev.sala || '—';
+
     let logCol = '—';
     if (!ev.sala && !ev.actuacion) {
       const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
-      if (t === 'transporte') logCol = '🚚 Transporte';
-      else if (t === 'mochila') logCol = ev.carpetilla ? `🎒 Mochila (${ev.carpetilla})` : '🎒 Mochila';
-      else if (t === 'montaje') logCol = '🛒 Montaje';
-      else if (t === 'desmontaje') logCol = '🛒 Desmontaje';
-      else if (t === 'montar_desmontar') logCol = '🔄 Montar > Desmontar';
-      else if (t === 'desmontar_montar') logCol = '🔄 Desmontar > Montar';
-      else if (t === 'retranquear') logCol = '↔️ Retranquear';
-      else if (t === 'guardar' || t === 'guardar_instrumental') logCol = '📦 Guardar';
+      if (t === 'transporte') logCol = 'Transporte';
+      else if (t === 'mochila') logCol = ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila';
+      else if (t === 'montaje') logCol = 'Montaje';
+      else if (t === 'desmontaje') logCol = 'Desmontaje';
+      else if (t === 'montar_desmontar') logCol = 'Montar > Desmontar';
+      else if (t === 'desmontar_montar') logCol = 'Desmontar > Montar';
+      else if (t === 'retranquear') logCol = 'Retranquear';
+      else if (t === 'guardar' || t === 'guardar_instrumental') logCol = 'Guardar';
     }
 
-    const ubiCol = ev.ubicacion || '—';
-    const festivoCol = ev.festivo === 'si' ? 'Sí' : 'No';
-    const vacacionesCol = ev.vacaciones === 'si' ? 'Sí' : 'No';
+    const actuacionCol = ev.actuacion ? ev.actuacion : '—';
+
+    // Relleno de Lugar: si hay Sala y no hay ubicación, toma el nombre de la Sala
+    let ubiCol = '—';
+    if (ev.ubicacion) {
+      ubiCol = formatUbicacionDisplay(ev.ubicacion);
+    } else if (ev.sala) {
+      ubiCol = ev.sala;
+    }
+
     const notesCol = ev.notes || '';
 
-    tableData.push([dates, salaCol, logCol, ubiCol, horario, festivoCol, vacacionesCol, notesCol]);
+    tableData.push([fechaCol, salaCol, logCol, actuacionCol, ubiCol, horario, notesCol]);
   });
 
   if (tableData.length === 0) {
-    tableData.push(['—', '—', '—', '—', '—', '—', '—', 'Sin eventos para este período o filtro']);
+    tableData.push([{ content: 'Sin eventos para este período o filtro', colSpan: 7, styles: { halign: 'center' } }]);
   }
 
   doc.autoTable({
     startY: 20,
-    head: [['Fecha', 'Sala / Actuación', 'Servicio / Logística', 'Ubicación / Trayecto', 'Horario', 'Festivo', 'Vacaciones', 'Notas']],
+    head: [['Fecha', 'Sala', 'Logística', 'Actuación', 'Lugar', 'Horario', 'Notas']],
     body: tableData,
     theme: 'grid',
+    rowPageBreak: 'avoid', // EVITA QUE NINGUNA FILA SE DIVIDA O CORTE ENTRE DOS PÁGINAS
     styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
-    headStyles: { fillColor: [230, 235, 245], textColor: [0, 0, 0], fontStyle: 'bold' },
-    margin: { left: 8, right: 8 }
+    headStyles: { 
+      fillColor: [0, 98, 204], // Azul institucional
+      textColor: [255, 255, 255], // Texto blanco
+      fontStyle: 'bold',
+      fontSize: 8.5
+    },
+    margin: { left: 8, right: 8, top: 20, bottom: 12 },
+    didDrawPage: function(data) {
+      // Encabezado superior
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(0, 0, 0);
+      doc.text(titleHeader, 8, 13);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(subTitleHeader, doc.internal.pageSize.width - 8, 13, { align: 'right' });
+
+      // Pie de página: Paginación pegada al extremo inferior derecho
+      const str = `${doc.internal.getNumberOfPages()}`;
+      doc.setFontSize(8.5);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Página ${str} de {total_pages_count_string}`, doc.internal.pageSize.width - 8, doc.internal.pageSize.height - 4.5, { align: 'right' });
+    }
   });
+
+  // Reemplazar marcador de total de páginas
+  if (typeof doc.putTotalPages === 'function') {
+    doc.putTotalPages('{total_pages_count_string}');
+  }
 
   return doc;
 }
@@ -4688,51 +4873,60 @@ async function executeExportPDF() {
     const now = new Date();
     const curYear = currentDate.getFullYear();
     const curMonth = currentDate.getMonth();
-    const dateFormatted = `${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()}`;
+
+    const dStr = String(now.getDate()).padStart(2, '0');
+    const mStr = String(now.getMonth() + 1).padStart(2, '0');
+    const yStr = now.getFullYear();
+    const hStr = String(now.getHours()).padStart(2, '0');
+    const minStr = String(now.getMinutes()).padStart(2, '0');
+
+    const dateFormatted = `${dStr}-${mStr}-${yStr}`;
+    const fileStamp = `${dateFormatted} - ${hStr}.${minStr}h`;
+    const headerDateStamp = `Generado: ${dateFormatted} | ${hStr}:${minStr}h`;
 
     const zip = new JSZip();
 
     if (scope === 'all_views') {
-      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`))), filter);
-      const docAnual = generatePDFDocument(`Sala y transporte — Vista Anual ${curYear}`, `Generado: ${dateFormatted}`, yearEvents);
-      zip.file(`Sala y transporte (anual) - ${dateFormatted}.pdf`, docAnual.output('blob'));
+      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`)) || (e.dateEnd && e.dateEnd.startsWith(`${curYear}`))), filter);
+      const docAnual = generatePDFDocument(`Sala y transporte — Vista Anual ${curYear}`, headerDateStamp, yearEvents);
+      zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, docAnual.output('blob'));
 
-      const monthPrefix = `${curYear}-${String(curMonth+1).padStart(2,'0')}`;
-      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix))), filter);
-      const docMensual = generatePDFDocument(`Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, `Generado: ${dateFormatted}`, monthEvents);
-      zip.file(`Sala y transporte (mensual) - ${dateFormatted}.pdf`, docMensual.output('blob'));
+      const monthPrefix = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
+      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix))), filter);
+      const docMensual = generatePDFDocument(`Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp, monthEvents);
+      zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, docMensual.output('blob'));
 
-      const allSortedEvents = filterEventsByType([...events].sort((a,b) => (a.dateStart||'').localeCompare(b.dateStart||'')), filter);
-      const docAgenda = generatePDFDocument(`Sala y transporte — Agenda Completa`, `Generado: ${dateFormatted}`, allSortedEvents);
-      zip.file(`Sala y transporte (agenda) - ${dateFormatted}.pdf`, docAgenda.output('blob'));
+      const allSortedEvents = filterEventsByType([...events], filter);
+      const docAgenda = generatePDFDocument(`Sala y transporte — Agenda Completa`, headerDateStamp, allSortedEvents);
+      zip.file(`Sala y transporte (agenda) - ${fileStamp}.pdf`, docAgenda.output('blob'));
 
     } else if (scope === 'year') {
-      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`))), filter);
-      const doc = generatePDFDocument(`Sala y transporte — Anual ${curYear}`, `Generado: ${dateFormatted}`, yearEvents);
-      zip.file(`Sala y transporte (anual) - ${dateFormatted}.pdf`, doc.output('blob'));
+      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`)) || (e.dateEnd && e.dateEnd.startsWith(`${curYear}`))), filter);
+      const doc = generatePDFDocument(`Sala y transporte — Anual ${curYear}`, headerDateStamp, yearEvents);
+      zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, doc.output('blob'));
 
     } else if (scope === 'month') {
-      const monthPrefix = `${curYear}-${String(curMonth+1).padStart(2,'0')}`;
-      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix))), filter);
-      const doc = generatePDFDocument(`Sala y transporte — ${MONTHS_ES[curMonth]} ${curYear}`, `Generado: ${dateFormatted}`, monthEvents);
-      zip.file(`Sala y transporte (mensual) - ${dateFormatted}.pdf`, doc.output('blob'));
+      const monthPrefix = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
+      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix))), filter);
+      const doc = generatePDFDocument(`Sala y transporte — ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp, monthEvents);
+      zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, doc.output('blob'));
 
     } else if (scope === 'day') {
       const ds = dateStr(currentDate);
       const dayEvs = filterEventsByType(eventsOnDate(ds), filter);
-      const doc = generatePDFDocument(`Sala y transporte — Día ${formatDisplayDateWithDay(ds)}`, `Generado: ${dateFormatted}`, dayEvs);
-      zip.file(`Sala y transporte (dia_${formatDisplayDate(ds)}) - ${dateFormatted}.pdf`, doc.output('blob'));
+      const doc = generatePDFDocument(`Sala y transporte — Día ${formatDisplayDateWithDay(ds)}`, headerDateStamp, dayEvs, { from: ds, to: ds });
+      zip.file(`Sala y transporte (dia_${formatDisplayDate(ds)}) - ${fileStamp}.pdf`, doc.output('blob'));
 
     } else if (scope === 'custom_range') {
       const from = document.getElementById('export-date-from').value;
       const to = document.getElementById('export-date-to').value;
-      const rangeEvents = filterEventsByType(events.filter(e => e.dateStart >= from && e.dateStart <= to), filter);
-      const doc = generatePDFDocument(`Sala y transporte — Rango (${formatDisplayDateWithDay(from)} al ${formatDisplayDateWithDay(to)})`, `Generado: ${dateFormatted}`, rangeEvents);
-      zip.file(`Sala y transporte (rango_${formatDisplayDate(from)}_a_${formatDisplayDate(to)}) - ${dateFormatted}.pdf`, doc.output('blob'));
+      const rangeEvents = filterEventsByType(events.filter(e => (e.dateStart <= to && (e.dateEnd || e.dateStart) >= from)), filter);
+      const doc = generatePDFDocument(`Sala y transporte — Rango (${formatDisplayDateWithDay(from)} al ${formatDisplayDateWithDay(to)})`, headerDateStamp, rangeEvents, { from, to });
+      zip.file(`Sala y transporte (rango_${formatDisplayDate(from)}_a_${formatDisplayDate(to)}) - ${fileStamp}.pdf`, doc.output('blob'));
     }
 
     const content = await zip.generateAsync({ type: 'blob' });
-    const zipName = `Sala y transporte - ${dateFormatted}.zip`;
+    const zipName = `Sala y transporte - ${fileStamp}.zip`;
 
     const downloadLink = document.createElement('a');
     downloadLink.href = URL.createObjectURL(content);
