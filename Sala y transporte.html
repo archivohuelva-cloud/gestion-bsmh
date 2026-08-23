@@ -4658,161 +4658,206 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
     return getMins(a.ev) - getMins(b.ev);
   });
 
-  const tableData = [];
-  let currentMonthKey = '';
-
+  // Agrupar elementos por mes y por fecha para estructurar la tabla
+  const monthsMap = new Map();
   flattenedList.forEach(item => {
     const dObj = parseDate(item.date);
     const mKey = `${dObj.getFullYear()}-${dObj.getMonth()}`;
-
-    // Insertar encabezado de mes cuando cambie (colSpan: 7 para abarcar todas las columnas)
-    if (mKey !== currentMonthKey) {
-      currentMonthKey = mKey;
-      const monthName = MONTHS_ES[dObj.getMonth()].toUpperCase();
-      tableData.push([
-        {
-          content: `${monthName} ${dObj.getFullYear()}`,
-          colSpan: 7,
-          styles: {
-            fillColor: [220, 226, 236],
-            textColor: [17, 24, 39],
-            fontStyle: 'bold',
-            fontSize: 10,
-            halign: 'left',
-            cellPadding: 3.5
-          }
-        }
-      ]);
+    if (!monthsMap.has(mKey)) {
+      monthsMap.set(mKey, {
+        monthName: `${MONTHS_ES[dObj.getMonth()].toUpperCase()} ${dObj.getFullYear()}`,
+        datesMap: new Map()
+      });
     }
-
-    const ev = item.ev;
-    const fechaCol = formatDisplayDateWithDay(item.date);
-    const horario = formatTimeRangeDisplay(ev);
-
-    // Caso 1: Vacaciones -> Fecha + Bloque destacado en las 6 columnas restantes
-    if (ev.vacaciones === 'si') {
-      const extraNotes = ev.notes ? ` — ${ev.notes}` : '';
-      tableData.push([
-        {
-          content: fechaCol,
-          styles: { fontStyle: 'bold', fillColor: [249, 250, 251] }
-        },
-        {
-          content: `VACACIONES${extraNotes}`,
-          colSpan: 6,
-          styles: {
-            fillColor: [243, 244, 246],
-            textColor: [107, 33, 168],
-            fontStyle: 'bold',
-            fontSize: 11,
-            halign: 'center',
-            cellPadding: 3.5
-          }
-        }
-      ]);
-      return;
+    const mGroup = monthsMap.get(mKey);
+    if (!mGroup.datesMap.has(item.date)) {
+      mGroup.datesMap.set(item.date, []);
     }
+    mGroup.datesMap.get(item.date).push(item.ev);
+  });
 
-    // Caso 2: Festivo -> Fecha + Bloque destacado en las 6 columnas restantes
-    if (ev.festivo === 'si') {
-      const extraNotes = ev.notes ? ` — ${ev.notes}` : '';
-      tableData.push([
-        {
-          content: fechaCol,
-          styles: { fontStyle: 'bold', fillColor: [249, 250, 251] }
-        },
-        {
-          content: `FESTIVO${extraNotes}`,
-          colSpan: 6,
-          styles: {
-            fillColor: [243, 244, 246],
-            textColor: [22, 101, 52],
-            fontStyle: 'bold',
-            fontSize: 11,
-            halign: 'center',
-            cellPadding: 3.5
-          }
+  const tableData = [];
+  const rowMetaList = [];
+
+  monthsMap.forEach((mGroup) => {
+    // Fila encabezado de mes
+    tableData.push([
+      {
+        content: mGroup.monthName,
+        colSpan: 7,
+        styles: {
+          fillColor: [220, 226, 236],
+          textColor: [17, 24, 39],
+          fontStyle: 'bold',
+          fontSize: 10,
+          halign: 'left',
+          cellPadding: 3.5
         }
-      ]);
-      return;
-    }
-
-    // Caso 3: "Libre todo el día" / Instrumental Guardado -> Fila destacada centrada en grande
-    const isLibreTodoElDia = (horario === 'Libre todo el día' || ev.guardado === 'si');
-    if (isLibreTodoElDia) {
-      let labelParts = [];
-      const ubi = ev.ubicacion ? formatUbicacionDisplay(ev.ubicacion) : '';
-      if (ubi) labelParts.push(ubi);
-
-      if (ev.guardado === 'si') {
-        labelParts.push('INSTRUMENTAL GUARDADO');
-      } else {
-        const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
-        if (t === 'transporte') labelParts.push('Transporte');
-        else if (t === 'mochila') labelParts.push(ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila');
-        else if (t === 'montaje') labelParts.push('Montaje');
-        else if (t === 'desmontaje') labelParts.push('Desmontaje');
-        else if (t === 'montar_desmontar') labelParts.push('Montar > Desmontar');
-        else if (t === 'desmontar_montar') labelParts.push('Desmontar > Montar');
-        else if (t === 'retranquear') labelParts.push('Retranquear');
-        else if (t === 'guardar' || t === 'guardar_instrumental') labelParts.push('Guardar');
-        else if (ev.sala) labelParts.push(ev.sala);
       }
+    ]);
+    rowMetaList.push({ isMonthHeader: true, date: '', hasMultiple: false, isFirstOfDate: false, isLastOfDate: false });
 
-      let centerText = labelParts.filter(Boolean).join(' - ');
-      if (!centerText) centerText = 'LIBRE TODO EL DÍA';
-      if (ev.notes) centerText += ` — ${ev.notes}`;
+    mGroup.datesMap.forEach((evList, dStr) => {
+      const count = evList.length;
+      const hasMultiple = count >= 2;
+      const fechaText = formatDisplayDateWithDay(dStr);
 
-      tableData.push([
-        {
-          content: fechaCol,
-          styles: { fontStyle: 'bold', fillColor: [249, 250, 251] }
-        },
-        {
-          content: centerText,
-          colSpan: 6,
-          styles: {
-            fillColor: [243, 244, 246],
-            textColor: ev.guardado === 'si' ? [185, 28, 28] : [55, 65, 81],
-            fontStyle: 'bold',
-            fontSize: 10.5,
-            halign: 'center',
-            cellPadding: 3.5
+      evList.forEach((ev, idx) => {
+        const isFirst = (idx === 0);
+        const isLast = (idx === count - 1);
+        const horario = formatTimeRangeDisplay(ev);
+
+        rowMetaList.push({
+          isMonthHeader: false,
+          date: dStr,
+          hasMultiple: hasMultiple,
+          isFirstOfDate: isFirst,
+          isLastOfDate: isLast
+        });
+
+        // Caso 1: Vacaciones
+        if (ev.vacaciones === 'si') {
+          const extraNotes = ev.notes ? ` — ${ev.notes}` : '';
+          const rowCells = [];
+          if (isFirst) {
+            rowCells.push({
+              content: fechaText,
+              rowSpan: count,
+              styles: { fontStyle: 'bold', fillColor: [249, 250, 251], valign: 'top' }
+            });
           }
+          rowCells.push({
+            content: `VACACIONES${extraNotes}`,
+            colSpan: 6,
+            styles: {
+              fillColor: [243, 244, 246],
+              textColor: [107, 33, 168],
+              fontStyle: 'bold',
+              fontSize: 11,
+              halign: 'center',
+              cellPadding: 3.5
+            }
+          });
+          tableData.push(rowCells);
+          return;
         }
-      ]);
-      return;
-    }
 
-    // Caso 4: Evento con horario estándar (7 Columnas)
-    const salaCol = ev.sala || '—';
+        // Caso 2: Festivo
+        if (ev.festivo === 'si') {
+          const extraNotes = ev.notes ? ` — ${ev.notes}` : '';
+          const rowCells = [];
+          if (isFirst) {
+            rowCells.push({
+              content: fechaText,
+              rowSpan: count,
+              styles: { fontStyle: 'bold', fillColor: [249, 250, 251], valign: 'top' }
+            });
+          }
+          rowCells.push({
+            content: `FESTIVO${extraNotes}`,
+            colSpan: 6,
+            styles: {
+              fillColor: [243, 244, 246],
+              textColor: [22, 101, 52],
+              fontStyle: 'bold',
+              fontSize: 11,
+              halign: 'center',
+              cellPadding: 3.5
+            }
+          });
+          tableData.push(rowCells);
+          return;
+        }
 
-    let logCol = '—';
-    if (!ev.sala && !ev.actuacion) {
-      const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
-      if (t === 'transporte') logCol = 'Transporte';
-      else if (t === 'mochila') logCol = ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila';
-      else if (t === 'montaje') logCol = 'Montaje';
-      else if (t === 'desmontaje') logCol = 'Desmontaje';
-      else if (t === 'montar_desmontar') logCol = 'Montar > Desmontar';
-      else if (t === 'desmontar_montar') logCol = 'Desmontar > Montar';
-      else if (t === 'retranquear') logCol = 'Retranquear';
-      else if (t === 'guardar' || t === 'guardar_instrumental') logCol = 'Guardar';
-    }
+        // Caso 3: Libre todo el día / Instrumental Guardado
+        const isLibreTodoElDia = (horario === 'Libre todo el día' || ev.guardado === 'si');
+        if (isLibreTodoElDia) {
+          let labelParts = [];
+          const ubi = ev.ubicacion ? formatUbicacionDisplay(ev.ubicacion) : '';
+          if (ubi) labelParts.push(ubi);
 
-    const actuacionCol = ev.actuacion ? ev.actuacion : '—';
+          if (ev.guardado === 'si') {
+            labelParts.push('INSTRUMENTAL GUARDADO');
+          } else {
+            const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+            if (t === 'transporte') labelParts.push('Transporte');
+            else if (t === 'mochila') labelParts.push(ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila');
+            else if (t === 'montaje') labelParts.push('Montaje');
+            else if (t === 'desmontaje') labelParts.push('Desmontaje');
+            else if (t === 'montar_desmontar') labelParts.push('Montar > Desmontar');
+            else if (t === 'desmontar_montar') labelParts.push('Desmontar > Montar');
+            else if (t === 'retranquear') labelParts.push('Retranquear');
+            else if (t === 'guardar' || t === 'guardar_instrumental') labelParts.push('Guardar');
+            else if (ev.sala) labelParts.push(ev.sala);
+          }
 
-    // Relleno de Lugar: si hay Sala y no hay ubicación, toma el nombre de la Sala
-    let ubiCol = '—';
-    if (ev.ubicacion) {
-      ubiCol = formatUbicacionDisplay(ev.ubicacion);
-    } else if (ev.sala) {
-      ubiCol = ev.sala;
-    }
+          let centerText = labelParts.filter(Boolean).join(' - ');
+          if (!centerText) centerText = 'LIBRE TODO EL DÍA';
+          if (ev.notes) centerText += ` — ${ev.notes}`;
 
-    const notesCol = ev.notes || '';
+          const rowCells = [];
+          if (isFirst) {
+            rowCells.push({
+              content: fechaText,
+              rowSpan: count,
+              styles: { fontStyle: 'bold', fillColor: [249, 250, 251], valign: 'top' }
+            });
+          }
+          rowCells.push({
+            content: centerText,
+            colSpan: 6,
+            styles: {
+              fillColor: [243, 244, 246],
+              textColor: ev.guardado === 'si' ? [185, 28, 28] : [55, 65, 81],
+              fontStyle: 'bold',
+              fontSize: 10.5,
+              halign: 'center',
+              cellPadding: 3.5
+            }
+          });
+          tableData.push(rowCells);
+          return;
+        }
 
-    tableData.push([fechaCol, salaCol, logCol, actuacionCol, ubiCol, horario, notesCol]);
+        // Caso 4: Horario estándar (7 Columnas)
+        const salaCol = ev.sala || '—';
+
+        let logCol = '—';
+        if (!ev.sala && !ev.actuacion) {
+          const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+          if (t === 'transporte') logCol = 'Transporte';
+          else if (t === 'mochila') logCol = ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila';
+          else if (t === 'montaje') logCol = 'Montaje';
+          else if (t === 'desmontaje') logCol = 'Desmontaje';
+          else if (t === 'montar_desmontar') logCol = 'Montar > Desmontar';
+          else if (t === 'desmontar_montar') logCol = 'Desmontar > Montar';
+          else if (t === 'retranquear') logCol = 'Retranquear';
+          else if (t === 'guardar' || t === 'guardar_instrumental') logCol = 'Guardar';
+        }
+
+        const actuacionCol = ev.actuacion ? ev.actuacion : '—';
+
+        let ubiCol = '—';
+        if (ev.ubicacion) {
+          ubiCol = formatUbicacionDisplay(ev.ubicacion);
+        } else if (ev.sala) {
+          ubiCol = ev.sala;
+        }
+
+        const notesCol = ev.notes || '';
+
+        const rowCells = [];
+        if (isFirst) {
+          rowCells.push({
+            content: fechaText,
+            rowSpan: count,
+            styles: { fontStyle: 'bold', fillColor: [249, 250, 251], valign: 'top' }
+          });
+        }
+        rowCells.push(salaCol, logCol, actuacionCol, ubiCol, horario, notesCol);
+        tableData.push(rowCells);
+      });
+    });
   });
 
   if (tableData.length === 0) {
@@ -4824,16 +4869,68 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
     head: [['Fecha', 'Sala', 'Logística', 'Actuación', 'Lugar', 'Horario', 'Notas']],
     body: tableData,
     theme: 'grid',
-    rowPageBreak: 'avoid', // EVITA QUE NINGUNA FILA SE DIVIDA O CORTE ENTRE DOS PÁGINAS
-    styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5 },
+    rowPageBreak: 'avoid',
+    styles: { 
+      font: 'helvetica', 
+      fontSize: 8, 
+      cellPadding: 2.5,
+      lineColor: [209, 213, 219], // Gris fino interior
+      lineWidth: 0.15
+    },
+    columnStyles: {
+      0: { cellWidth: 38 }, // Fecha
+      1: { cellWidth: 34 }, // Sala
+      2: { cellWidth: 32 }, // Logística
+      3: { cellWidth: 32 }, // Actuación
+      4: { cellWidth: 42 }, // Lugar
+      5: { cellWidth: 32 }, // Horario
+      6: { cellWidth: 'auto' } // Notas
+    },
     headStyles: { 
-      fillColor: [0, 98, 204], // Azul institucional
-      textColor: [255, 255, 255], // Texto blanco
+      fillColor: [0, 98, 204],
+      textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 8.5
+      fontSize: 8.5,
+      lineColor: [0, 98, 204],
+      lineWidth: 0.2
     },
     margin: { left: 8, right: 8, top: 20, bottom: 12 },
+    didDrawCell: function(data) {
+      // Dibujar marco exterior negro y grueso en el perímetro del día con 2 o más eventos
+      if (data.section === 'body') {
+        const meta = rowMetaList[data.row.index];
+        if (meta && meta.hasMultiple && !meta.isMonthHeader) {
+          doc.saveGraphicsState();
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(0.65);
+
+          const { x, y, width, height } = data.cell;
+
+          // Borde Superior si es la primera fila del día
+          if (meta.isFirstOfDate) {
+            doc.line(x, y, x + width, y);
+          }
+          // Borde Inferior si es la última fila del día
+          if (meta.isLastOfDate) {
+            doc.line(x, y + height, x + width, y + height);
+          }
+          // Borde Izquierdo si es la primera columna visible de la fila
+          if (data.column.index === 0) {
+            doc.line(x, y, x, y + height);
+          }
+          // Borde Derecho si es la última columna
+          if (data.column.index === data.table.columns.length - 1 || data.cell.colSpan > 1) {
+            doc.line(x + width, y, x + width, y + height);
+          }
+
+          doc.restoreGraphicsState();
+        }
+      }
+    },
     didDrawPage: function(data) {
+      const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+
       // Encabezado superior
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(13);
@@ -4843,13 +4940,13 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(80, 80, 80);
-      doc.text(subTitleHeader, doc.internal.pageSize.width - 8, 13, { align: 'right' });
+      doc.text(subTitleHeader, pageWidth - 8, 13, { align: 'right' });
 
-      // Pie de página: Paginación pegada al extremo inferior derecho
+      // Paginación exactamente en el centro horizontal de la página
       const str = `${doc.internal.getNumberOfPages()}`;
       doc.setFontSize(8.5);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Página ${str} de {total_pages_count_string}`, doc.internal.pageSize.width - 8, doc.internal.pageSize.height - 4.5, { align: 'right' });
+      doc.text(`Página ${str} de {total_pages_count_string}`, pageWidth / 2, pageHeight - 4.5, { align: 'center' });
     }
   });
 
@@ -4874,6 +4971,7 @@ async function executeExportPDF() {
     const curYear = currentDate.getFullYear();
     const curMonth = currentDate.getMonth();
 
+    const dayName = DAYS_FULL[(now.getDay() + 6) % 7];
     const dStr = String(now.getDate()).padStart(2, '0');
     const mStr = String(now.getMonth() + 1).padStart(2, '0');
     const yStr = now.getFullYear();
@@ -4882,7 +4980,7 @@ async function executeExportPDF() {
 
     const dateFormatted = `${dStr}-${mStr}-${yStr}`;
     const fileStamp = `${dateFormatted} - ${hStr}.${minStr}h`;
-    const headerDateStamp = `Generado: ${dateFormatted} | ${hStr}:${minStr}h`;
+    const headerDateStamp = `Generado: ${dayName}, ${dateFormatted} | ${hStr}:${minStr}h`;
 
     const zip = new JSZip();
 
