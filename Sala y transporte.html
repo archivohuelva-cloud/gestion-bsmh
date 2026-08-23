@@ -4721,6 +4721,248 @@ function filterEventsByType(evList, filterType) {
   return evList;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   EXPORTACIÓN PDF: CUADRÍCULA VISUAL MENSUAL (TABLA IGUAL A LA PANTALLA)
+═══════════════════════════════════════════════════════════════════════════════ */
+function generateMonthlyGridPDF(year, month, listEvents, titleHeader, subTitleHeader) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const totalDays = lastDay.getDate();
+
+  // Calcular las semanas totales que ocupa el mes
+  const totalCells = startOffset + totalDays;
+  const numWeeks = Math.ceil(totalCells / 7);
+
+  // Mapear eventos por fecha (YYYY-MM-DD)
+  const eventsByDate = new Map();
+  listEvents.forEach(ev => {
+    const s = ev.dateStart;
+    const e = ev.dateEnd || ev.dateStart;
+    let cur = s;
+    while (cur <= e) {
+      if (!eventsByDate.has(cur)) eventsByDate.set(cur, []);
+      eventsByDate.get(cur).push(ev);
+      cur = addDays(cur, 1);
+    }
+  });
+
+  // Estructura de celdas para la tabla
+  const gridCellsData = [];
+  const DAYS_COL_NAMES = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+
+  let dayCounter = 1 - startOffset;
+  for (let w = 0; w < numWeeks; w++) {
+    const row = [];
+    for (let d = 0; d < 7; d++) {
+      const isWeekend = (d >= 5);
+      const curDateObj = new Date(year, month, dayCounter);
+      const isCurrentMonth = (dayCounter >= 1 && dayCounter <= totalDays);
+      const dStr = dateStr(curDateObj);
+
+      let cellEvents = isCurrentMonth ? (eventsByDate.get(dStr) || []) : [];
+      
+      // Ordenar eventos del día por hora
+      cellEvents.sort((a, b) => {
+        const getMins = (ev) => {
+          let t = ev.timeStart || '00:00';
+          if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+            t = ev.secondaryTime;
+          }
+          const parts = String(t).replace(/h$/i, '').trim().split(':');
+          return ((parseInt(parts[0], 10) || 0) * 60) + (parseInt(parts[1], 10) || 0);
+        };
+        return getMins(a) - getMins(b);
+      });
+
+      row.push({
+        dayNum: curDateObj.getDate(),
+        isCurrentMonth: isCurrentMonth,
+        isWeekend: isWeekend,
+        dateStr: dStr,
+        events: cellEvents
+      });
+      dayCounter++;
+    }
+    gridCellsData.push(row);
+  }
+
+  // Altura dinámica por fila para aprovechar toda la hoja A4 apaisada
+  const availableHeight = 175; // Altura disponible en mm
+  const rowHeight = availableHeight / numWeeks;
+
+  // Construir filas vacías para autoTable (se rellenarán en didDrawCell)
+  const bodyRows = gridCellsData.map(() => ['', '', '', '', '', '', '']);
+
+  doc.autoTable({
+    startY: 18,
+    head: [DAYS_COL_NAMES],
+    body: bodyRows,
+    theme: 'grid',
+    styles: {
+      minCellHeight: rowHeight,
+      cellPadding: 1,
+      lineColor: [209, 213, 219],
+      lineWidth: 0.2
+    },
+    headStyles: {
+      fillColor: [248, 250, 252],
+      textColor: [100, 116, 139],
+      fontStyle: 'bold',
+      fontSize: 8.5,
+      halign: 'center',
+      valign: 'middle',
+      minCellHeight: 7,
+      lineColor: [209, 213, 219],
+      lineWidth: 0.2
+    },
+    columnStyles: {
+      0: { cellWidth: 40.1 },
+      1: { cellWidth: 40.1 },
+      2: { cellWidth: 40.1 },
+      3: { cellWidth: 40.1 },
+      4: { cellWidth: 40.1 },
+      5: { cellWidth: 40.1, textColor: [157, 23, 77] },
+      6: { cellWidth: 40.1, textColor: [157, 23, 77] }
+    },
+    margin: { left: 8, right: 8, top: 18, bottom: 8 },
+    didDrawCell: function(data) {
+      if (data.section === 'head' && (data.column.index === 5 || data.column.index === 6)) {
+        doc.setFillColor(250, 232, 243); // Fondo rosado para encabezados de fin de semana
+        doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        doc.setTextColor(157, 23, 77);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text(DAYS_COL_NAMES[data.column.index], data.cell.x + data.cell.width / 2, data.cell.y + 4.8, { align: 'center' });
+      }
+
+      if (data.section === 'body') {
+        const cellInfo = gridCellsData[data.row.index][data.column.index];
+        const { x, y, width, height } = data.cell;
+
+        // Fondo de la celda
+        if (!cellInfo.isCurrentMonth) {
+          doc.setFillColor(250, 250, 250);
+          doc.rect(x, y, width, height, 'F');
+        } else if (cellInfo.isWeekend) {
+          doc.setFillColor(253, 242, 248);
+          doc.rect(x, y, width, height, 'F');
+        }
+
+        // Borde fino
+        doc.setDrawColor(229, 231, 235);
+        doc.setLineWidth(0.2);
+        doc.rect(x, y, width, height, 'S');
+
+        // Número del día
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        if (!cellInfo.isCurrentMonth) {
+          doc.setTextColor(180, 180, 180);
+        } else if (cellInfo.isWeekend) {
+          doc.setTextColor(157, 23, 77);
+        } else {
+          doc.setTextColor(17, 24, 39);
+        }
+        doc.text(String(cellInfo.dayNum), x + 2, y + 4);
+
+        // Renderizar chips de eventos dentro del cuadro
+        if (cellInfo.events && cellInfo.events.length > 0) {
+          let eventY = y + 5.5;
+          const maxEventY = y + height - 2;
+
+          cellInfo.events.forEach(ev => {
+            if (eventY + 4.2 > maxEventY) return; // Si no cabe en la casilla, salta
+
+            // Paleta de colores idéntica a la vista web
+            let fillRGB = [219, 234, 254];  // Azul claro
+            let textRGB = [0, 98, 204];     // Azul oscuro
+            let borderRGB = [0, 98, 204];
+
+            if (ev.guardado === 'si') {
+              fillRGB = [254, 226, 226]; textRGB = [185, 28, 28]; borderRGB = [185, 28, 28];
+            } else if (ev.vacaciones === 'si') {
+              fillRGB = [243, 232, 255]; textRGB = [107, 33, 168]; borderRGB = [107, 33, 168];
+            } else if (ev.festivo === 'si') {
+              fillRGB = [220, 252, 231]; textRGB = [22, 101, 52]; borderRGB = [22, 101, 52];
+            } else if (ev.actuacion) {
+              fillRGB = [229, 229, 234]; textRGB = [0, 0, 0]; borderRGB = [0, 0, 0];
+            } else if (ev.transport === 'si' || ev.tipoLogistica === 'transporte') {
+              fillRGB = [255, 224, 178]; textRGB = [230, 81, 0]; borderRGB = [230, 81, 0];
+            } else if (!ev.sala && !ev.actuacion) {
+              fillRGB = [254, 249, 195]; textRGB = [183, 129, 3]; borderRGB = [183, 129, 3];
+            }
+
+            // Dibujar fondo y borde del chip
+            const chipX = x + 1.2;
+            const chipW = width - 2.4;
+            const chipH = 4;
+
+            doc.setFillColor(fillRGB[0], fillRGB[1], fillRGB[2]);
+            doc.setDrawColor(borderRGB[0], borderRGB[1], borderRGB[2]);
+            doc.setLineWidth(0.2);
+            doc.roundedRect(chipX, eventY, chipW, chipH, 0.8, 0.8, 'FD');
+
+            // Texto del evento
+            let evTitle = getEventTitle(ev);
+            // Limpiar emojis para jsPDF
+            evTitle = evTitle.replace(/[^\x00-\x7F\u00C0-\u00FF\s\-\.\,\:\(\)\>]/g, '').trim();
+
+            if (ev.festivo !== 'si' && ev.vacaciones !== 'si' && ev.guardado !== 'si' && ev.timeStart) {
+              evTitle += ` ${formatTimeH(ev.timeStart)}`;
+            }
+
+            doc.setTextColor(textRGB[0], textRGB[1], textRGB[2]);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.2);
+
+            // Cortar texto si es muy largo
+            const maxTxtW = chipW - 2.5;
+            let displayTxt = evTitle;
+            if (doc.getTextWidth(displayTxt) > maxTxtW) {
+              while (displayTxt.length > 3 && doc.getTextWidth(displayTxt + '…') > maxTxtW) {
+                displayTxt = displayTxt.slice(0, -1);
+              }
+              displayTxt += '…';
+            }
+
+            doc.text(displayTxt, chipX + 1.2, eventY + 2.8);
+
+            // Punto amarillo discreto si tiene notas
+            if (ev.notes) {
+              doc.setFillColor(234, 179, 8);
+              doc.setDrawColor(202, 138, 4);
+              doc.setLineWidth(0.1);
+              doc.circle(chipX + chipW - 1.5, eventY + 2, 0.5, 'FD');
+            }
+
+            eventY += 4.5;
+          });
+        }
+      }
+    },
+    didDrawPage: function() {
+      const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+
+      // Encabezado superior
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12.5);
+      doc.setTextColor(0, 0, 0);
+      doc.text(titleHeader, 8, 11);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(80, 80, 80);
+      doc.text(subTitleHeader, pageWidth - 8, 11, { align: 'right' });
+    }
+  });
+
+  return doc;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    EXPORTACIÓN PDF MEJORADA (DESGLOSE DÍA A DÍA, AGRUPACIÓN Y PAGINACIÓN)
 ═══════════════════════════════════════════════════════════════ */
@@ -5141,15 +5383,24 @@ async function executeExportPDF() {
     const zip = new JSZip();
 
     if (scope === 'all_views') {
+      // 1. PDF Anual (Listado)
       const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`)) || (e.dateEnd && e.dateEnd.startsWith(`${curYear}`))), filter);
       const docAnual = generatePDFDocument(`Sala y transporte — Vista Anual ${curYear}`, headerDateStamp, yearEvents);
       zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, docAnual.output('blob'));
 
+      // Eventos del mes
       const monthPrefix = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
       const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix))), filter);
+      
+      // 2. PDF Mensual (Listado desglosado)
       const docMensual = generatePDFDocument(`Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp, monthEvents);
       zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, docMensual.output('blob'));
 
+      // 3. NUEVO: PDF Mensual Cuadrícula (Tabla idéntica a la pantalla)
+      const docMensualTabla = generateMonthlyGridPDF(curYear, curMonth, monthEvents, `Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp);
+      zip.file(`Sala y transporte (tabla mensual) - ${fileStamp}.pdf`, docMensualTabla.output('blob'));
+
+      // 4. PDF Agenda Completa
       const allSortedEvents = filterEventsByType([...events], filter);
       const docAgenda = generatePDFDocument(`Sala y transporte — Agenda Completa`, headerDateStamp, allSortedEvents);
       zip.file(`Sala y transporte (agenda) - ${fileStamp}.pdf`, docAgenda.output('blob'));
@@ -5162,8 +5413,14 @@ async function executeExportPDF() {
     } else if (scope === 'month') {
       const monthPrefix = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
       const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix))), filter);
+      
+      // 1. PDF Mensual en Listado
       const doc = generatePDFDocument(`Sala y transporte — ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp, monthEvents);
       zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, doc.output('blob'));
+
+      // 2. NUEVO: PDF Mensual Cuadrícula (Tabla idéntica a la pantalla)
+      const docGrid = generateMonthlyGridPDF(curYear, curMonth, monthEvents, `Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp);
+      zip.file(`Sala y transporte (tabla mensual) - ${fileStamp}.pdf`, docGrid.output('blob'));
 
     } else if (scope === 'day') {
       const ds = dateStr(currentDate);
