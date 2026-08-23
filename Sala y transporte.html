@@ -4820,22 +4820,69 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
         }
 
         // Caso 4: Horario estándar (7 Columnas)
-        const salaCol = ev.sala || '—';
-
-        let logCol = '—';
-        if (!ev.sala && !ev.actuacion) {
-          const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
-          if (t === 'transporte') logCol = 'Transporte';
-          else if (t === 'mochila') logCol = ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila';
-          else if (t === 'montaje') logCol = 'Montaje';
-          else if (t === 'desmontaje') logCol = 'Desmontaje';
-          else if (t === 'montar_desmontar') logCol = 'Montar > Desmontar';
-          else if (t === 'desmontar_montar') logCol = 'Desmontar > Montar';
-          else if (t === 'retranquear') logCol = 'Retranquear';
-          else if (t === 'guardar' || t === 'guardar_instrumental') logCol = 'Guardar';
+        // Celda Sala con color de fondo correspondiente
+        let salaCell = { content: '—', styles: {} };
+        if (ev.sala) {
+          salaCell = {
+            content: ev.sala,
+            styles: {
+              fillColor: [219, 234, 254], // Azul suave
+              textColor: [0, 98, 204],    // Azul oscuro
+              fontStyle: 'bold'
+            }
+          };
         }
 
-        const actuacionCol = ev.actuacion ? ev.actuacion : '—';
+        // Celda Logística con color de fondo correspondiente
+        let logCell = { content: '—', styles: {} };
+        if (!ev.sala && !ev.actuacion) {
+          const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+          let labelLog = 'Logística';
+          let fillCol = [254, 249, 195]; // Amarillo suave por defecto
+          let textCol = [183, 129, 3];
+
+          if (t === 'transporte') {
+            labelLog = 'Transporte';
+            fillCol = [255, 224, 178]; // Naranja suave
+            textCol = [230, 81, 0];
+          } else if (t === 'mochila') {
+            labelLog = ev.carpetilla ? `Mochila (${ev.carpetilla})` : 'Mochila';
+          } else if (t === 'montaje') {
+            labelLog = 'Montaje';
+          } else if (t === 'desmontaje') {
+            labelLog = 'Desmontaje';
+          } else if (t === 'montar_desmontar') {
+            labelLog = 'Montar > Desmontar';
+          } else if (t === 'desmontar_montar') {
+            labelLog = 'Desmontar > Montar';
+          } else if (t === 'retranquear') {
+            labelLog = 'Retranquear';
+          } else if (t === 'guardar' || t === 'guardar_instrumental') {
+            labelLog = 'Guardar';
+          }
+
+          logCell = {
+            content: labelLog,
+            styles: {
+              fillColor: fillCol,
+              textColor: textCol,
+              fontStyle: 'bold'
+            }
+          };
+        }
+
+        // Celda Actuación con color de fondo correspondiente
+        let actuacionCell = { content: '—', styles: {} };
+        if (ev.actuacion) {
+          actuacionCell = {
+            content: ev.actuacion,
+            styles: {
+              fillColor: [229, 229, 234], // Gris/Navy suave
+              textColor: [0, 0, 0],       // Negro
+              fontStyle: 'bold'
+            }
+          };
+        }
 
         let ubiCol = '—';
         if (ev.ubicacion) {
@@ -4854,7 +4901,7 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
             styles: { fontStyle: 'bold', fillColor: [249, 250, 251], valign: 'top' }
           });
         }
-        rowCells.push(salaCol, logCol, actuacionCol, ubiCol, horario, notesCol);
+        rowCells.push(salaCell, logCell, actuacionCell, ubiCol, horario, notesCol);
         tableData.push(rowCells);
       });
     });
@@ -4910,15 +4957,23 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
           if (meta.isFirstOfDate) {
             doc.line(x, y, x + width, y);
           }
-          // Borde Inferior si es la última fila del día
+          // Borde Inferior si es la última fila del día (cubre toda la celda actual)
           if (meta.isLastOfDate) {
             doc.line(x, y + height, x + width, y + height);
+            
+            // Corrección de la esquina inferior izquierda: si la columna de Fecha tiene rowSpan, 
+            // cerramos la línea horizontal también bajo la celda de la fecha en la última fila
+            if (data.column.index === 1 && data.table.columns[0]) {
+              const dateCellWidth = data.table.columns[0].width || 38;
+              const dateCellX = data.table.columns[0].x || 8;
+              doc.line(dateCellX, y + height, dateCellX + dateCellWidth, y + height);
+            }
           }
-          // Borde Izquierdo si es la primera columna visible de la fila
+          // Borde Izquierdo si es la primera columna del día (o si la celda de fecha tiene rowSpan)
           if (data.column.index === 0) {
             doc.line(x, y, x, y + height);
           }
-          // Borde Derecho si es la última columna
+          // Borde Derecho si es la última columna o abarca todas las columnas
           if (data.column.index === data.table.columns.length - 1 || data.cell.colSpan > 1) {
             doc.line(x + width, y, x + width, y + height);
           }
@@ -4942,11 +4997,11 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
       doc.setTextColor(80, 80, 80);
       doc.text(subTitleHeader, pageWidth - 8, 13, { align: 'right' });
 
-      // Paginación exactamente en el centro horizontal de la página
+      // Paginación al estilo libro: pegada al margen inferior derecho
       const str = `${doc.internal.getNumberOfPages()}`;
       doc.setFontSize(8.5);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Página ${str} de {total_pages_count_string}`, pageWidth / 2, pageHeight - 4.5, { align: 'center' });
+      doc.text(`Página ${str} de {total_pages_count_string}`, pageWidth - 8, pageHeight - 4.5, { align: 'right' });
     }
   });
 
