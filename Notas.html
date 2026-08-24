@@ -123,6 +123,28 @@
     .btn-back-nav:hover { background-color: #374151; }
     .btn-back-nav:active { transform: scale(0.97); }
 
+    /* BOTÓN GUARDAR EXPLÍCITO */
+    .btn-save-cloud {
+      background-color: var(--apple-blue);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      border-radius: 7px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+    .btn-save-cloud:hover { background-color: #0066d6; }
+    .btn-save-cloud:active { transform: scale(0.97); }
+    .btn-save-cloud.has-pending {
+      background-color: var(--apple-orange);
+    }
+
     .btn-icon {
       background: none;
       border: none;
@@ -142,7 +164,20 @@
     .btn-icon:active { background: rgba(0,0,0,0.1); }
     .btn-icon.active-pinned { color: var(--apple-orange); }
 
-    /* SEMÁFORO DE SINCRONIZACIÓN */
+    /* ICONO PAPELERA EN ROJO */
+    .btn-delete-red {
+      color: var(--apple-red) !important;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .btn-delete-red:hover {
+      background: rgba(255, 59, 48, 0.12) !important;
+      transform: scale(1.06);
+    }
+    .btn-delete-red:active {
+      transform: scale(0.94);
+    }
+
+    /* BOTÓN DE ESTADO / RECARGAR NUBE */
     .sync-status-container {
       display: inline-flex;
       align-items: center;
@@ -531,7 +566,7 @@
 
 <div id="sync-overlay" class="sync-overlay">
   <div class="apple-spinner"></div>
-  <div class="sync-overlay-text">Sincronizando datos...</div>
+  <div class="sync-overlay-text">Cargando notas...</div>
 </div>
 
 <div class="notes-app">
@@ -551,6 +586,12 @@
     </div>
 
     <div class="toolbar-actions">
+      <!-- BOTÓN GUARDAR EXPLÍCITO -->
+      <button class="btn-save-cloud" id="btn-save-cloud" onclick="manualSave()" title="Guardar cambios en Google Sheets">
+        <i data-lucide="save" style="width:16px; height:16px;"></i>
+        <span id="save-btn-text">Guardar</span>
+      </button>
+
       <button class="btn-icon" id="btn-new-note" title="Nueva Nota">
         <i data-lucide="square-pen" style="color: var(--apple-orange)"></i>
       </button>
@@ -559,7 +600,8 @@
         <i data-lucide="pin"></i>
       </button>
 
-      <button class="btn-icon" id="btn-delete-note" title="Eliminar Nota">
+      <!-- BOTÓN PAPELERA EN ROJO -->
+      <button class="btn-icon btn-delete-red" id="btn-delete-note" title="Eliminar Nota Directamente">
         <i data-lucide="trash-2"></i>
       </button>
 
@@ -574,9 +616,10 @@
       <button class="btn-icon" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
       <button class="btn-icon" onclick="formatDoc('insertUnorderedList')" title="Lista"><i data-lucide="list"></i></button>
 
-      <button class="sync-status-container" id="btn-sync" onclick="manualSync()" title="Estado: Sincronizado">
+      <!-- BOTÓN DESCARGAR / RECARGAR NUBE -->
+      <button class="sync-status-container" id="btn-sync" onclick="fetchChangesFromCloud(true)" title="Recargar desde la nube">
         <span class="status-dot green" id="sync-dot"></span>
-        <i data-lucide="cloud" style="width:17px; height:17px; color: #6b7280;"></i>
+        <i data-lucide="refresh-cw" style="width:16px; height:16px; color: #6b7280;"></i>
       </button>
     </div>
 
@@ -619,11 +662,8 @@
   let currentFolderId = 'all';
   let activeNoteId = notes.length > 0 ? notes[0].id : null;
   let draggedNoteId = null;
-  
   let isSending = false;
-  let isFetching = false;
   let hasLocalChanges = false;
-  let autoSaveTimeout = null;
   let collapsedSections = JSON.parse(localStorage.getItem('apple_notes_collapsed')) || {};
 
   function setSyncStatus(status, customMsg = '') {
@@ -634,12 +674,35 @@
     dot.className = 'status-dot ' + status;
     if (status === 'green') {
       const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      container.title = customMsg || `Sincronizado correctamente (${now})`;
+      container.title = customMsg || `Sincronizado (${now}) - Clic para recargar`;
     } else if (status === 'orange') {
-      container.title = customMsg || 'Guardando en la nube...';
+      container.title = customMsg || 'Procesando con la nube...';
     } else if (status === 'red') {
-      container.title = customMsg || 'Error de conexión / Cambios pendientes';
+      container.title = customMsg || 'Error de conexión';
     }
+  }
+
+  function markPendingChanges() {
+    hasLocalChanges = true;
+    const saveBtn = document.getElementById('btn-save-cloud');
+    const saveBtnText = document.getElementById('save-btn-text');
+    if (saveBtn) {
+      saveBtn.classList.add('has-pending');
+      saveBtnText.innerText = 'Guardar *';
+    }
+    setSyncStatus('orange', 'Tienes cambios pendientes de guardar');
+    saveLocal();
+  }
+
+  function markSavedChanges() {
+    hasLocalChanges = false;
+    const saveBtn = document.getElementById('btn-save-cloud');
+    const saveBtnText = document.getElementById('save-btn-text');
+    if (saveBtn) {
+      saveBtn.classList.remove('has-pending');
+      saveBtnText.innerText = 'Guardar';
+    }
+    setSyncStatus('green');
   }
 
   function hideOverlay() {
@@ -681,7 +744,7 @@
         const nuevoNombre = prompt('Cambiar nombre de la carpeta:', f.name);
         if (nuevoNombre && nuevoNombre.trim() !== '') {
           f.name = nuevoNombre.trim();
-          markChangedAndSave(true);
+          markPendingChanges();
           renderFolders();
           if (currentFolderId === f.id) {
             document.getElementById('current-folder-title').innerText = f.name;
@@ -706,7 +769,7 @@
           if (note) {
             note.folderId = f.id;
             note.updatedAt = new Date().toISOString();
-            markChangedAndSave(true);
+            markPendingChanges();
             renderFolders();
             renderNotesList();
           }
@@ -745,7 +808,7 @@
     if (note) {
       note.pinned = !note.pinned;
       note.updatedAt = new Date().toISOString();
-      markChangedAndSave(true);
+      markPendingChanges();
       renderNotesList();
       updatePinButtonState();
     }
@@ -908,7 +971,7 @@
       .filter(Boolean);
 
     return {
-      title: lines.length > 0 ? lines[0] : 'Nueva Nota',
+      title: lines.length > 0 ? lines[0] : 'Nota vacía',
       preview: lines.length > 1 ? lines.slice(1).join(' ') : 'Sin texto adicional'
     };
   }
@@ -922,25 +985,19 @@
     activeNote.title = title;
     activeNote.updatedAt = new Date().toISOString();
 
-    markChangedAndSave(false);
+    markPendingChanges();
     renderNotesList();
   }
 
   document.getElementById('editor').addEventListener('input', updateActiveNoteFromEditor);
   document.getElementById('editor').addEventListener('keyup', updateActiveNoteFromEditor);
 
-  document.getElementById('editor').addEventListener('blur', () => {
-    if (hasLocalChanges) {
-      pushChangesToCloud();
-    }
-  });
-
   document.getElementById('btn-new-note').addEventListener('click', () => {
     const now = new Date().toISOString();
     const newNote = {
       id: 'n_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
       folderId: currentFolderId === 'all' ? 'notes' : currentFolderId,
-      title: 'Nueva Nota',
+      title: 'Nota vacía',
       body: '<h1><br></h1>',
       createdAt: now,
       updatedAt: now,
@@ -948,7 +1005,7 @@
     };
     notes.unshift(newNote);
     activeNoteId = newNote.id;
-    markChangedAndSave(true);
+    markPendingChanges();
     renderNotesList();
     renderFolders();
     selectNote(newNote.id);
@@ -965,21 +1022,26 @@
     }
   });
 
+  // --- ELIMINAR DIRECTAMENTE Y SINCRONIZAR DE INMEDIATO ---
   document.getElementById('btn-delete-note').addEventListener('click', () => {
     if (!activeNoteId) return;
     
-    // Eliminación directa
+    // 1. Quitar la nota de la lista local
     notes = notes.filter(n => n.id !== activeNoteId);
     activeNoteId = notes.length > 0 ? notes[0].id : null;
     
-    markChangedAndSave(true);
+    saveLocal();
     renderNotesList();
     renderFolders();
+    
     if (activeNoteId) selectNote(activeNoteId);
     else {
       document.getElementById('editor').innerHTML = '';
       document.getElementById('editor-date-label').innerText = '';
     }
+
+    // 2. Enviar inmediatamente a Google Sheets sin pulsar guardar
+    sendPayloadDirectly();
   });
 
   function createNewFolder() {
@@ -990,13 +1052,13 @@
       name: folderName,
       icon: 'folder'
     });
-    markChangedAndSave(true);
+    markPendingChanges();
     renderFolders();
   }
 
   function formatDoc(cmd, value = null) {
     document.execCommand(cmd, false, value);
-    markChangedAndSave(true);
+    markPendingChanges();
   }
 
   function applyHighlight(className) {
@@ -1008,7 +1070,7 @@
     span.appendChild(range.extractContents());
     range.insertNode(span);
     document.getElementById('editor').dispatchEvent(new Event('input'));
-    markChangedAndSave(true);
+    markPendingChanges();
   }
 
   document.getElementById('toggle-sidebar').addEventListener('click', () => {
@@ -1017,58 +1079,48 @@
 
   document.getElementById('search-input').addEventListener('input', renderNotesList);
 
-  function markChangedAndSave(immediate = false) {
-    hasLocalChanges = true;
-    saveLocal();
-    clearTimeout(autoSaveTimeout);
-    if (immediate) {
-      pushChangesToCloud();
-    } else {
-      autoSaveTimeout = setTimeout(() => {
-        pushChangesToCloud();
-      }, 800);
-    }
-  }
-
-  // --- MOTOR PUSH SECUENCIAL SIN PÉRDIDAS ---
-  async function pushChangesToCloud() {
-    if (!hasLocalChanges || isSending) return;
-    isSending = true;
-    setSyncStatus('orange', 'Guardando en la nube...');
-
+  // --- ENVÍO RÁPIDO Y DIRECTO A LA NUBE ---
+  function sendPayloadDirectly() {
     const payload = JSON.stringify({ notes, folders });
-    hasLocalChanges = false;
+    markSavedChanges();
 
-    try {
-      await fetch(SYNC_API_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: payload
-      });
-      setSyncStatus('green');
-    } catch (e) {
-      console.warn('Error al guardar:', e);
-      hasLocalChanges = true;
-      setSyncStatus('red', 'Error al guardar');
-    } finally {
-      isSending = false;
-      hideOverlay();
-      if (hasLocalChanges) {
-        pushChangesToCloud(); // Procesa cambios que hayan ocurrido durante la petición
-      }
-    }
+    fetch(SYNC_API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: payload
+    }).catch(e => {
+      console.warn('Error en el envío directo:', e);
+      setSyncStatus('red', 'Error al sincronizar con Google Sheets');
+    });
   }
 
-  // --- MOTOR PULL FIABLE (LA NUBE MANDA) ---
-  async function fetchChangesFromCloud(isManual = false) {
-    if (isFetching || isSending || hasLocalChanges) return;
-    isFetching = true;
+  // --- BOTÓN MANUAL GUARDAR (RESPUESTA INSTANTÁNEA) ---
+  function manualSave() {
+    const saveBtnText = document.getElementById('save-btn-text');
+    
+    // Feedback visual instantáneo
+    if (saveBtnText) saveBtnText.innerText = '¡Guardado!';
+    markSavedChanges();
 
-    if (isManual) setSyncStatus('orange', 'Descargando...');
+    sendPayloadDirectly();
+
+    setTimeout(() => {
+      if (!hasLocalChanges && saveBtnText) saveBtnText.innerText = 'Guardar';
+    }, 1200);
+  }
+
+  // --- BOTÓN MANUAL PARA DESCARGAR DESDE GOOGLE SHEETS ---
+  async function fetchChangesFromCloud(isManual = false) {
+    if (hasLocalChanges && isManual) {
+      const confirmReload = confirm('Tienes cambios locales sin guardar. Si recargas se perderán. ¿Deseas recargar de todas formas?');
+      if (!confirmReload) return;
+    }
+
+    setSyncStatus('orange', 'Descargando datos...');
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
 
     try {
       const response = await fetch(`${SYNC_API_URL}?t=${Date.now()}`, {
@@ -1078,79 +1130,43 @@
 
       const data = await response.json();
       if (data && data.status === "success") {
-        const cloudNotes = Array.isArray(data.notes) ? data.notes : [];
-        const cloudFolders = Array.isArray(data.folders) ? data.folders : [];
+        notes = Array.isArray(data.notes) ? data.notes : [];
+        if (Array.isArray(data.folders) && data.folders.length > 0) {
+          folders = data.folders;
+        }
+        
+        saveLocal();
+        markSavedChanges();
 
-        // Comprobación de cambios
-        const currentDataStr = JSON.stringify({ notes, folders });
-        const incomingDataStr = JSON.stringify({ notes: cloudNotes, folders: cloudFolders.length > 0 ? cloudFolders : folders });
+        if (!notes.find(n => n.id === activeNoteId)) {
+          activeNoteId = notes.length > 0 ? notes[0].id : null;
+        }
 
-        if (currentDataStr !== incomingDataStr) {
-          notes = cloudNotes;
-          if (cloudFolders.length > 0) {
-            folders = cloudFolders;
-          }
-          saveLocal();
-          
-          if (!notes.find(n => n.id === activeNoteId)) {
-            activeNoteId = notes.length > 0 ? notes[0].id : null;
-          }
+        renderFolders();
+        renderNotesList();
 
-          renderFolders();
-          renderNotesList();
-
-          const isEditing = document.activeElement === document.getElementById('editor');
-          if (!isEditing) {
-            if (activeNoteId) selectNote(activeNoteId);
-            else {
-              document.getElementById('editor').innerHTML = '';
-              document.getElementById('editor-date-label').innerText = '';
-            }
-          }
+        if (activeNoteId) selectNote(activeNoteId);
+        else {
+          document.getElementById('editor').innerHTML = '';
+          document.getElementById('editor-date-label').innerText = '';
         }
         setSyncStatus('green');
       }
     } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn('Aviso sincronización:', err);
-      }
+      console.warn('Error al descargar:', err);
+      setSyncStatus('red', 'No se pudo descargar de la nube');
     } finally {
-      isFetching = false;
       hideOverlay();
     }
   }
 
-  async function manualSync() {
-    if (hasLocalChanges) {
-      await pushChangesToCloud();
-    }
-    await fetchChangesFromCloud(true);
-  }
-
-  // Inicialización
+  // Carga inicial
   renderFolders();
   renderNotesList();
   if (activeNoteId) selectNote(activeNoteId);
 
-  setTimeout(hideOverlay, 300);
-
-  // Primera descarga
+  // Primera descarga para tener todo al día al abrir
   fetchChangesFromCloud(false);
-
-  // Sondeo cada 4 segundos
-  setInterval(() => {
-    fetchChangesFromCloud(false);
-  }, 4000);
-
-  // Eventos de reactivación (iPad / Safari / PC)
-  window.addEventListener('focus', () => fetchChangesFromCloud(false));
-  window.addEventListener('online', () => pushChangesToCloud());
-  window.addEventListener('offline', () => setSyncStatus('red', 'Sin conexión a Internet'));
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      fetchChangesFromCloud(false);
-    }
-  });
 </script>
 </body>
 </html>
