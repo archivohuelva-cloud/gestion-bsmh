@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Notas - Apple UI</title>
+  <title>Notas - BSMHuelva/title>
   <link rel="preconnect" href="https://script.google.com" crossorigin>
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <!-- Lucide Icons -->
@@ -378,7 +378,7 @@
 
     .pill-btn:hover { background: rgba(0, 0, 0, 0.05); }
     .pill-btn.active {
-      background: #e59e00; /* Tono amarillo/mostaza Apple */
+      background: #e59e00;
       color: #ffffff;
       font-weight: 600;
     }
@@ -433,6 +433,114 @@
     }
     .color-swatch-circle:hover {
       transform: scale(1.15);
+    }
+
+    /* --- ESTILOS DE ELEMENTOS IOS --- */
+    .apple-checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 3px 0;
+      min-height: 24px;
+      line-height: 1.5;
+    }
+    .apple-checklist-text {
+      flex: 1;
+      outline: none;
+      min-width: 20px;
+    }
+    .apple-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #8e8e93;
+      border-radius: 50%;
+      outline: none;
+      cursor: pointer;
+      margin-top: 3px;
+      position: relative;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .apple-checkbox:checked {
+      background-color: var(--apple-orange);
+      border-color: var(--apple-orange);
+    }
+    .apple-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 4px;
+      height: 8px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .apple-checkbox:checked + span, 
+    .apple-checkbox:checked + div {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .apple-notes-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+    }
+    .apple-notes-table td, .apple-notes-table th {
+      border: 1px solid #d1d1d6;
+      padding: 8px 12px;
+      min-width: 60px;
+      font-size: 14px;
+    }
+    .apple-notes-table th {
+      background-color: #f2f2f7;
+      font-weight: 600;
+    }
+
+    /* MODAL DE DIBUJO ESTILO APPLE PENCIL */
+    .apple-drawing-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .apple-drawing-modal.hidden {
+      display: none;
+    }
+    .drawing-window {
+      background: #ffffff;
+      border-radius: 18px;
+      width: 90%;
+      max-width: 780px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .drawing-toolbar {
+      padding: 10px 16px;
+      background: #fbfbfd;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #drawing-canvas {
+      background: #ffffff;
+      touch-action: none;
+      cursor: crosshair;
     }
 
     .main-workspace {
@@ -726,6 +834,14 @@
     </div>
 
     <div class="toolbar-actions">
+      <!-- DESHACER / REHACER -->
+      <button class="btn-icon" onclick="execUndo()" title="Deshacer (Ctrl+Z)">
+        <i data-lucide="undo-2"></i>
+      </button>
+      <button class="btn-icon" onclick="execRedo()" title="Rehacer (Ctrl+Y)">
+        <i data-lucide="redo-2"></i>
+      </button>
+
       <!-- BOTÓN GUARDAR EXPLÍCITO -->
       <button class="btn-save-cloud" id="btn-save-cloud" onclick="manualSave()" title="Guardar cambios en Google Sheets">
         <i data-lucide="save" style="width:16px; height:16px;"></i>
@@ -741,7 +857,7 @@
         <i data-lucide="trash-2"></i>
       </button>
 
-      <!-- BOTÓN Y CAJA FLOTANTE DE HERRAMIENTAS APPLE -->
+      <!-- BOTÓN Y CAJA FLOTANTE DE HERRAMIENTAS APPLE (Aa) -->
       <div class="format-popover-container">
         <button class="btn-icon btn-format-trigger" id="btn-format-menu" title="Formato de texto" onclick="toggleFormatMenu(event)">
           Aa
@@ -798,6 +914,20 @@
         </div>
       </div>
 
+      <!-- BOTONES ESTILO IOS (Checklist, Tabla, Dibujo, Compartir) -->
+      <button class="btn-icon" onclick="insertChecklist()" title="Lista de comprobación">
+        <i data-lucide="list-checks"></i>
+      </button>
+      <button class="btn-icon" onclick="insertTable()" title="Insertar tabla">
+        <i data-lucide="table"></i>
+      </button>
+      <button class="btn-icon" onclick="openDrawingModal()" title="Dibujo / Apple Pencil">
+        <i data-lucide="pen-tool"></i>
+      </button>
+      <button class="btn-icon" onclick="shareCurrentNote()" title="Compartir nota">
+        <i data-lucide="share"></i>
+      </button>
+
       <!-- BOTÓN DESCARGAR / RECARGAR NUBE -->
       <button class="sync-status-container" id="btn-sync" onclick="fetchChangesFromCloud(true)" title="Recargar desde la nube">
         <span class="status-dot green" id="sync-dot"></span>
@@ -827,6 +957,24 @@
       </div>
       <div class="note-content" id="editor" contenteditable="true" spellcheck="false"></div>
     </div>
+  </div>
+</div>
+
+<!-- MODAL DE DIBUJO ESTILO APPLE PENCIL -->
+<div id="drawing-modal" class="apple-drawing-modal hidden">
+  <div class="drawing-window">
+    <div class="drawing-toolbar">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <input type="color" id="draw-color" value="#1d1d1f" style="border:none; width:28px; height:28px; border-radius:50%; cursor:pointer;">
+        <input type="range" id="draw-width" min="1" max="15" value="3" title="Grosor">
+        <button class="btn-icon" onclick="clearDrawingCanvas()" title="Borrar lienzo"><i data-lucide="eraser"></i></button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-back-nav" onclick="closeDrawingModal()">Cancelar</button>
+        <button class="btn-save-cloud" onclick="saveDrawingToNote()">Insertar</button>
+      </div>
+    </div>
+    <canvas id="drawing-canvas" width="780" height="420"></canvas>
   </div>
 </div>
 
@@ -1139,7 +1287,7 @@
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html || '';
     
-    tempDiv.querySelectorAll('h1, h2, h3, p, div, li, br').forEach(el => {
+    tempDiv.querySelectorAll('h1, h2, h3, p, div, li, br, table, tr').forEach(el => {
       if (el.tagName.toLowerCase() === 'br') {
         el.replaceWith('\n');
       } else {
@@ -1308,11 +1456,10 @@
         const confirmReload = confirm('Tienes cambios locales sin guardar. Si recargas se perderán. ¿Deseas recargar de todas formas?');
         if (!confirmReload) return;
       } else {
-        return; // Auto-sync pausado: hay cambios pendientes de pulsar Guardar
+        return;
       }
     }
 
-    // No sincronizar automáticamente si el usuario tiene el cursor en el editor o ya hay una petición
     if (!isManual && (isEditorFocused || isFetching)) {
       return;
     }
@@ -1334,7 +1481,6 @@
         const newNotes = Array.isArray(data.notes) ? data.notes : [];
         const newFolders = Array.isArray(data.folders) && data.folders.length > 0 ? data.folders : folders;
 
-        // Comprobar si hay cambios reales respecto al estado local
         const hasDataChanged = JSON.stringify(newNotes) !== JSON.stringify(notes) ||
                                JSON.stringify(newFolders) !== JSON.stringify(folders);
 
@@ -1353,7 +1499,6 @@
 
           if (activeNoteId) {
             const cur = notes.find(n => n.id === activeNoteId);
-            // Actualizar contenido solo si no se está editando activamente
             if (!isEditorFocused && cur) {
               selectNote(activeNoteId);
             }
@@ -1377,19 +1522,10 @@
 
   // --- INTERVALO DE SINCRONIZACIÓN AUTOMÁTICA CADA 5 SEGUNDOS ---
   setInterval(() => {
-    // Solo sincroniza si todo está guardado y no se está editando
     if (!hasLocalChanges && !isEditorFocused) {
       fetchChangesFromCloud(false);
     }
   }, 5000);
-
-  // Carga inicial
-  renderFolders();
-  renderNotesList();
-  if (activeNoteId) selectNote(activeNoteId);
-
-  // Primera descarga al abrir
-  fetchChangesFromCloud(false);
 
   // Alternar el menú desplegable de formato
   function toggleFormatMenu(event) {
@@ -1411,7 +1547,6 @@
   function applyBlockFormat(tag) {
     document.execCommand('formatBlock', false, `<${tag}>`);
     
-    // Actualizar estilo activo visual de las píldoras
     const pills = document.querySelectorAll('.format-type-pill-group .pill-btn');
     pills.forEach(p => p.classList.remove('active'));
     if (event && event.target) {
@@ -1420,6 +1555,281 @@
     
     markPendingChanges();
   }
+
+  /* ==========================================================================
+     NUEVAS FUNCIONES: DESHACER, REHACER Y BOTONES ESTILO IOS
+     ========================================================================== */
+
+  // 1. Deshacer y Rehacer (Botones e integración por atajos de teclado)
+  function execUndo() {
+    document.execCommand('undo', false, null);
+    updateActiveNoteFromEditor();
+  }
+
+  function execRedo() {
+    document.execCommand('redo', false, null);
+    updateActiveNoteFromEditor();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    if (modifier && e.key.toLowerCase() === 'z') {
+      if (e.shiftKey) {
+        e.preventDefault();
+        execRedo();
+      } else {
+        e.preventDefault();
+        execUndo();
+      }
+    } else if (modifier && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      execRedo();
+    }
+  });
+
+  // 2. Checklist interactivo con inserción precisa en la posición del cursor
+  function insertChecklist() {
+    const editor = document.getElementById('editor');
+    editor.focus();
+
+    const sel = window.getSelection();
+    let range = null;
+
+    if (sel && sel.rangeCount > 0) {
+      range = sel.getRangeAt(0);
+    } else {
+      range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    const checkItem = document.createElement('div');
+    checkItem.className = 'apple-checklist-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'apple-checkbox';
+    checkbox.setAttribute('contenteditable', 'false');
+    checkbox.onchange = markPendingChanges;
+
+    const spanText = document.createElement('span');
+    spanText.className = 'apple-checklist-text';
+    spanText.innerHTML = '<br>'; // Espaciador para permitir cursor inmediato
+
+    checkItem.appendChild(checkbox);
+    checkItem.appendChild(spanText);
+
+    // Reemplazar párrafo actual si está completamente vacío, o insertar en el punto exacto
+    let parentBlock = range.commonAncestorContainer;
+    if (parentBlock.nodeType === 3) parentBlock = parentBlock.parentNode;
+
+    if (parentBlock && parentBlock !== editor && parentBlock.parentNode === editor && parentBlock.textContent.trim() === '' && !parentBlock.classList.contains('apple-checklist-item')) {
+      editor.replaceChild(checkItem, parentBlock);
+    } else {
+      range.deleteContents();
+      range.insertNode(checkItem);
+    }
+
+    // Colocar el cursor de forma exacta dentro del checklist
+    const newRange = document.createRange();
+    newRange.setStart(spanText, 0);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+
+    markPendingChanges();
+  }
+
+  // Manejo de comportamiento nativo Apple Notes para listas de tareas (Enter / Backspace)
+  document.getElementById('editor').addEventListener('keydown', (e) => {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+
+    let node = sel.anchorNode;
+    if (!node) return;
+    if (node.nodeType === 3) node = node.parentNode;
+
+    const checklistItem = node.closest ? node.closest('.apple-checklist-item') : null;
+
+    if (checklistItem) {
+      const textSpan = checklistItem.querySelector('.apple-checklist-text');
+      const textContent = textSpan ? textSpan.textContent.replace(/\u200B/g, '').trim() : '';
+
+      // Al pulsar ENTER: Crear siguiente tarea debajo, o salir si estaba vacía
+      if (e.key === 'Enter') {
+        e.preventDefault();
+
+        if (textContent === '') {
+          // Si el checklist está vacío y pulsas Enter, convertir a párrafo normal (salir de la lista)
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          checklistItem.parentNode.replaceChild(p, checklistItem);
+
+          const r = document.createRange();
+          r.setStart(p, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        } else {
+          // Si tiene texto, crear un nuevo checklist justo debajo
+          const newItem = document.createElement('div');
+          newItem.className = 'apple-checklist-item';
+
+          const newCb = document.createElement('input');
+          newCb.type = 'checkbox';
+          newCb.className = 'apple-checkbox';
+          newCb.setAttribute('contenteditable', 'false');
+          newCb.onchange = markPendingChanges;
+
+          const newSpan = document.createElement('span');
+          newSpan.className = 'apple-checklist-text';
+          newSpan.innerHTML = '<br>';
+
+          newItem.appendChild(newCb);
+          newItem.appendChild(newSpan);
+
+          checklistItem.insertAdjacentElement('afterend', newItem);
+
+          const r = document.createRange();
+          r.setStart(newSpan, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+        markPendingChanges();
+      }
+
+      // Al pulsar BACKSPACE (Retroceso): Eliminar el check si el texto está vacío
+      else if (e.key === 'Backspace') {
+        if (textContent === '' && sel.anchorOffset === 0) {
+          e.preventDefault();
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          checklistItem.parentNode.replaceChild(p, checklistItem);
+
+          const r = document.createRange();
+          r.setStart(p, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+          markPendingChanges();
+        }
+      }
+    }
+  });
+
+  // 3. Insertar Tabla
+  function insertTable() {
+    const html = `
+      <table class="apple-notes-table">
+        <tbody>
+          <tr><th>Columna 1</th><th>Columna 2</th></tr>
+          <tr><td>Dato 1</td><td>Dato 2</td></tr>
+        </tbody>
+      </table><p><br></p>`;
+    document.execCommand('insertHTML', false, html);
+    markPendingChanges();
+  }
+
+  // 4. Compartir Nota
+  async function shareCurrentNote() {
+    const activeNote = notes.find(n => n.id === activeNoteId);
+    if (!activeNote) return;
+
+    const { title, preview } = extractNoteLines(activeNote.body);
+    const textShare = `${title}\n\n${preview}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: title,
+          text: textShare
+        });
+      } catch (err) {
+        console.log('Compartición cancelada');
+      }
+    } else {
+      navigator.clipboard.writeText(textShare).then(() => {
+        alert('Contenido de la nota copiado al portapapeles.');
+      });
+    }
+  }
+
+  // 5. Módulo de Dibujo (Canvas)
+  let canvas, ctx, isDrawing = false;
+
+  function initDrawing() {
+    canvas = document.getElementById('drawing-canvas');
+    if (!canvas) return;
+    ctx = canvas.getContext('2d');
+
+    const startDraw = (e) => {
+      isDrawing = true;
+      ctx.beginPath();
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      ctx.moveTo(clientX - rect.left, clientY - rect.top);
+    };
+
+    const draw = (e) => {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      ctx.lineTo(clientX - rect.left, clientY - rect.top);
+      ctx.strokeStyle = document.getElementById('draw-color').value;
+      ctx.lineWidth = document.getElementById('draw-width').value;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    };
+
+    const stopDraw = () => { isDrawing = false; };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw);
+
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
+  }
+
+  function openDrawingModal() {
+    const modal = document.getElementById('drawing-modal');
+    modal.classList.remove('hidden');
+    initDrawing();
+    clearDrawingCanvas();
+  }
+
+  function closeDrawingModal() {
+    document.getElementById('drawing-modal').classList.add('hidden');
+  }
+
+  function clearDrawingCanvas() {
+    if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function saveDrawingToNote() {
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/png');
+    const imgHtml = `<p><img src="${dataUrl}" style="max-width:100%; border-radius:8px; margin:8px 0;"></p><p><br></p>`;
+    document.getElementById('editor').focus();
+    document.execCommand('insertHTML', false, imgHtml);
+    closeDrawingModal();
+    markPendingChanges();
+  }
+
+  // Carga inicial
+  renderFolders();
+  renderNotesList();
+  if (activeNoteId) selectNote(activeNoteId);
+  fetchChangesFromCloud(false);
 </script>
 </body>
 </html>
