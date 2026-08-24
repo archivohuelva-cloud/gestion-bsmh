@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Notas - BSMHuelva/title>
+  <title>Notas - bSMHuelva</title>
   <link rel="preconnect" href="https://script.google.com" crossorigin>
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <!-- Lucide Icons -->
@@ -921,11 +921,11 @@
       <button class="btn-icon" onclick="insertTable()" title="Insertar tabla">
         <i data-lucide="table"></i>
       </button>
-      <button class="btn-icon" onclick="openDrawingModal()" title="Dibujo / Apple Pencil">
+      <button class="btn-icon" onclick="openDrawingModal()" title="Dibujar">
         <i data-lucide="pen-tool"></i>
       </button>
-      <button class="btn-icon" onclick="shareCurrentNote()" title="Compartir nota">
-        <i data-lucide="share"></i>
+      <button class="btn-icon" onclick="exportNoteToPDF()" title="Imprimir">
+        <i data-lucide="printer"></i>
       </button>
 
       <!-- BOTÓN DESCARGAR / RECARGAR NUBE -->
@@ -1644,7 +1644,7 @@
     markPendingChanges();
   }
 
-  // Manejo de comportamiento nativo Apple Notes para listas de tareas (Enter / Backspace)
+  // Manejo de eventos de teclado en el editor (Listas y Navegación con Tab en Tablas)
   document.getElementById('editor').addEventListener('keydown', (e) => {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
@@ -1653,18 +1653,57 @@
     if (!node) return;
     if (node.nodeType === 3) node = node.parentNode;
 
-    const checklistItem = node.closest ? node.closest('.apple-checklist-item') : null;
+    // --- 1. NAVEGACIÓN CON TABULADOR (TAB / SHIFT+TAB) EN TABLAS ---
+    const currentCell = node.closest ? node.closest('td, th') : null;
+    if (currentCell && e.key === 'Tab') {
+      e.preventDefault(); // Evita perder el foco fuera del editor
 
+      const table = currentCell.closest('table');
+      if (!table) return;
+
+      const cells = Array.from(table.querySelectorAll('th, td'));
+      const currentIndex = cells.indexOf(currentCell);
+
+      if (e.shiftKey) {
+        // Shift + Tab: Ir a la celda anterior
+        if (currentIndex > 0) {
+          const prevCell = cells[currentIndex - 1];
+          focusCell(prevCell);
+        }
+      } else {
+        // Tab: Ir a la siguiente celda
+        if (currentIndex < cells.length - 1) {
+          const nextCell = cells[currentIndex + 1];
+          focusCell(nextCell);
+        } else {
+          // Si estamos en la última celda de la tabla, añadir automáticamente una nueva fila
+          const colCount = table.rows[0].cells.length;
+          const tbody = table.querySelector('tbody') || table;
+          const newRow = document.createElement('tr');
+          for (let i = 0; i < colCount; i++) {
+            const newTd = document.createElement('td');
+            newTd.innerHTML = '<br>';
+            newRow.appendChild(newTd);
+          }
+          tbody.appendChild(newRow);
+          focusCell(newRow.cells[0]);
+          markPendingChanges();
+        }
+      }
+      return;
+    }
+
+    // --- 2. COMPORTAMIENTO NATIVO PARA CHECKLISTS (ENTER / BACKSPACE) ---
+    const checklistItem = node.closest ? node.closest('.apple-checklist-item') : null;
     if (checklistItem) {
       const textSpan = checklistItem.querySelector('.apple-checklist-text');
       const textContent = textSpan ? textSpan.textContent.replace(/\u200B/g, '').trim() : '';
 
-      // Al pulsar ENTER: Crear siguiente tarea debajo, o salir si estaba vacía
+      // Al pulsar ENTER
       if (e.key === 'Enter') {
         e.preventDefault();
 
         if (textContent === '') {
-          // Si el checklist está vacío y pulsas Enter, convertir a párrafo normal (salir de la lista)
           const p = document.createElement('p');
           p.innerHTML = '<br>';
           checklistItem.parentNode.replaceChild(p, checklistItem);
@@ -1675,7 +1714,6 @@
           sel.removeAllRanges();
           sel.addRange(r);
         } else {
-          // Si tiene texto, crear un nuevo checklist justo debajo
           const newItem = document.createElement('div');
           newItem.className = 'apple-checklist-item';
 
@@ -1702,8 +1740,7 @@
         }
         markPendingChanges();
       }
-
-      // Al pulsar BACKSPACE (Retroceso): Eliminar el check si el texto está vacío
+      // Al pulsar BACKSPACE
       else if (e.key === 'Backspace') {
         if (textContent === '' && sel.anchorOffset === 0) {
           e.preventDefault();
@@ -1722,41 +1759,261 @@
     }
   });
 
-  // 3. Insertar Tabla
+  // Función auxiliar para posicionar el cursor y seleccionar el contenido de una celda
+  function focusCell(cell) {
+    if (!cell) return;
+    cell.focus();
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(cell);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // 3. Insertar Tabla con filas y columnas personalizadas
   function insertTable() {
-    const html = `
-      <table class="apple-notes-table">
-        <tbody>
-          <tr><th>Columna 1</th><th>Columna 2</th></tr>
-          <tr><td>Dato 1</td><td>Dato 2</td></tr>
-        </tbody>
-      </table><p><br></p>`;
-    document.execCommand('insertHTML', false, html);
+    const editor = document.getElementById('editor');
+    editor.focus();
+
+    // Solicitar número de columnas
+    let colsInput = prompt('Introduce el número de columnas:', '2');
+    if (colsInput === null) return; // Si el usuario cancela, no hace nada
+    let cols = parseInt(colsInput, 10);
+    if (isNaN(cols) || cols < 1) cols = 2; // Valor por defecto ante entradas inválidas
+
+    // Solicitar número de filas
+    let rowsInput = prompt('Introduce el número de filas:', '2');
+    if (rowsInput === null) return; // Si el usuario cancela, no hace nada
+    let rows = parseInt(rowsInput, 10);
+    if (isNaN(rows) || rows < 1) rows = 2; // Valor por defecto ante entradas inválidas
+
+    // Límite de seguridad razonable para evitar bloquear la página
+    cols = Math.min(cols, 20);
+    rows = Math.min(rows, 50);
+
+    // Construcción dinámica de la cabecera (primera fila)
+    let tableHtml = '<table class="apple-notes-table"><tbody><tr>';
+    for (let c = 1; c <= cols; c++) {
+      tableHtml += `<th>Columna ${c}</th>`;
+    }
+    tableHtml += '</tr>';
+
+    // Construcción dinámica del resto de filas
+    for (let r = 1; r < rows; r++) {
+      tableHtml += '<tr>';
+      for (let c = 1; c <= cols; c++) {
+        tableHtml += '<td><br></td>';
+      }
+      tableHtml += '</tr>';
+    }
+
+    tableHtml += '</tbody></table><p><br></p>';
+
+    // Inserción en el editor
+    document.execCommand('insertHTML', false, tableHtml);
     markPendingChanges();
   }
 
-  // 4. Compartir Nota
-  async function shareCurrentNote() {
+  // 4. Exportar Nota a PDF Vertical con Maquetación Editorial (Sin URL inferior)
+  function exportNoteToPDF() {
     const activeNote = notes.find(n => n.id === activeNoteId);
-    if (!activeNote) return;
-
-    const { title, preview } = extractNoteLines(activeNote.body);
-    const textShare = `${title}\n\n${preview}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: title,
-          text: textShare
-        });
-      } catch (err) {
-        console.log('Compartición cancelada');
-      }
-    } else {
-      navigator.clipboard.writeText(textShare).then(() => {
-        alert('Contenido de la nota copiado al portapapeles.');
-      });
+    if (!activeNote) {
+      alert('Selecciona una nota para exportar');
+      return;
     }
+
+    const { title } = extractNoteLines(activeNote.body);
+    const dateFormatted = new Date(activeNote.updatedAt || activeNote.createdAt).toLocaleString('es-ES', {
+      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = activeNote.body || '';
+
+    const currentCheckboxes = document.querySelectorAll('#editor .apple-checkbox');
+    const tempCheckboxes = tempContainer.querySelectorAll('.apple-checkbox');
+    tempCheckboxes.forEach((cb, idx) => {
+      const isChecked = currentCheckboxes[idx] ? currentCheckboxes[idx].checked : cb.hasAttribute('checked');
+      const checkIcon = document.createElement('span');
+      checkIcon.className = `pdf-check-icon ${isChecked ? 'checked' : ''}`;
+      cb.parentNode.replaceChild(checkIcon, cb);
+    });
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 0; /* Al estar a 0 oculta la URL y datos del navegador */
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body {
+            margin: 0;
+            padding: 20mm 20mm 20mm 20mm;
+            color: #1c1c1e;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.65;
+            background: #ffffff;
+          }
+          .pdf-document-wrapper {
+            max-width: 100%;
+            margin: 0 auto;
+          }
+          .pdf-header-meta {
+            font-size: 9pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #8e8e93;
+            border-bottom: 1px solid #d1d1d6;
+            padding-bottom: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+          }
+          h1 {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #000000;
+            margin: 0 0 16px 0;
+            line-height: 1.25;
+            page-break-after: avoid;
+          }
+          h2 {
+            font-size: 15pt;
+            font-weight: 600;
+            color: #1c1c1e;
+            margin: 20px 0 10px 0;
+            page-break-after: avoid;
+          }
+          h3 {
+            font-size: 12.5pt;
+            font-weight: 600;
+            color: #2c2c2e;
+            margin: 16px 0 8px 0;
+            page-break-after: avoid;
+          }
+          p {
+            margin: 0 0 10px 0;
+            text-align: justify;
+            text-justify: inter-word;
+          }
+          .apple-notes-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+          }
+          .apple-notes-table th, 
+          .apple-notes-table td {
+            border: 1px solid #d1d1d6;
+            padding: 8px 12px;
+            text-align: left;
+            vertical-align: top;
+          }
+          .apple-notes-table th {
+            background-color: #f2f2f7 !important;
+            font-weight: 600;
+            color: #1c1c1e;
+          }
+          .apple-checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 6px 0;
+            page-break-inside: avoid;
+          }
+          .pdf-check-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1.5px solid #8e8e93;
+            margin-top: 3px;
+            flex-shrink: 0;
+          }
+          .pdf-check-icon.checked {
+            background-color: #ff9500 !important;
+            border-color: #ff9500 !important;
+            position: relative;
+          }
+          .pdf-check-icon.checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1.5px;
+            width: 3px;
+            height: 6px;
+            border: solid white;
+            border-width: 0 1.5px 1.5px 0;
+            transform: rotate(45deg);
+          }
+          .apple-checklist-text {
+            flex: 1;
+          }
+          .hl-cyan   { background-color: #a5f3fc !important; border-radius: 2px; padding: 1px 3px; }
+          .hl-pink   { background-color: #fbcfe8 !important; border-radius: 2px; padding: 1px 3px; }
+          .hl-orange { background-color: #fed7aa !important; border-radius: 2px; padding: 1px 3px; }
+          .hl-green  { background-color: #bbf7d0 !important; border-radius: 2px; padding: 1px 3px; }
+          .hl-yellow { background-color: #fef08a !important; border-radius: 2px; padding: 1px 3px; }
+          img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin: 12px 0;
+            page-break-inside: avoid;
+          }
+          ul, ol {
+            margin: 8px 0 12px 22px;
+            padding: 0;
+          }
+          li {
+            margin-bottom: 4px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="pdf-document-wrapper">
+          <div class="pdf-header-meta">
+            <span>Banda Sinfónica Municipal de Huelva | Notas</span>
+            <span>${dateFormatted}</span>
+          </div>
+          <div>${tempContainer.innerHTML}</div>
+        </div>
+      </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      setTimeout(() => {
+        if (document.body.contains(printFrame)) {
+          document.body.removeChild(printFrame);
+        }
+      }, 1500);
+    }, 300);
   }
 
   // 5. Módulo de Dibujo (Canvas)
