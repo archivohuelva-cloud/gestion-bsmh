@@ -282,14 +282,45 @@
     /* POPOVER ESTILO APPLE NOTES */
     .format-popover-container {
       position: relative;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      height: 32px;
     }
 
     .btn-format-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1px;
+      width: 32px;
+      height: 32px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", sans-serif;
+      user-select: none;
+      border-radius: 6px;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .btn-format-trigger .ios-big-a {
+      font-size: 16px;
       font-weight: 700;
-      font-size: 15px;
-      font-family: -apple-system, serif;
-      letter-spacing: -0.5px;
+      color: #48484a;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    .btn-format-trigger .ios-small-a {
+      font-size: 12px;
+      font-weight: 600;
+      color: #48484a;
+      line-height: 1;
+      display: inline-block;
+      transform: translateY(1.5px);
+    }
+
+    .btn-format-trigger:hover .ios-big-a,
+    .btn-format-trigger:hover .ios-small-a {
+      color: var(--apple-orange);
     }
 
     .apple-format-menu {
@@ -297,7 +328,7 @@
       top: 42px;
       left: 50%;
       transform: translateX(-50%) scale(0.95);
-      background: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(25px) saturate(180%);
       -webkit-backdrop-filter: blur(25px) saturate(180%);
       border: 1px solid rgba(0, 0, 0, 0.08);
@@ -308,7 +339,8 @@
       flex-direction: column;
       gap: 10px;
       z-index: 1000;
-      width: 320px;
+      width: 380px;
+      max-width: 90vw;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -320,23 +352,23 @@
       transform: translateX(-50%) scale(1);
     }
 
-    /* Píldoras de Tipo de Texto (Título, Cabezal, etc.) */
+    /* Píldoras de Tipo de Texto distribuidas uniformemente */
     .format-type-pill-group {
       display: flex;
       align-items: center;
-      gap: 4px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      scrollbar-width: none;
+      justify-content: space-between;
+      gap: 3px;
+      width: 100%;
     }
-    .format-type-pill-group::-webkit-scrollbar { display: none; }
 
     .pill-btn {
+      flex: 1;
+      text-align: center;
       border: none;
       background: transparent;
-      padding: 6px 12px;
-      border-radius: 14px;
-      font-size: 13px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      font-size: 12.5px;
       font-weight: 500;
       color: #1d1d1f;
       cursor: pointer;
@@ -1260,17 +1292,36 @@
     }, 1200);
   }
 
-  // --- BOTÓN MANUAL PARA DESCARGAR DESDE GOOGLE SHEETS ---
+  let isFetching = false;
+  let isEditorFocused = false;
+
+  // Detectar foco para no pisar el cursor mientras se escribe
+  const editorEl = document.getElementById('editor');
+  editorEl.addEventListener('focus', () => { isEditorFocused = true; });
+  editorEl.addEventListener('blur', () => { isEditorFocused = false; });
+
+  // --- DESCARGAR / SINCRONIZAR DESDE GOOGLE SHEETS ---
   async function fetchChangesFromCloud(isManual = false) {
-    if (hasLocalChanges && isManual) {
-      const confirmReload = confirm('Tienes cambios locales sin guardar. Si recargas se perderán. ¿Deseas recargar de todas formas?');
-      if (!confirmReload) return;
+    // Si hay cambios locales sin guardar y es manual, confirmar; si es auto, cancelar
+    if (hasLocalChanges) {
+      if (isManual) {
+        const confirmReload = confirm('Tienes cambios locales sin guardar. Si recargas se perderán. ¿Deseas recargar de todas formas?');
+        if (!confirmReload) return;
+      } else {
+        return; // Auto-sync pausado: hay cambios pendientes de pulsar Guardar
+      }
     }
 
-    setSyncStatus('orange', 'Descargando datos...');
+    // No sincronizar automáticamente si el usuario tiene el cursor en el editor o ya hay una petición
+    if (!isManual && (isEditorFocused || isFetching)) {
+      return;
+    }
+
+    isFetching = true;
+    if (isManual) setSyncStatus('orange', 'Descargando datos...');
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
     try {
       const response = await fetch(`${SYNC_API_URL}?t=${Date.now()}`, {
@@ -1280,42 +1331,64 @@
 
       const data = await response.json();
       if (data && data.status === "success") {
-        notes = Array.isArray(data.notes) ? data.notes : [];
-        if (Array.isArray(data.folders) && data.folders.length > 0) {
-          folders = data.folders;
-        }
-        
-        saveLocal();
-        markSavedChanges();
+        const newNotes = Array.isArray(data.notes) ? data.notes : [];
+        const newFolders = Array.isArray(data.folders) && data.folders.length > 0 ? data.folders : folders;
 
-        if (!notes.find(n => n.id === activeNoteId)) {
-          activeNoteId = notes.length > 0 ? notes[0].id : null;
-        }
+        // Comprobar si hay cambios reales respecto al estado local
+        const hasDataChanged = JSON.stringify(newNotes) !== JSON.stringify(notes) ||
+                               JSON.stringify(newFolders) !== JSON.stringify(folders);
 
-        renderFolders();
-        renderNotesList();
+        if (hasDataChanged) {
+          notes = newNotes;
+          folders = newFolders;
+          saveLocal();
+          markSavedChanges();
 
-        if (activeNoteId) selectNote(activeNoteId);
-        else {
-          document.getElementById('editor').innerHTML = '';
-          document.getElementById('editor-date-label').innerText = '';
+          if (!notes.find(n => n.id === activeNoteId)) {
+            activeNoteId = notes.length > 0 ? notes[0].id : null;
+          }
+
+          renderFolders();
+          renderNotesList();
+
+          if (activeNoteId) {
+            const cur = notes.find(n => n.id === activeNoteId);
+            // Actualizar contenido solo si no se está editando activamente
+            if (!isEditorFocused && cur) {
+              selectNote(activeNoteId);
+            }
+          } else {
+            editorEl.innerHTML = '';
+            document.getElementById('editor-date-label').innerText = '';
+          }
         }
         setSyncStatus('green');
       }
     } catch (err) {
-      console.warn('Error al descargar:', err);
-      setSyncStatus('red', 'No se pudo descargar de la nube');
+      if (isManual) {
+        console.warn('Error al descargar:', err);
+        setSyncStatus('red', 'No se pudo descargar de la nube');
+      }
     } finally {
+      isFetching = false;
       hideOverlay();
     }
   }
+
+  // --- INTERVALO DE SINCRONIZACIÓN AUTOMÁTICA CADA 5 SEGUNDOS ---
+  setInterval(() => {
+    // Solo sincroniza si todo está guardado y no se está editando
+    if (!hasLocalChanges && !isEditorFocused) {
+      fetchChangesFromCloud(false);
+    }
+  }, 5000);
 
   // Carga inicial
   renderFolders();
   renderNotesList();
   if (activeNoteId) selectNote(activeNoteId);
 
-  // Primera descarga para tener todo al día al abrir
+  // Primera descarga al abrir
   fetchChangesFromCloud(false);
 
   // Alternar el menú desplegable de formato
