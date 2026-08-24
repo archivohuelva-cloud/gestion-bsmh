@@ -142,7 +142,7 @@
     .btn-icon:active { background: rgba(0,0,0,0.1); }
     .btn-icon.active-pinned { color: var(--apple-orange); }
 
-    /* ESTILO SEMÁFORO DE SINCRONIZACIÓN */
+    /* SEMÁFORO DE SINCRONIZACIÓN */
     .sync-status-container {
       display: inline-flex;
       align-items: center;
@@ -525,152 +525,10 @@
     .hl-orange { background-color: #fed7aa; border-radius: 4px; padding: 0 4px; }
     .hl-green  { background-color: #bbf7d0; border-radius: 4px; padding: 0 4px; }
     .hl-yellow { background-color: #fef08a; border-radius: 4px; padding: 0 4px; }
-    .hl-purple { background-color: #e9d5ff; border-radius: 4px; padding: 0 4px; }
-
-    /* ESTILOS DEL EDITOR APPLE NOTES */
-    .note-content h2 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-top: 14px;
-      margin-bottom: 6px;
-      color: #1d1d1f;
-    }
-    .note-content blockquote {
-      border-left: 3px solid #d1d1d6;
-      padding-left: 12px;
-      margin: 8px 0;
-      color: #636366;
-      font-style: italic;
-    }
-    .note-content ul, .note-content ol {
-      margin-left: 24px;
-      margin-bottom: 8px;
-    }
-
-    /* POPOVER ESTILO APPLE NOTES */
-    .format-popover-container {
-      position: relative;
-      display: inline-block;
-    }
-
-    .apple-format-menu {
-      position: absolute;
-      top: 42px;
-      left: 0;
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(25px) saturate(180%);
-      -webkit-backdrop-filter: blur(25px) saturate(180%);
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      border-radius: 18px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(255,255,255,0.6) inset;
-      padding: 12px;
-      width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 999;
-      user-select: none;
-      animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .apple-format-menu.hidden {
-      display: none;
-    }
-
-    @keyframes popoverFadeIn {
-      from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    /* Fila 1: Píldoras de formato de párrafo */
-    .format-pills-row {
-      display: flex;
-      background: rgba(118, 118, 128, 0.12);
-      border-radius: 20px;
-      padding: 3px;
-      gap: 2px;
-    }
-
-    .format-pill-btn {
-      flex: 1;
-      border: none;
-      background: none;
-      padding: 6px 4px;
-      font-size: 12px;
-      font-weight: 500;
-      color: #1d1d1f;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      white-space: nowrap;
-      text-align: center;
-    }
-
-    .format-pill-btn:hover {
-      background: rgba(255, 255, 255, 0.6);
-    }
-
-    .format-pill-btn.active {
-      background: #ffffff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-      font-weight: 600;
-    }
-
-    /* Grupos de botones horizontales */
-    .format-button-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .format-btn-cluster {
-      display: flex;
-      flex: 1;
-      background: rgba(118, 118, 128, 0.12);
-      border-radius: 12px;
-      padding: 2px;
-    }
-
-    .format-btn-cluster .f-btn {
-      flex: 1;
-      height: 34px;
-      border: none;
-      background: none;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 14px;
-      color: #1c1c1e;
-      transition: background 0.15s ease;
-    }
-
-    .format-btn-cluster .f-btn:hover {
-      background: rgba(255, 255, 255, 0.6);
-    }
-
-    .format-btn-cluster .f-btn:active,
-    .format-btn-cluster .f-btn.active {
-      background: #ffffff;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-    }
-
-    /* Selector de color desplegable */
-    .color-swatches-menu {
-      display: flex;
-      gap: 6px;
-      padding: 6px 8px;
-      background: rgba(118, 118, 128, 0.08);
-      border-radius: 10px;
-      justify-content: space-around;
-      align-items: center;
-    }
   </style>
 </head>
 <body>
 
-<!-- OVERLAY DE SINCRONIZACIÓN -->
 <div id="sync-overlay" class="sync-overlay">
   <div class="apple-spinner"></div>
   <div class="sync-overlay-text">Sincronizando datos...</div>
@@ -693,7 +551,7 @@
     </div>
 
     <div class="toolbar-actions">
-      <button class="btn-icon" id="btn-new-note" title="">
+      <button class="btn-icon" id="btn-new-note" title="Nueva Nota">
         <i data-lucide="square-pen" style="color: var(--apple-orange)"></i>
       </button>
 
@@ -705,71 +563,18 @@
         <i data-lucide="trash-2"></i>
       </button>
 
-      <!-- BOTÓN Y MENÚ DE FORMATO ESTILO APPLE -->
-      <div class="format-popover-container">
-        <button class="btn-icon" id="btn-toggle-format" title="Formato de texto" onclick="toggleFormatMenu(event)">
-          <span style="font-weight: 700; font-size: 15px; letter-spacing: -0.5px;">Aa</span>
-        </button>
-
-        <div class="apple-format-menu hidden" id="apple-format-popover" onmousedown="event.preventDefault()">
-          <!-- FILA 1: Encabezados / Estilos de bloque -->
-          <div class="format-pills-row">
-            <button class="format-pill-btn" onmousedown="event.preventDefault()" onclick="formatBlock('h1')">Título</button>
-            <button class="format-pill-btn" onmousedown="event.preventDefault()" onclick="formatBlock('h2')">Subtítulo</button>
-            <button class="format-pill-btn" onmousedown="event.preventDefault()" onclick="formatBlock('p')">Cuerpo</button>
-          </div>
-
-          <!-- FILA 2: Estilos tipográficos (B, I, U, S) + Resaltador -->
-          <div class="format-button-group">
-            <div class="format-btn-cluster">
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('italic')" title="Cursiva"><i>I</i></button>
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('underline')" title="Subrayado"><u>U</u></button>
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('strikeThrough')" title="Tachado"><s>S</s></button>
-            </div>
-          </div>
-
-          <!-- FILA 3: Paleta de Resaltadores Apple -->
-          <div class="color-swatches-menu">
-            <span class="color-swatch" style="background:#5ac8fa;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-cyan')" title="Cian"></span>
-            <span class="color-swatch" style="background:#ff2d55;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
-            <span class="color-swatch" style="background:#ff9500;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-orange')" title="Naranja"></span>
-            <span class="color-swatch" style="background:#34c759;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-green')" title="Verde"></span>
-            <span class="color-swatch" style="background:#ffd60a;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
-            <span class="color-swatch" style="background:#af52de;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-purple')" title="Morado"></span>
-          </div>
-
-          <!-- FILA 4: Listas, Sangrías y Citas -->
-          <div class="format-button-group">
-            <div class="format-btn-cluster">
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('insertUnorderedList')" title="Lista con viñetas">
-                <i data-lucide="list" style="width:16px;"></i>
-              </button>
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('insertOrderedList')" title="Lista numerada">
-                <i data-lucide="list-ordered" style="width:16px;"></i>
-              </button>
-            </div>
-
-            <div class="format-btn-cluster">
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('outdent')" title="Disminuir sangría">
-                <i data-lucide="indent" style="width:16px; transform: scaleX(-1);"></i>
-              </button>
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('indent')" title="Aumentar sangría">
-                <i data-lucide="indent" style="width:16px;"></i>
-              </button>
-            </div>
-
-            <div class="format-btn-cluster" style="flex:0.4;">
-              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('formatBlock', 'blockquote')" title="Cita">
-                <i data-lucide="quote" style="width:15px;"></i>
-              </button>
-            </div>
-          </div>
-        </div>
+      <div class="color-picker">
+        <span class="color-swatch" style="background:#5ac8fa;" onclick="applyHighlight('hl-cyan')" title="Cian"></span>
+        <span class="color-swatch" style="background:#ff2d55;" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
+        <span class="color-swatch" style="background:#ff9500;" onclick="applyHighlight('hl-orange')" title="Naranja"></span>
+        <span class="color-swatch" style="background:#34c759;" onclick="applyHighlight('hl-green')" title="Verde"></span>
+        <span class="color-swatch" style="background:#ffd60a;" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
       </div>
 
-      <!-- SEMÁFORO DE SINCRONIZACIÓN -->
-      <button class="sync-status-container" id="btn-sync" onclick="syncWithCloud(true, true)" title="Estado: Sincronizado">
+      <button class="btn-icon" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
+      <button class="btn-icon" onclick="formatDoc('insertUnorderedList')" title="Lista"><i data-lucide="list"></i></button>
+
+      <button class="sync-status-container" id="btn-sync" onclick="manualSync()" title="Estado: Sincronizado">
         <span class="status-dot green" id="sync-dot"></span>
         <i data-lucide="cloud" style="width:17px; height:17px; color: #6b7280;"></i>
       </button>
@@ -810,17 +615,16 @@
   ];
 
   let notes = JSON.parse(localStorage.getItem('apple_notes_data')) || [];
-  let deletedNoteIds = JSON.parse(localStorage.getItem('apple_notes_deleted')) || [];
 
   let currentFolderId = 'all';
   let activeNoteId = notes.length > 0 ? notes[0].id : null;
   let draggedNoteId = null;
+  
   let isSending = false;
   let isFetching = false;
   let hasLocalChanges = false;
   let autoSaveTimeout = null;
   let collapsedSections = JSON.parse(localStorage.getItem('apple_notes_collapsed')) || {};
-  
 
   function setSyncStatus(status, customMsg = '') {
     const dot = document.getElementById('sync-dot');
@@ -843,6 +647,11 @@
     if (overlay && !overlay.classList.contains('hidden')) {
       overlay.classList.add('hidden');
     }
+  }
+
+  function saveLocal() {
+    localStorage.setItem('apple_notes_data', JSON.stringify(notes));
+    localStorage.setItem('apple_notes_folders', JSON.stringify(folders));
   }
 
   function renderFolders() {
@@ -1081,25 +890,10 @@
     updatePinButtonState();
   }
 
-  function markChangedAndSave(immediate = false) {
-    hasLocalChanges = true;
-    saveLocal();
-    clearTimeout(autoSaveTimeout);
-    if (immediate) {
-      pushChangesToCloud();
-    } else {
-      // Debounce balanceado: no satura la cuota de Google
-      autoSaveTimeout = setTimeout(() => {
-        pushChangesToCloud();
-      }, 600);
-    }
-  }
-
   function extractNoteLines(html) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html || '';
     
-    // Convertimos elementos de bloque y saltos en saltos de línea reales
     tempDiv.querySelectorAll('h1, h2, h3, p, div, li, br').forEach(el => {
       if (el.tagName.toLowerCase() === 'br') {
         el.replaceWith('\n');
@@ -1159,7 +953,6 @@
     renderFolders();
     selectNote(newNote.id);
     
-    // Enfocar y situar el cursor dentro del Título (h1)
     const editor = document.getElementById('editor');
     editor.focus();
     const range = document.createRange();
@@ -1175,13 +968,10 @@
   document.getElementById('btn-delete-note').addEventListener('click', () => {
     if (!activeNoteId) return;
     
-    if (!deletedNoteIds.includes(activeNoteId)) {
-      deletedNoteIds.push(activeNoteId);
-      localStorage.setItem('apple_notes_deleted', JSON.stringify(deletedNoteIds));
-    }
-    
+    // Eliminación directa
     notes = notes.filter(n => n.id !== activeNoteId);
     activeNoteId = notes.length > 0 ? notes[0].id : null;
+    
     markChangedAndSave(true);
     renderNotesList();
     renderFolders();
@@ -1204,48 +994,21 @@
     renderFolders();
   }
 
-  function toggleFormatMenu(event) {
-    if (event) event.stopPropagation();
-    const menu = document.getElementById('apple-format-popover');
-    menu.classList.toggle('hidden');
-  }
-
-  // Cerrar el popover al hacer clic fuera
-  document.addEventListener('click', (e) => {
-    const popover = document.getElementById('apple-format-popover');
-    const toggleBtn = document.getElementById('btn-toggle-format');
-    if (popover && !popover.classList.contains('hidden')) {
-      if (!popover.contains(e.target) && !toggleBtn.contains(e.target)) {
-        popover.classList.add('hidden');
-      }
-    }
-  });
-
   function formatDoc(cmd, value = null) {
     document.execCommand(cmd, false, value);
-    document.getElementById('editor').focus();
-    updateActiveNoteFromEditor();
-  }
-
-  function formatBlock(tag) {
-    document.execCommand('formatBlock', false, `<${tag}>`);
-    document.getElementById('editor').focus();
-    updateActiveNoteFromEditor();
+    markChangedAndSave(true);
   }
 
   function applyHighlight(className) {
     const selection = window.getSelection();
-    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
+    if (!selection.rangeCount) return;
     const range = selection.getRangeAt(0);
-    
-    // Si ya está dentro de un resaltador del mismo tipo, lo limpiamos; si no, lo aplicamos
     const span = document.createElement('span');
     span.className = className;
     span.appendChild(range.extractContents());
     range.insertNode(span);
-    
     document.getElementById('editor').dispatchEvent(new Event('input'));
-    updateActiveNoteFromEditor();
+    markChangedAndSave(true);
   }
 
   document.getElementById('toggle-sidebar').addEventListener('click', () => {
@@ -1254,18 +1017,26 @@
 
   document.getElementById('search-input').addEventListener('input', renderNotesList);
 
-  function saveLocal() {
-    localStorage.setItem('apple_notes_data', JSON.stringify(notes));
-    localStorage.setItem('apple_notes_folders', JSON.stringify(folders));
+  function markChangedAndSave(immediate = false) {
+    hasLocalChanges = true;
+    saveLocal();
+    clearTimeout(autoSaveTimeout);
+    if (immediate) {
+      pushChangesToCloud();
+    } else {
+      autoSaveTimeout = setTimeout(() => {
+        pushChangesToCloud();
+      }, 800);
+    }
   }
 
-  // --- MOTOR DE ENVÍO RÁPIDO (PUSH ASÍNCRONO) ---
+  // --- MOTOR PUSH SECUENCIAL SIN PÉRDIDAS ---
   async function pushChangesToCloud() {
     if (!hasLocalChanges || isSending) return;
     isSending = true;
-    setSyncStatus('orange', 'Guardando cambios en la nube...');
+    setSyncStatus('orange', 'Guardando en la nube...');
 
-    const payload = JSON.stringify({ notes, folders, deletedIds: deletedNoteIds });
+    const payload = JSON.stringify({ notes, folders });
     hasLocalChanges = false;
 
     try {
@@ -1277,25 +1048,27 @@
       });
       setSyncStatus('green');
     } catch (e) {
-      console.warn('Error al guardar en la nube:', e);
-      hasLocalChanges = true; // Reintentar en siguiente ciclo
+      console.warn('Error al guardar:', e);
+      hasLocalChanges = true;
       setSyncStatus('red', 'Error al guardar');
     } finally {
       isSending = false;
       hideOverlay();
+      if (hasLocalChanges) {
+        pushChangesToCloud(); // Procesa cambios que hayan ocurrido durante la petición
+      }
     }
   }
 
-  // --- MOTOR DE LECTURA ASÍNCRONA RÁPIDA (PULL) ---
+  // --- MOTOR PULL FIABLE (LA NUBE MANDA) ---
   async function fetchChangesFromCloud(isManual = false) {
-    // Si estamos editando activamente o enviando, posponer lectura para no colisionar
     if (isFetching || isSending || hasLocalChanges) return;
     isFetching = true;
 
-    if (isManual) setSyncStatus('orange', 'Descargando notas...');
+    if (isManual) setSyncStatus('orange', 'Descargando...');
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout para evitar bloqueos
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
     try {
       const response = await fetch(`${SYNC_API_URL}?t=${Date.now()}`, {
@@ -1304,68 +1077,39 @@
       clearTimeout(timeoutId);
 
       const data = await response.json();
+      if (data && data.status === "success") {
+        const cloudNotes = Array.isArray(data.notes) ? data.notes : [];
+        const cloudFolders = Array.isArray(data.folders) ? data.folders : [];
 
-      let cloudNotes = (data && Array.isArray(data.notes)) ? data.notes : [];
-      let cloudFolders = (data && Array.isArray(data.folders)) ? data.folders : [];
+        // Comprobación de cambios
+        const currentDataStr = JSON.stringify({ notes, folders });
+        const incomingDataStr = JSON.stringify({ notes: cloudNotes, folders: cloudFolders.length > 0 ? cloudFolders : folders });
 
-      cloudNotes = cloudNotes.filter(n => !deletedNoteIds.includes(String(n.id)));
+        if (currentDataStr !== incomingDataStr) {
+          notes = cloudNotes;
+          if (cloudFolders.length > 0) {
+            folders = cloudFolders;
+          }
+          saveLocal();
+          
+          if (!notes.find(n => n.id === activeNoteId)) {
+            activeNoteId = notes.length > 0 ? notes[0].id : null;
+          }
 
-      const mergedNotesMap = new Map();
-      cloudNotes.forEach(n => mergedNotesMap.set(String(n.id), n));
+          renderFolders();
+          renderNotesList();
 
-      let hasNewData = false;
-
-      notes.forEach(localNote => {
-        if (deletedNoteIds.includes(String(localNote.id))) return;
-        const cloudNote = mergedNotesMap.get(String(localNote.id));
-        if (!cloudNote) {
-          mergedNotesMap.set(String(localNote.id), localNote);
-        } else {
-          const localTime = new Date(localNote.updatedAt || localNote.createdAt || 0).getTime();
-          const cloudTime = new Date(cloudNote.updatedAt || cloudNote.createdAt || 0).getTime();
-          if (localTime > cloudTime) {
-            mergedNotesMap.set(String(localNote.id), localNote);
-          } else if (cloudTime > localTime) {
-            hasNewData = true;
+          const isEditing = document.activeElement === document.getElementById('editor');
+          if (!isEditing) {
+            if (activeNoteId) selectNote(activeNoteId);
+            else {
+              document.getElementById('editor').innerHTML = '';
+              document.getElementById('editor-date-label').innerText = '';
+            }
           }
         }
-      });
-
-      if (cloudNotes.length !== notes.length) hasNewData = true;
-
-      notes = Array.from(mergedNotesMap.values());
-
-      const mergedFoldersMap = new Map();
-      cloudFolders.forEach(f => mergedFoldersMap.set(String(f.id), f));
-      folders.forEach(f => {
-        if (!mergedFoldersMap.has(String(f.id))) {
-          mergedFoldersMap.set(String(f.id), f);
-        }
-      });
-      if (mergedFoldersMap.size > 0) {
-        folders = Array.from(mergedFoldersMap.values());
+        setSyncStatus('green');
       }
-
-      saveLocal();
-
-      if (hasNewData || isManual) {
-        renderFolders();
-        renderNotesList();
-
-        const isEditing = document.activeElement === document.getElementById('editor');
-        if (!isEditing && activeNoteId) {
-          const currentNote = notes.find(n => n.id === activeNoteId);
-          if (currentNote) {
-            document.getElementById('editor').innerHTML = currentNote.body || '';
-            const dateFormatted = new Date(currentNote.updatedAt || currentNote.createdAt).toLocaleString('es-ES', {
-              day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-            document.getElementById('editor-date-label').innerText = `Creada / Modificada: ${dateFormatted}`;
-          }
-        }
-      }
-
-      setSyncStatus('green');
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.warn('Aviso sincronización:', err);
@@ -1376,14 +1120,14 @@
     }
   }
 
-  function syncWithCloud(forcePush = false, isUserAction = false) {
-    if (forcePush || hasLocalChanges) {
-      pushChangesToCloud();
+  async function manualSync() {
+    if (hasLocalChanges) {
+      await pushChangesToCloud();
     }
-    fetchChangesFromCloud(isUserAction);
+    await fetchChangesFromCloud(true);
   }
 
-  // Renderizado inicial
+  // Inicialización
   renderFolders();
   renderNotesList();
   if (activeNoteId) selectNote(activeNoteId);
@@ -1393,12 +1137,12 @@
   // Primera descarga
   fetchChangesFromCloud(false);
 
-  // Sondeo de fondo silencioso cada 4 segundos
+  // Sondeo cada 4 segundos
   setInterval(() => {
     fetchChangesFromCloud(false);
   }, 4000);
 
-  // Eventos de reactivación en iPad / PC
+  // Eventos de reactivación (iPad / Safari / PC)
   window.addEventListener('focus', () => fetchChangesFromCloud(false));
   window.addEventListener('online', () => pushChangesToCloud());
   window.addEventListener('offline', () => setSyncStatus('red', 'Sin conexión a Internet'));
