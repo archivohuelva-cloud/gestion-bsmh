@@ -525,6 +525,147 @@
     .hl-orange { background-color: #fed7aa; border-radius: 4px; padding: 0 4px; }
     .hl-green  { background-color: #bbf7d0; border-radius: 4px; padding: 0 4px; }
     .hl-yellow { background-color: #fef08a; border-radius: 4px; padding: 0 4px; }
+    .hl-purple { background-color: #e9d5ff; border-radius: 4px; padding: 0 4px; }
+
+    /* ESTILOS DEL EDITOR APPLE NOTES */
+    .note-content h2 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      color: #1d1d1f;
+    }
+    .note-content blockquote {
+      border-left: 3px solid #d1d1d6;
+      padding-left: 12px;
+      margin: 8px 0;
+      color: #636366;
+      font-style: italic;
+    }
+    .note-content ul, .note-content ol {
+      margin-left: 24px;
+      margin-bottom: 8px;
+    }
+
+    /* POPOVER ESTILO APPLE NOTES */
+    .format-popover-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    .apple-format-menu {
+      position: absolute;
+      top: 42px;
+      left: 0;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(25px) saturate(180%);
+      -webkit-backdrop-filter: blur(25px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 18px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(255,255,255,0.6) inset;
+      padding: 12px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 999;
+      user-select: none;
+      animation: popoverFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .apple-format-menu.hidden {
+      display: none;
+    }
+
+    @keyframes popoverFadeIn {
+      from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Fila 1: Píldoras de formato de párrafo */
+    .format-pills-row {
+      display: flex;
+      background: rgba(118, 118, 128, 0.12);
+      border-radius: 20px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .format-pill-btn {
+      flex: 1;
+      border: none;
+      background: none;
+      padding: 6px 4px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #1d1d1f;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .format-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .format-pill-btn.active {
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      font-weight: 600;
+    }
+
+    /* Grupos de botones horizontales */
+    .format-button-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .format-btn-cluster {
+      display: flex;
+      flex: 1;
+      background: rgba(118, 118, 128, 0.12);
+      border-radius: 12px;
+      padding: 2px;
+    }
+
+    .format-btn-cluster .f-btn {
+      flex: 1;
+      height: 34px;
+      border: none;
+      background: none;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      color: #1c1c1e;
+      transition: background 0.15s ease;
+    }
+
+    .format-btn-cluster .f-btn:hover {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .format-btn-cluster .f-btn:active,
+    .format-btn-cluster .f-btn.active {
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Selector de color desplegable */
+    .color-swatches-menu {
+      display: flex;
+      gap: 6px;
+      padding: 6px 8px;
+      background: rgba(118, 118, 128, 0.08);
+      border-radius: 10px;
+      justify-content: space-around;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -564,16 +705,68 @@
         <i data-lucide="trash-2"></i>
       </button>
 
-      <div class="color-picker">
-        <span class="color-swatch" style="background:#5ac8fa;" onclick="applyHighlight('hl-cyan')" title="Cian"></span>
-        <span class="color-swatch" style="background:#ff2d55;" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
-        <span class="color-swatch" style="background:#ff9500;" onclick="applyHighlight('hl-orange')" title="Naranja"></span>
-        <span class="color-swatch" style="background:#34c759;" onclick="applyHighlight('hl-green')" title="Verde"></span>
-        <span class="color-swatch" style="background:#ffd60a;" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
-      </div>
+      <!-- BOTÓN Y MENÚ DE FORMATO ESTILO APPLE -->
+      <div class="format-popover-container">
+        <button class="btn-icon" id="btn-toggle-format" title="Formato de texto" onclick="toggleFormatMenu(event)">
+          <span style="font-weight: 700; font-size: 15px; letter-spacing: -0.5px;">Aa</span>
+        </button>
 
-      <button class="btn-icon" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
-      <button class="btn-icon" onclick="formatDoc('insertUnorderedList')" title="Lista"><i data-lucide="list"></i></button>
+        <div class="apple-format-menu hidden" id="apple-format-popover" onmousedown="event.preventDefault()">
+          <!-- FILA 1: Encabezados / Estilos de bloque -->
+          <div class="format-pills-row">
+            <button class="format-pill-btn" onmousedown="event.preventDefault()" onclick="formatBlock('h1')">Título</button>
+            <button class="format-pill-btn" onmousedown="event.preventDefault()" onclick="formatBlock('h2')">Subtítulo</button>
+            <button class="format-pill-btn" onmousedown="event.preventDefault()" onclick="formatBlock('p')">Cuerpo</button>
+          </div>
+
+          <!-- FILA 2: Estilos tipográficos (B, I, U, S) + Resaltador -->
+          <div class="format-button-group">
+            <div class="format-btn-cluster">
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('italic')" title="Cursiva"><i>I</i></button>
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('underline')" title="Subrayado"><u>U</u></button>
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('strikeThrough')" title="Tachado"><s>S</s></button>
+            </div>
+          </div>
+
+          <!-- FILA 3: Paleta de Resaltadores Apple -->
+          <div class="color-swatches-menu">
+            <span class="color-swatch" style="background:#5ac8fa;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-cyan')" title="Cian"></span>
+            <span class="color-swatch" style="background:#ff2d55;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
+            <span class="color-swatch" style="background:#ff9500;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-orange')" title="Naranja"></span>
+            <span class="color-swatch" style="background:#34c759;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-green')" title="Verde"></span>
+            <span class="color-swatch" style="background:#ffd60a;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
+            <span class="color-swatch" style="background:#af52de;" onmousedown="event.preventDefault()" onclick="applyHighlight('hl-purple')" title="Morado"></span>
+          </div>
+
+          <!-- FILA 4: Listas, Sangrías y Citas -->
+          <div class="format-button-group">
+            <div class="format-btn-cluster">
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('insertUnorderedList')" title="Lista con viñetas">
+                <i data-lucide="list" style="width:16px;"></i>
+              </button>
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('insertOrderedList')" title="Lista numerada">
+                <i data-lucide="list-ordered" style="width:16px;"></i>
+              </button>
+            </div>
+
+            <div class="format-btn-cluster">
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('outdent')" title="Disminuir sangría">
+                <i data-lucide="indent" style="width:16px; transform: scaleX(-1);"></i>
+              </button>
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('indent')" title="Aumentar sangría">
+                <i data-lucide="indent" style="width:16px;"></i>
+              </button>
+            </div>
+
+            <div class="format-btn-cluster" style="flex:0.4;">
+              <button class="f-btn" onmousedown="event.preventDefault()" onclick="formatDoc('formatBlock', 'blockquote')" title="Cita">
+                <i data-lucide="quote" style="width:15px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- SEMÁFORO DE SINCRONIZACIÓN -->
       <button class="sync-status-container" id="btn-sync" onclick="syncWithCloud(true, true)" title="Estado: Sincronizado">
@@ -1011,21 +1204,48 @@
     renderFolders();
   }
 
+  function toggleFormatMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('apple-format-popover');
+    menu.classList.toggle('hidden');
+  }
+
+  // Cerrar el popover al hacer clic fuera
+  document.addEventListener('click', (e) => {
+    const popover = document.getElementById('apple-format-popover');
+    const toggleBtn = document.getElementById('btn-toggle-format');
+    if (popover && !popover.classList.contains('hidden')) {
+      if (!popover.contains(e.target) && !toggleBtn.contains(e.target)) {
+        popover.classList.add('hidden');
+      }
+    }
+  });
+
   function formatDoc(cmd, value = null) {
     document.execCommand(cmd, false, value);
-    markChangedAndSave(true);
+    document.getElementById('editor').focus();
+    updateActiveNoteFromEditor();
+  }
+
+  function formatBlock(tag) {
+    document.execCommand('formatBlock', false, `<${tag}>`);
+    document.getElementById('editor').focus();
+    updateActiveNoteFromEditor();
   }
 
   function applyHighlight(className) {
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
     const range = selection.getRangeAt(0);
+    
+    // Si ya está dentro de un resaltador del mismo tipo, lo limpiamos; si no, lo aplicamos
     const span = document.createElement('span');
     span.className = className;
     span.appendChild(range.extractContents());
     range.insertNode(span);
+    
     document.getElementById('editor').dispatchEvent(new Event('input'));
-    markChangedAndSave(true);
+    updateActiveNoteFromEditor();
   }
 
   document.getElementById('toggle-sidebar').addEventListener('click', () => {
