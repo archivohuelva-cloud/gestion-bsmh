@@ -135,21 +135,61 @@
       justify-content: center;
       cursor: pointer;
       transition: background 0.15s ease, color 0.15s ease;
+      position: relative;
     }
 
     .btn-icon:hover { background: rgba(0,0,0,0.06); }
     .btn-icon:active { background: rgba(0,0,0,0.1); }
     .btn-icon.active-pinned { color: var(--apple-orange); }
 
+    /* ESTILO SEMÁFORO DE SINCRONIZACIÓN */
+    .sync-status-container {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      transition: background 0.15s ease;
+    }
+    .sync-status-container:hover {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: var(--apple-green);
+      transition: background-color 0.25s ease, transform 0.2s ease;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.05);
+    }
+
+    .status-dot.green {
+      background-color: #34c759;
+      box-shadow: 0 0 6px rgba(52, 199, 89, 0.6);
+    }
+    .status-dot.orange {
+      background-color: #ff9500;
+      box-shadow: 0 0 6px rgba(255, 149, 0, 0.6);
+      animation: pulse-dot 0.8s infinite alternate ease-in-out;
+    }
+    .status-dot.red {
+      background-color: #ff3b30;
+      box-shadow: 0 0 6px rgba(255, 59, 48, 0.6);
+    }
+
+    @keyframes pulse-dot {
+      0% { transform: scale(0.85); opacity: 0.7; }
+      100% { transform: scale(1.15); opacity: 1; }
+    }
+
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
-    }
-
-    .btn-icon.syncing svg,
-    .btn-icon.syncing i {
-      animation: spin 0.8s linear infinite;
-      color: var(--apple-blue);
     }
 
     .folder-title-display {
@@ -456,8 +496,29 @@
       min-height: 100%;
     }
 
-    .note-content h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
-    .note-content p { margin-bottom: 12px; }
+    .note-content h1 { 
+      font-size: 26px; 
+      font-weight: 700; 
+      margin-bottom: 8px; 
+      line-height: 1.2;
+    }
+    .note-content h1:empty:before {
+      content: "Título";
+      color: #c7c7cc;
+      pointer-events: none;
+      font-weight: 700;
+    }
+    .note-content p { 
+      font-size: 16px; 
+      font-weight: normal; 
+      margin-bottom: 12px; 
+    }
+    .note-content:empty:before {
+      content: "Escribe aquí...";
+      color: var(--text-muted);
+      pointer-events: none;
+      display: block;
+    }
 
     .hl-cyan   { background-color: #a5f3fc; border-radius: 4px; padding: 0 4px; }
     .hl-pink   { background-color: #fbcfe8; border-radius: 4px; padding: 0 4px; }
@@ -491,7 +552,7 @@
     </div>
 
     <div class="toolbar-actions">
-      <button class="btn-icon" id="btn-new-note" title="Nueva Nota">
+      <button class="btn-icon" id="btn-new-note" title="">
         <i data-lucide="square-pen" style="color: var(--apple-orange)"></i>
       </button>
 
@@ -514,8 +575,10 @@
       <button class="btn-icon" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
       <button class="btn-icon" onclick="formatDoc('insertUnorderedList')" title="Lista"><i data-lucide="list"></i></button>
 
-      <button class="btn-icon" id="btn-sync" onclick="syncWithCloud(true)" title="Sincronizar con Google Sheets">
-        <i data-lucide="rotate-cw"></i>
+      <!-- SEMÁFORO DE SINCRONIZACIÓN -->
+      <button class="sync-status-container" id="btn-sync" onclick="syncWithCloud(true, true)" title="Estado: Sincronizado">
+        <span class="status-dot green" id="sync-dot"></span>
+        <i data-lucide="cloud" style="width:17px; height:17px; color: #6b7280;"></i>
       </button>
     </div>
 
@@ -559,11 +622,28 @@
   let currentFolderId = 'all';
   let activeNoteId = notes.length > 0 ? notes[0].id : null;
   let draggedNoteId = null;
-  let isSyncing = false;
+  let isSending = false;
+  let isFetching = false;
   let hasLocalChanges = false;
-  let pendingSync = false;
   let autoSaveTimeout = null;
   let collapsedSections = JSON.parse(localStorage.getItem('apple_notes_collapsed')) || {};
+  
+
+  function setSyncStatus(status, customMsg = '') {
+    const dot = document.getElementById('sync-dot');
+    const container = document.getElementById('btn-sync');
+    if (!dot || !container) return;
+
+    dot.className = 'status-dot ' + status;
+    if (status === 'green') {
+      const now = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      container.title = customMsg || `Sincronizado correctamente (${now})`;
+    } else if (status === 'orange') {
+      container.title = customMsg || 'Guardando en la nube...';
+    } else if (status === 'red') {
+      container.title = customMsg || 'Error de conexión / Cambios pendientes';
+    }
+  }
 
   function hideOverlay() {
     const overlay = document.getElementById('sync-overlay');
@@ -752,20 +832,19 @@
           card.classList.remove('dragging');
         });
 
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = note.body || '';
-        let textPreview = (tempDiv.textContent || '').replace(note.title || '', '').trim() || 'Sin texto adicional';
+        const { title, preview } = extractNoteLines(note.body);
+        const cardTitle = note.title || title;
 
         card.innerHTML = `
           <div class="note-card-title-row">
-            <div class="note-card-title">${note.title || 'Nueva Nota'}</div>
+            <div class="note-card-title">${cardTitle}</div>
             <button class="btn-pin-card ${note.pinned ? 'is-pinned' : ''}" title="${note.pinned ? 'Desfijar' : 'Fijar'}" onclick="togglePinNote('${note.id}', event)">
               <i data-lucide="pin" style="width: 13px; height: 13px; transform: ${note.pinned ? 'rotate(45deg)' : 'none'};"></i>
             </button>
           </div>
           <div class="note-card-meta">
             <span class="note-card-date">${formatCardDate(dateObj)}</span>
-            <span class="note-card-preview">${textPreview}</span>
+            <span class="note-card-preview">${preview}</span>
           </div>
         `;
 
@@ -796,7 +875,7 @@
     const editor = document.getElementById('editor');
     
     if (note) {
-      editor.innerHTML = note.body || '';
+      editor.innerHTML = note.body && note.body.trim() !== '' ? note.body : '<h1><br></h1>';
       const dateFormatted = new Date(note.updatedAt || note.createdAt).toLocaleString('es-ES', {
         day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
       });
@@ -814,13 +893,37 @@
     saveLocal();
     clearTimeout(autoSaveTimeout);
     if (immediate) {
-      syncWithCloud(true);
+      pushChangesToCloud();
     } else {
-      // Envío ultrarrápido a los 150ms
+      // Debounce balanceado: no satura la cuota de Google
       autoSaveTimeout = setTimeout(() => {
-        syncWithCloud(true);
-      }, 150);
+        pushChangesToCloud();
+      }, 600);
     }
+  }
+
+  function extractNoteLines(html) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html || '';
+    
+    // Convertimos elementos de bloque y saltos en saltos de línea reales
+    tempDiv.querySelectorAll('h1, h2, h3, p, div, li, br').forEach(el => {
+      if (el.tagName.toLowerCase() === 'br') {
+        el.replaceWith('\n');
+      } else {
+        el.after('\n');
+      }
+    });
+
+    const lines = (tempDiv.textContent || '')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
+
+    return {
+      title: lines.length > 0 ? lines[0] : 'Nueva Nota',
+      preview: lines.length > 1 ? lines.slice(1).join(' ') : 'Sin texto adicional'
+    };
   }
 
   function updateActiveNoteFromEditor() {
@@ -828,11 +931,8 @@
     if (!activeNote) return;
 
     activeNote.body = document.getElementById('editor').innerHTML;
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = activeNote.body;
-    
-    const lines = (tempDiv.innerText || tempDiv.textContent || '').split('\n').map(l => l.trim()).filter(Boolean);
-    activeNote.title = lines.length > 0 ? lines[0].slice(0, 40) : 'Nueva Nota';
+    const { title } = extractNoteLines(activeNote.body);
+    activeNote.title = title;
     activeNote.updatedAt = new Date().toISOString();
 
     markChangedAndSave(false);
@@ -844,7 +944,7 @@
 
   document.getElementById('editor').addEventListener('blur', () => {
     if (hasLocalChanges) {
-      markChangedAndSave(true);
+      pushChangesToCloud();
     }
   });
 
@@ -854,7 +954,7 @@
       id: 'n_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
       folderId: currentFolderId === 'all' ? 'notes' : currentFolderId,
       title: 'Nueva Nota',
-      body: '<h1>Nueva Nota</h1><p></p>',
+      body: '<h1><br></h1>',
       createdAt: now,
       updatedAt: now,
       pinned: false
@@ -865,7 +965,18 @@
     renderNotesList();
     renderFolders();
     selectNote(newNote.id);
-    document.getElementById('editor').focus();
+    
+    // Enfocar y situar el cursor dentro del Título (h1)
+    const editor = document.getElementById('editor');
+    editor.focus();
+    const range = document.createRange();
+    const sel = window.getSelection();
+    if (editor.firstChild) {
+      range.selectNodeContents(editor.firstChild);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   });
 
   document.getElementById('btn-delete-note').addEventListener('click', () => {
@@ -928,30 +1039,50 @@
     localStorage.setItem('apple_notes_folders', JSON.stringify(folders));
   }
 
-  // --- MOTOR DE SINCRONIZACIÓN EN TIEMPO REAL ---
-  async function syncWithCloud(forcePush = false) {
-    if (isSyncing) {
-      if (forcePush || hasLocalChanges) pendingSync = true;
-      return;
-    }
-    isSyncing = true;
+  // --- MOTOR DE ENVÍO RÁPIDO (PUSH ASÍNCRONO) ---
+  async function pushChangesToCloud() {
+    if (!hasLocalChanges || isSending) return;
+    isSending = true;
+    setSyncStatus('orange', 'Guardando cambios en la nube...');
 
-    const syncBtn = document.getElementById('btn-sync');
-    if (syncBtn) syncBtn.classList.add('syncing');
+    const payload = JSON.stringify({ notes, folders, deletedIds: deletedNoteIds });
+    hasLocalChanges = false;
 
     try {
-      if (hasLocalChanges || forcePush) {
-        hasLocalChanges = false;
-        await fetch(SYNC_API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ notes, folders })
-        });
-      }
+      await fetch(SYNC_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      });
+      setSyncStatus('green');
+    } catch (e) {
+      console.warn('Error al guardar en la nube:', e);
+      hasLocalChanges = true; // Reintentar en siguiente ciclo
+      setSyncStatus('red', 'Error al guardar');
+    } finally {
+      isSending = false;
+      hideOverlay();
+    }
+  }
 
-      // Descarga desde la nube sin caché
-      const response = await fetch(`${SYNC_API_URL}?t=${Date.now()}`);
+  // --- MOTOR DE LECTURA ASÍNCRONA RÁPIDA (PULL) ---
+  async function fetchChangesFromCloud(isManual = false) {
+    // Si estamos editando activamente o enviando, posponer lectura para no colisionar
+    if (isFetching || isSending || hasLocalChanges) return;
+    isFetching = true;
+
+    if (isManual) setSyncStatus('orange', 'Descargando notas...');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000); // 4s timeout para evitar bloqueos
+
+    try {
+      const response = await fetch(`${SYNC_API_URL}?t=${Date.now()}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       const data = await response.json();
 
       let cloudNotes = (data && Array.isArray(data.notes)) ? data.notes : [];
@@ -962,6 +1093,8 @@
       const mergedNotesMap = new Map();
       cloudNotes.forEach(n => mergedNotesMap.set(String(n.id), n));
 
+      let hasNewData = false;
+
       notes.forEach(localNote => {
         if (deletedNoteIds.includes(String(localNote.id))) return;
         const cloudNote = mergedNotesMap.get(String(localNote.id));
@@ -970,11 +1103,15 @@
         } else {
           const localTime = new Date(localNote.updatedAt || localNote.createdAt || 0).getTime();
           const cloudTime = new Date(cloudNote.updatedAt || cloudNote.createdAt || 0).getTime();
-          if (localTime >= cloudTime) {
+          if (localTime > cloudTime) {
             mergedNotesMap.set(String(localNote.id), localNote);
+          } else if (cloudTime > localTime) {
+            hasNewData = true;
           }
         }
       });
+
+      if (cloudNotes.length !== notes.length) hasNewData = true;
 
       notes = Array.from(mergedNotesMap.values());
 
@@ -990,15 +1127,13 @@
       }
 
       saveLocal();
-      renderFolders();
-      renderNotesList();
 
-      const isEditing = document.activeElement === document.getElementById('editor');
-      if (!isEditing) {
-        if (!activeNoteId && notes.length > 0) {
-          activeNoteId = notes[0].id;
-        }
-        if (activeNoteId) {
+      if (hasNewData || isManual) {
+        renderFolders();
+        renderNotesList();
+
+        const isEditing = document.activeElement === document.getElementById('editor');
+        if (!isEditing && activeNoteId) {
           const currentNote = notes.find(n => n.id === activeNoteId);
           if (currentNote) {
             document.getElementById('editor').innerHTML = currentNote.body || '';
@@ -1009,18 +1144,23 @@
           }
         }
       }
-    } catch (err) {
-      console.warn('Aviso sincronización:', err);
-    } finally {
-      isSyncing = false;
-      if (syncBtn) syncBtn.classList.remove('syncing');
-      hideOverlay();
 
-      if (pendingSync) {
-        pendingSync = false;
-        syncWithCloud(true);
+      setSyncStatus('green');
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('Aviso sincronización:', err);
       }
+    } finally {
+      isFetching = false;
+      hideOverlay();
     }
+  }
+
+  function syncWithCloud(forcePush = false, isUserAction = false) {
+    if (forcePush || hasLocalChanges) {
+      pushChangesToCloud();
+    }
+    fetchChangesFromCloud(isUserAction);
   }
 
   // Renderizado inicial
@@ -1030,25 +1170,23 @@
 
   setTimeout(hideOverlay, 300);
 
-  // Sincronización instantánea al arrancar
-  syncWithCloud(false);
+  // Primera descarga
+  fetchChangesFromCloud(false);
 
-  // Sincronización continua de fondo cada 2 segundos (máxima inmediatez)
+  // Sondeo de fondo silencioso cada 4 segundos
   setInterval(() => {
-    syncWithCloud(false);
-  }, 2000);
+    fetchChangesFromCloud(false);
+  }, 4000);
 
-  // Sincronizaciones activadas por interacción en iPad / PC
-  window.addEventListener('focus', () => syncWithCloud(false));
-  window.addEventListener('online', () => syncWithCloud(true));
+  // Eventos de reactivación en iPad / PC
+  window.addEventListener('focus', () => fetchChangesFromCloud(false));
+  window.addEventListener('online', () => pushChangesToCloud());
+  window.addEventListener('offline', () => setSyncStatus('red', 'Sin conexión a Internet'));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      syncWithCloud(false);
+      fetchChangesFromCloud(false);
     }
   });
-  document.addEventListener('touchstart', () => {
-    if (!isSyncing && !hasLocalChanges) syncWithCloud(false);
-  }, { passive: true });
 </script>
 </body>
 </html>
