@@ -279,20 +279,128 @@
       pointer-events: none;
     }
 
-    .color-picker {
-      display: flex;
-      gap: 4px;
-      padding: 4px 8px;
-      background: #f0f0f4;
-      border-radius: 8px;
+    /* POPOVER ESTILO APPLE NOTES */
+    .format-popover-container {
+      position: relative;
+      display: inline-block;
     }
 
-    .color-swatch {
+    .btn-format-trigger {
+      font-weight: 700;
+      font-size: 15px;
+      font-family: -apple-system, serif;
+      letter-spacing: -0.5px;
+    }
+
+    .apple-format-menu {
+      position: absolute;
+      top: 42px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.95);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(25px) saturate(180%);
+      -webkit-backdrop-filter: blur(25px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 20px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.06);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+      width: 320px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .apple-format-menu.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) scale(1);
+    }
+
+    /* Píldoras de Tipo de Texto (Título, Cabezal, etc.) */
+    .format-type-pill-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .format-type-pill-group::-webkit-scrollbar { display: none; }
+
+    .pill-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 12px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1d1d1f;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .pill-btn:hover { background: rgba(0, 0, 0, 0.05); }
+    .pill-btn.active {
+      background: #e59e00; /* Tono amarillo/mostaza Apple */
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    /* Filas de botones agrupados con fondo gris translúcido */
+    .format-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .format-segment-group {
+      display: flex;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+      padding: 2px;
+      flex: 1;
+      justify-content: space-around;
+    }
+
+    .seg-btn {
+      border: none;
+      background: transparent;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1d1d1f;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      transition: background 0.12s ease;
+    }
+
+    .seg-btn:hover {
+      background: rgba(255, 255, 255, 0.65);
+    }
+    .seg-btn:active {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .color-swatch-circle {
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      cursor: pointer;
       border: 1px solid rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+    .color-swatch-circle:hover {
+      transform: scale(1.15);
     }
 
     .main-workspace {
@@ -601,16 +709,62 @@
         <i data-lucide="trash-2"></i>
       </button>
 
-      <div class="color-picker">
-        <span class="color-swatch" style="background:#5ac8fa;" onclick="applyHighlight('hl-cyan')" title="Cian"></span>
-        <span class="color-swatch" style="background:#ff2d55;" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
-        <span class="color-swatch" style="background:#ff9500;" onclick="applyHighlight('hl-orange')" title="Naranja"></span>
-        <span class="color-swatch" style="background:#34c759;" onclick="applyHighlight('hl-green')" title="Verde"></span>
-        <span class="color-swatch" style="background:#ffd60a;" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
-      </div>
+      <!-- BOTÓN Y CAJA FLOTANTE DE HERRAMIENTAS APPLE -->
+      <div class="format-popover-container">
+        <button class="btn-icon btn-format-trigger" id="btn-format-menu" title="Formato de texto" onclick="toggleFormatMenu(event)">
+          Aa
+        </button>
 
-      <button class="btn-icon" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
-      <button class="btn-icon" onclick="formatDoc('insertUnorderedList')" title="Lista"><i data-lucide="list"></i></button>
+        <div class="apple-format-menu" id="apple-format-menu">
+          <!-- 1. Píldoras de Jerarquía de Texto -->
+          <div class="format-type-pill-group">
+            <button class="pill-btn" onclick="applyBlockFormat('h1')">Título</button>
+            <button class="pill-btn" onclick="applyBlockFormat('h2')">Encabezamiento</button>
+            <button class="pill-btn" onclick="applyBlockFormat('h3')">Subtítulo</button>
+            <button class="pill-btn active" onclick="applyBlockFormat('p')">Cuerpo</button>
+          </div>
+
+          <!-- 2. Formato de Carácter y Resaltador -->
+          <div class="format-row">
+            <div class="format-segment-group">
+              <button class="seg-btn" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
+              <button class="seg-btn" onclick="formatDoc('italic')" title="Cursiva"><i>I</i></button>
+              <button class="seg-btn" onclick="formatDoc('underline')" title="Subrayado"><u>U</u></button>
+              <button class="seg-btn" onclick="formatDoc('strikeThrough')" title="Tachado"><s>S</s></button>
+            </div>
+
+            <!-- Paleta de color estilo pluma / bolita -->
+            <div class="format-segment-group" style="flex: 0 0 auto; gap: 4px; padding: 2px 6px;">
+              <span class="color-swatch-circle" style="background:#ff2d55;" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
+              <span class="color-swatch-circle" style="background:#ffd60a;" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
+              <span class="color-swatch-circle" style="background:#34c759;" onclick="applyHighlight('hl-green')" title="Verde"></span>
+              <span class="color-swatch-circle" style="background:#5ac8fa;" onclick="applyHighlight('hl-cyan')" title="Cian"></span>
+              <span class="color-swatch-circle" style="background:#ff9500;" onclick="applyHighlight('hl-orange')" title="Naranja"></span>
+            </div>
+          </div>
+
+          <!-- 3. Listas y Sangrías -->
+          <div class="format-row">
+            <div class="format-segment-group">
+              <button class="seg-btn" onclick="formatDoc('insertUnorderedList')" title="Lista con viñetas">
+                <i data-lucide="list" style="width:15px; height:15px;"></i>
+              </button>
+              <button class="seg-btn" onclick="formatDoc('insertOrderedList')" title="Lista numerada">
+                <i data-lucide="list-ordered" style="width:15px; height:15px;"></i>
+              </button>
+            </div>
+
+            <div class="format-segment-group">
+              <button class="seg-btn" onclick="formatDoc('outdent')" title="Disminuir sangría">
+                <i data-lucide="outdent" style="width:15px; height:15px;"></i>
+              </button>
+              <button class="seg-btn" onclick="formatDoc('indent')" title="Aumentar sangría">
+                <i data-lucide="indent" style="width:15px; height:15px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- BOTÓN DESCARGAR / RECARGAR NUBE -->
       <button class="sync-status-container" id="btn-sync" onclick="fetchChangesFromCloud(true)" title="Recargar desde la nube">
@@ -1163,6 +1317,36 @@
 
   // Primera descarga para tener todo al día al abrir
   fetchChangesFromCloud(false);
+
+  // Alternar el menú desplegable de formato
+  function toggleFormatMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('apple-format-menu');
+    menu.classList.toggle('show');
+  }
+
+  // Cerrar el menú si se hace clic fuera
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('apple-format-menu');
+    const btn = document.getElementById('btn-format-menu');
+    if (menu && !menu.contains(e.target) && e.target !== btn) {
+      menu.classList.remove('show');
+    }
+  });
+
+  // Aplicar formato de bloque (Título, Encabezamiento, Subtítulo, Cuerpo)
+  function applyBlockFormat(tag) {
+    document.execCommand('formatBlock', false, `<${tag}>`);
+    
+    // Actualizar estilo activo visual de las píldoras
+    const pills = document.querySelectorAll('.format-type-pill-group .pill-btn');
+    pills.forEach(p => p.classList.remove('active'));
+    if (event && event.target) {
+      event.target.classList.add('active');
+    }
+    
+    markPendingChanges();
+  }
 </script>
 </body>
 </html>
