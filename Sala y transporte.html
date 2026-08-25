@@ -4152,13 +4152,13 @@ if (mode === 'sala') {
       updateHourRangeUI();
     }
   } else if (mode === 'actuacion') {
-    lblMainTime.textContent = 'Hora inicio';
+    lblMainTime.textContent = 'Hora';
     if (!editingEventId) {
-      document.getElementById('time-start').value = '20:00';
-      document.getElementById('time-end').value = '21:00';
-      isHourRange = true;
-      updateHourRangeUI();
-    }
+          document.getElementById('time-start').value = '20:00';
+          document.getElementById('time-end').value = '21:00';
+          isHourRange = false; // Sin marcar rango de horas
+          updateHourRangeUI();
+        }
   } else {
     lblMainTime.textContent = 'Hora';
     if (!editingEventId) {
@@ -4573,6 +4573,17 @@ function updateHourRangeUI() {
   }
 }
 
+// Actualiza la hora fin a +1 hora si se modifica la hora de inicio en Actuaciones
+document.getElementById('time-start').addEventListener('input', (e) => {
+  if (currentMode === 'actuacion' && !isHourRange && e.target.value) {
+    const [h, m] = e.target.value.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) {
+      const nextH = (h + 1) % 24;
+      document.getElementById('time-end').value = `${String(nextH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+  }
+});
+
 /* ═══════════════════════════════════════
    PRESETS DE SALAS Y ACTUACIONES
 ═══════════════════════════════════════ */
@@ -4699,7 +4710,18 @@ function saveEvent() {
     timeStart = document.getElementById('deab-time-start').value || '08:30';
   }
 
-  const timeEnd = (isAllDaySpecial || !isHourRange || (isLogMode && trayectoTipoVal === 'De A a B')) ? null : document.getElementById('time-end').value;
+  let timeEnd = null;
+  if (!isAllDaySpecial) {
+    if (isActMode && !isHourRange && timeStart) {
+      // En Actuaciones sin rango manual: asignar automáticamente +1 hora
+      const [h, m] = timeStart.split(':').map(Number);
+      const nextH = (h + 1) % 24;
+      timeEnd = `${String(nextH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    } else if (isHourRange && !(isLogMode && trayectoTipoVal === 'De A a B')) {
+      timeEnd = document.getElementById('time-end').value;
+    }
+  }
+
   const notes = document.getElementById('event-notes').value.trim();
 
   // Guardar fecha de autorización en Ensayo o Logística
