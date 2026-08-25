@@ -1698,7 +1698,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       </div>
 
 <!-- CONTENEDOR DE HORAS (SE OCULTA EN MODO FESTIVO) -->
-      <div id="hours-config-wrapper">
+      <div id="hours-config-wrapper" style="margin-bottom: 14px;">
         <!-- RANGO DE HORAS -->
         <div class="form-group" style="margin-bottom: 14px;">
           <label onclick="toggleHourRange()" class="range-toggle">
@@ -1717,6 +1717,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <label>Hora fin</label>
             <input type="time" id="time-end" value="13:15" />
           </div>
+        </div>
+
+        <!-- DESCRIPCIÓN DEBAJO DE LA HORA -->
+        <div id="actuacion-default-duration-hint" style="display:none; font-size:11.5px; font-weight:600; color:var(--accent-blue); margin-top:6px;">
+          💡 (La actuación por defecto es 1 hora)
         </div>
       </div>
 
@@ -4555,9 +4560,15 @@ function updateHourRangeUI() {
   const cb = document.getElementById('hour-range-checkbox');
   const endGrp = document.getElementById('time-end-group');
   const startLbl = document.getElementById('lbl-main-time-start');
+  const durationHint = document.getElementById('actuacion-default-duration-hint');
 
   cb.classList.toggle('checked', isHourRange);
   endGrp.style.display = isHourRange ? '' : 'none';
+
+  // Mostrar como bloque debajo del selector solo en Actuaciones cuando no hay rango
+  if (durationHint) {
+    durationHint.style.display = (currentMode === 'actuacion' && !isHourRange) ? 'block' : 'none';
+  }
 
   if (startLbl) {
     const trayectoTipo = document.getElementById('trayecto-tipo')?.value;
