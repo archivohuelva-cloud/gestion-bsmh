@@ -1383,11 +1383,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     </div>
     <div class="modal-body">
 
-      <!-- SELECTOR DE MODO (3 PESTAÑAS) -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:4px;">
-        <button type="button" class="btn-action" id="btn-tab-sala" onclick="setMode('sala')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11.5px;padding:6px 4px;">🎵 Sala de Ensayo</button>
-        <button type="button" class="btn-action" id="btn-tab-logistica" onclick="setMode('logistica')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11.5px;padding:6px 4px;">🚚 Logística</button>
-        <button type="button" class="btn-action" id="btn-tab-actuacion" onclick="setMode('actuacion')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11.5px;padding:6px 4px;">🎺 Actuaciones</button>
+      <!-- SELECTOR DE MODO (4 PESTAÑAS) -->
+      <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:5px;margin-bottom:4px;">
+        <button type="button" class="btn-action" id="btn-tab-sala" onclick="setMode('sala')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11px;padding:6px 2px;">🎵 Ensayos</button>
+        <button type="button" class="btn-action" id="btn-tab-logistica" onclick="setMode('logistica')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11px;padding:6px 2px;">🚚 Logística</button>
+        <button type="button" class="btn-action" id="btn-tab-actuacion" onclick="setMode('actuacion')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11px;padding:6px 2px;">🎺 Actuación</button>
+        <button type="button" class="btn-action" id="btn-tab-especial" onclick="setMode('especial')" style="justify-content:center;border-radius:8px;font-weight:700;font-size:11px;padding:6px 2px;">⭐ Especial</button>
       </div>
 
       <!-- SECCIÓN: SALA DE ENSAYO -->
@@ -1662,9 +1663,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-      <!-- SECCIÓN: FESTIVO (SOLO PARA ACTUACIONES) -->
-      <div class="section-box" id="box-festivo" style="display:none;background:#fdfdfe;border-color:var(--border);">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <!-- SECCIÓN: ESPECIAL (FESTIVOS Y VACACIONES) -->
+      <div class="section-box" id="box-especial" style="display:none;gap:12px;">
+        <label><strong>Días Especiales y Descanso</strong></label>
+        
+        <!-- FESTIVO -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-bottom:8px;border-bottom:1px solid var(--border);">
           <div>
             <label style="font-weight:700;color:var(--text);">🎉 ¿Es día festivo?</label>
             <div id="festivo-status-display" style="font-size:12px;color:var(--text-dim);margin-top:2px;">No festivo</div>
@@ -1674,10 +1678,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <button type="button" class="btn-auth-option" id="btn-festivo-si" onclick="setFestivoStatus('si')">Sí</button>
           </div>
         </div>
-      </div>
 
-      <!-- SECCIÓN: VACACIONES (SOLO PARA ACTUACIONES) -->
-      <div class="section-box" id="box-vacaciones" style="display:none;background:#fdfdfe;border-color:var(--border);">
+        <!-- VACACIONES -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div>
             <label style="font-weight:700;color:var(--text);">🏖️ ¿Vacaciones?</label>
@@ -3454,15 +3456,145 @@ let typeBadge = '';
     authBadge = `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
   }
 
-// Festivo badge para Actuaciones
-  const festivoBadge = (ev.festivo === 'si') 
-    ? `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
-    : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
+/* ═══════════════════════════════════════
+   MODAL DE DETALLE (SOLO LECTURA)
+═══════════════════════════════════════ */
+function openViewModal(id, contextDate) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  viewingEventId = id;
+  viewingContextDate = contextDate || ev.dateStart;
 
-  // Vacaciones badge para Actuaciones
-  const vacacionesBadge = (ev.vacaciones === 'si')
-    ? `<span style="background:#f3e8ff;color:#6b21a8;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span>`
-    : `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
+  const content = document.getElementById('view-detail-content');
+  const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
+  const horario = formatTimeRangeDisplay(ev);
+
+  let typeBadge = '';
+  if (ev.guardado === 'si') {
+    typeBadge = `<span style="background:var(--bg-guardado);color:var(--guardado-color);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">⚠️ INSTRUMENTAL GUARDADO</span>`;
+  } else if (ev.vacaciones === 'si') {
+    typeBadge = `<span style="background:var(--bg-vacaciones);color:var(--vacaciones-color);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🏖️ VACACIONES</span>`;
+  } else if (ev.festivo === 'si') {
+    typeBadge = `<span style="background:var(--bg-festivo);color:var(--festivo-color);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🎉 FESTIVO</span>`;
+  } else if (ev.actuacion) {
+    typeBadge = `<span style="background:var(--bg-actuacion-navy);color:var(--actuacion-navy);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🎺 ${ev.actuacion}</span>`;
+  } else if (ev.sala) {
+    typeBadge = `<span style="background:var(--bg-ensayo-blue);color:var(--ensayo-blue);padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">🎵 ${ev.sala}</span>`;
+  } else {
+    const t = ev.tipoLogistica || (ev.transport === 'si' ? 'transporte' : (ev.montaje ? 'montaje' : (ev.desmontaje ? 'desmontaje' : '')));
+    let lbl = 'Logística';
+    if (t === 'transporte') lbl = '🚚 TRANSPORTE';
+    else if (t === 'mochila') lbl = '🎒 MOCHILA';
+    else if (t === 'montaje') lbl = '🛒 MONTAJE';
+    else if (t === 'desmontaje') lbl = '🛒 DESMONTAJE';
+    else if (t === 'montar_desmontar') lbl = '🔄 MONTAR > DESMONTAR';
+    else if (t === 'desmontar_montar') lbl = '🔄 DESMONTAR > MONTAR';
+    else if (t === 'retranquear') lbl = '↔️ RETRANQUEAR';
+    else if (t === 'guardar' || t === 'guardar_instrumental') lbl = '📦 GUARDAR';
+    
+    const style = getEventStyle(ev);
+    typeBadge = `<span style="background:${style.bg};color:${style.color};padding:5px 10px;border-radius:6px;font-weight:700;display:inline-block;line-height:1.45;">${lbl}</span>`;
+  }
+
+  // Autorización badge para Ensayos y Logística
+  let authBadge = '';
+  if (ev.autorizadoCultura === 'si') {
+    const authDateFormatted = ev.autorizadoFecha ? formatTimestampFull(ev.autorizadoFecha) : '';
+    authBadge = `<span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí</span> ${authDateFormatted ? `<span style="font-size:12px;font-weight:500;color:var(--text);margin-left:6px;">(${authDateFormatted})</span>` : ''}`;
+  } else {
+    authBadge = `<span style="background:#fee2e2;color:#dc2626;padding:4px 8px;border-radius:6px;font-weight:700;">No</span>`;
+  }
+
+  const createdFormatted = ev.createdAt ? formatTimestampFull(ev.createdAt) : 'No disponible';
+
+  let html = `
+    <div class="view-detail-row">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 15 2 2 4-4"/><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+      <div class="view-detail-label">Tipo</div>
+      <div class="view-detail-value">${typeBadge}</div>
+    </div>
+  `;
+
+  // Mostrar Carpetilla seleccionada si es de tipo Mochila
+  if (ev.carpetilla && !ev.sala && !ev.actuacion) {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+        <div class="view-detail-label">Carpetilla</div>
+        <div class="view-detail-value">${ev.carpetilla}</div>
+      </div>
+    `;
+  }
+
+  // Mostrar Lugar/Ubicación en actuaciones o logística
+  if (ev.ubicacion && !ev.sala) {
+    const cleanUbicacion = formatUbicacionDisplay(ev.ubicacion);
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div class="view-detail-label">Lugar / Ubicación</div>
+        <div class="view-detail-value">${cleanUbicacion}</div>
+      </div>
+    `;
+  }
+
+  html += `
+    <div class="view-detail-row">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M8 13h.01"/><path d="M12 13h.01"/><path d="M16 13h.01"/><path d="M8 17h.01"/><path d="M12 17h.01"/><path d="M16 17h.01"/></svg>
+      <div class="view-detail-label">Fecha:</div>
+      <div class="view-detail-value">${dates}</div>
+    </div>
+
+    <div class="view-detail-row">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <div class="view-detail-label">Horario:</div>
+      <div class="view-detail-value">${horario}</div>
+    </div>
+  `;
+
+  // Mostrar Autorización solo en Ensayo (sala) o en Logística
+  const isLogisticaEv = !ev.sala && !ev.actuacion && (ev.festivo !== 'si') && (ev.vacaciones !== 'si');
+  if (ev.sala || isLogisticaEv) {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284"/><path d="M3 21h18"/></svg>
+        <div class="view-detail-label">Autorización</div>
+        <div class="view-detail-value">${authBadge}</div>
+      </div>
+    `;
+  }
+
+  // Mostrar la fila de Guardado ÚNICA Y EXCLUSIVAMENTE cuando esté marcado en 'Sí'
+  if (ev.guardado === 'si') {
+    html += `
+      <div class="view-detail-row">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <div class="view-detail-label">Guardado</div>
+        <div class="view-detail-value"><span style="background:#dcfce7;color:#16a34a;padding:4px 8px;border-radius:6px;font-weight:700;">Sí (Todo el día)</span></div>
+      </div>
+    `;
+  }
+
+  html += `
+    <div class="view-detail-row" style="background:#f8fafc;border:1px dashed var(--border);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>
+      <div class="view-detail-label" style="color:var(--accent-blue);">Registro</div>
+      <div class="view-detail-value" style="font-size:13px;color:var(--text);">${createdFormatted}</div>
+    </div>
+  `;
+
+  if (ev.notes) {
+    html += `
+      <div class="view-detail-row full-width" style="background:#e3e3e3;border:1px solid #fde047;border-left:4px solid #eab308;">
+        <div class="view-detail-label" style="color:#000000;">Notas</div>
+        <div class="view-detail-value" style="font-weight:normal;line-height:1.6;white-space:pre-wrap;min-height:90px;max-height:55vh;overflow-y:auto;background:#fffbeb;color:#451a03;padding:10px 12px;border-radius:8px;border:1px solid #fde047;box-shadow:0 1px 3px rgba(0,0,0,0.05);">${ev.notes}</div>
+      </div>
+    `;
+  }
+
+  content.innerHTML = html;
+  openModal('view-modal');
+}
 
   const createdFormatted = ev.createdAt ? formatTimestampFull(ev.createdAt) : 'No disponible';
 
@@ -3518,28 +3650,6 @@ let typeBadge = '';
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284"/><path d="M3 21h18"/></svg>
         <div class="view-detail-label">Autorización</div>
         <div class="view-detail-value">${authBadge}</div>
-      </div>
-    `;
-  }
-
-// Mostrar Festivo solo si es Actuación o está marcado como Festivo
-  if (ev.actuacion || ev.festivo === 'si') {
-    html += `
-      <div class="view-detail-row">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
-        <div class="view-detail-label">Festivo</div>
-        <div class="view-detail-value">${festivoBadge}</div>
-      </div>
-    `;
-  }
-
-  // Mostrar Vacaciones solo si es Actuación o está marcado como Vacaciones
-  if (ev.actuacion || ev.vacaciones === 'si') {
-    html += `
-      <div class="view-detail-row">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
-        <div class="view-detail-label">Vacaciones</div>
-        <div class="view-detail-value">${vacacionesBadge}</div>
       </div>
     `;
   }
@@ -4149,58 +4259,54 @@ function setMode(mode) {
   const boxSala = document.getElementById('box-sala');
   const boxActuacion = document.getElementById('box-actuacion');
   const boxLogistica = document.getElementById('box-logistica');
+  const boxEspecial = document.getElementById('box-especial');
   const boxAuthCultura = document.getElementById('box-auth-cultura');
-  const boxFestivo = document.getElementById('box-festivo');
-  const boxVacaciones = document.getElementById('box-vacaciones');
   const boxGuardado = document.getElementById('box-guardado');
 
   const tabSala = document.getElementById('btn-tab-sala');
   const tabActuacion = document.getElementById('btn-tab-actuacion');
   const tabLogistica = document.getElementById('btn-tab-logistica');
+  const tabEspecial = document.getElementById('btn-tab-especial');
   const lblMainTime = document.getElementById('lbl-main-time-start');
   const hoursWrapper = document.getElementById('hours-config-wrapper');
 
-  // Mostrar u ocultar cajas según el modo
+  // Visibilidad de cajas de contenido
   boxSala.style.display = (mode === 'sala') ? '' : 'none';
-  
-  // Si estamos en Actuaciones, la caja de tipo de actuación solo se muestra si Festivo y Vacaciones son 'no'
-  boxActuacion.style.display = (mode === 'actuacion' && isFestivo !== 'si' && isVacaciones !== 'si') ? '' : 'none';
-  
-  // En Logística, solo mostrar boxLogistica si NO está en modo Instrumental Guardado
+  boxActuacion.style.display = (mode === 'actuacion') ? '' : 'none';
   boxLogistica.style.display = (mode === 'logistica' && isGuardado !== 'si') ? '' : 'none';
+  if (boxEspecial) boxEspecial.style.display = (mode === 'especial') ? '' : 'none';
 
-  // Mostrar Autorizado por cultura en Ensayo y en Logística
+  // Mostrar Autorizado por Cultura solo en Ensayos y Logística
   if (boxAuthCultura) boxAuthCultura.style.display = (mode === 'sala' || mode === 'logistica') ? '' : 'none';
 
-  // Mostrar Festivo y Vacaciones SOLO en Actuaciones
-  if (boxFestivo) boxFestivo.style.display = (mode === 'actuacion') ? '' : 'none';
-  if (boxVacaciones) boxVacaciones.style.display = (mode === 'actuacion') ? '' : 'none';
-
-  // Mostrar Instrumental Guardado SOLO en Logística
+  // Mostrar Instrumental Guardado solo en Logística
   if (boxGuardado) boxGuardado.style.display = (mode === 'logistica') ? '' : 'none';
 
-  // Visibilidad de horas: se ocultan si estamos en Actuaciones (Festivo/Vacaciones Sí) o en Logística (Guardado Sí)
+  // Ocultar bloque de horas en Especial o cuando se guarda instrumental
   if (hoursWrapper) {
-    if (mode === 'actuacion' && (isFestivo === 'si' || isVacaciones === 'si')) {
-      hoursWrapper.style.display = 'none';
-    } else if (mode === 'logistica' && isGuardado === 'si') {
+    if (mode === 'especial' || (mode === 'logistica' && isGuardado === 'si')) {
       hoursWrapper.style.display = 'none';
     } else {
       hoursWrapper.style.display = '';
     }
   }
 
-  // Estilos de botones superiores
+  // Resaltado visual de las pestañas superiores
   tabSala.style.borderColor = (mode === 'sala') ? 'var(--ensayo-blue)' : 'var(--border)';
   tabSala.style.color = (mode === 'sala') ? 'var(--ensayo-blue)' : 'var(--text)';
-
-  tabActuacion.style.borderColor = (mode === 'actuacion') ? 'var(--actuacion-navy)' : 'var(--border)';
-  tabActuacion.style.color = (mode === 'actuacion') ? 'var(--actuacion-navy)' : 'var(--text)';
 
   tabLogistica.style.borderColor = (mode === 'logistica') ? 'var(--transport-color)' : 'var(--border)';
   tabLogistica.style.color = (mode === 'logistica') ? 'var(--transport-color)' : 'var(--text)';
 
-if (mode === 'sala') {
+  tabActuacion.style.borderColor = (mode === 'actuacion') ? 'var(--actuacion-navy)' : 'var(--border)';
+  tabActuacion.style.color = (mode === 'actuacion') ? 'var(--actuacion-navy)' : 'var(--text)';
+
+  if (tabEspecial) {
+    tabEspecial.style.borderColor = (mode === 'especial') ? '#166534' : 'var(--border)';
+    tabEspecial.style.color = (mode === 'especial') ? '#166534' : 'var(--text)';
+  }
+
+  if (mode === 'sala') {
     lblMainTime.textContent = 'Hora inicio';
     if (!editingEventId) {
       document.getElementById('time-start').value = '09:15';
@@ -4211,11 +4317,15 @@ if (mode === 'sala') {
   } else if (mode === 'actuacion') {
     lblMainTime.textContent = 'Hora';
     if (!editingEventId) {
-          document.getElementById('time-start').value = '20:00';
-          document.getElementById('time-end').value = '21:00';
-          isHourRange = false; // Sin marcar rango de horas
-          updateHourRangeUI();
-        }
+      document.getElementById('time-start').value = '20:00';
+      document.getElementById('time-end').value = '21:00';
+      isHourRange = false;
+      updateHourRangeUI();
+    }
+  } else if (mode === 'especial') {
+    if (!editingEventId && isFestivo === 'no' && isVacaciones === 'no') {
+      setFestivoStatus('si'); // Por defecto al entrar en especial sugiere festivo
+    }
   } else {
     lblMainTime.textContent = 'Hora';
     if (!editingEventId) {
@@ -4491,16 +4601,27 @@ function openEditModal(id) {
   if (!ev) return;
   editingEventId = id;
 
+  populateLocationSelects();
+
   document.getElementById('modal-title').textContent = 'Editar evento';
   document.getElementById('btn-delete-event').style.display = '';
 
-  if (ev.actuacion || ev.festivo === 'si' || ev.vacaciones === 'si') {
+  // 1. Cargar Autorización por Cultura
+  setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
+
+  // 2. Determinar la categoría y restaurar sus datos
+  if (ev.festivo === 'si' || ev.vacaciones === 'si') {
+    // --- MODO ESPECIAL ---
     setFestivoStatus(ev.festivo || 'no');
     setVacacionesStatus(ev.vacaciones || 'no');
+    setMode('especial');
+  } else if (ev.actuacion) {
+    // --- MODO ACTUACIONES ---
+    setFestivoStatus('no');
+    setVacacionesStatus('no');
     setMode('actuacion');
     setActuacion(ev.actuacion || '');
 
-    // Restaurar lugar de actuación si existe
     const actSel = document.getElementById('actuacion-lugar-select');
     const actCustom = document.getElementById('actuacion-lugar-custom');
     if (actSel) {
@@ -4520,24 +4641,63 @@ function openEditModal(id) {
         if (actCustom) actCustom.style.display = 'none';
       }
     }
+  } else if (!ev.sala) {
+    // --- MODO LOGÍSTICA / TRANSPORTE / SERVICIOS ---
+    setGuardadoStatus(ev.guardado || 'no');
+    setMode('logistica');
+
+    // Determinar tipo de logística específico
+    let tipo = ev.tipoLogistica;
+    if (!tipo) {
+      if (ev.transport === 'si') tipo = 'transporte';
+      else if (ev.montaje && ev.desmontaje) tipo = 'montar_desmontar';
+      else if (ev.montaje) tipo = 'montaje';
+      else if (ev.desmontaje) tipo = 'desmontaje';
+      else tipo = 'transporte';
+    }
+    selectLogisticsOption(tipo);
+
+    // Restaurar Carpetilla si es Mochila
+    if (tipo === 'mochila' && ev.carpetilla) {
+      const carpSel = document.getElementById('carpetillas-select');
+      const carpCustom = document.getElementById('carpetillas-custom');
+      const standardCarpetillas = ["Atriles", "Marchas Militares", "Marchas Procesionales", "Música de Cámara", "Pasodobles", "Nada"];
+      
+      if (standardCarpetillas.includes(ev.carpetilla)) {
+        if (carpSel) carpSel.value = ev.carpetilla;
+        if (carpCustom) carpCustom.style.display = 'none';
+      } else {
+        if (carpSel) carpSel.value = '_CUSTOM_';
+        if (carpCustom) {
+          carpCustom.value = ev.carpetilla;
+          carpCustom.style.display = 'block';
+        }
+      }
+    }
+
+    // Restaurar trayectos, ubicaciones e ida/vuelta
+    setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
+
+  } else {
+    // --- MODO SALA DE ENSAYO ---
+    setMode('sala');
+    setSala(ev.sala);
   }
 
-  document.getElementById('date-start').value = ev.dateStart;
-  document.getElementById('date-end').value = ev.dateEnd || ev.dateStart;
+  // 3. Restaurar Fechas y Horas
+  document.getElementById('date-start').value = ev.dateStart || '';
+  document.getElementById('date-end').value = ev.dateEnd || ev.dateStart || '';
   document.getElementById('time-start').value = ev.timeStart || '09:15';
+  
   const deabTimeStartEl = document.getElementById('deab-time-start');
   if (deabTimeStartEl) deabTimeStartEl.value = ev.timeStart || '08:30';
+
   document.getElementById('time-end').value = ev.timeEnd || '';
   document.getElementById('event-notes').value = ev.notes || '';
 
+  // 4. Configurar switches de rangos
   isHourRange = !!ev.timeEnd;
   updateHourRangeUI();
-
-  // Asegurar que si es Instrumental Guardado, Festivo o Vacaciones, se oculte el bloque de horas
-  const hoursWrapper = document.getElementById('hours-config-wrapper');
-  if (hoursWrapper && (ev.guardado === 'si' || ev.festivo === 'si' || ev.vacaciones === 'si')) {
-    hoursWrapper.style.display = 'none';
-  }
 
   if (ev.dateEnd && ev.dateEnd !== ev.dateStart) {
     isRange = true;
@@ -4549,6 +4709,12 @@ function openEditModal(id) {
     document.getElementById('range-checkbox').classList.remove('checked');
     document.getElementById('date-end-group').style.display = 'none';
     document.getElementById('date-label-start').textContent = 'Fecha';
+  }
+
+  // Si es evento especial de todo el día, ocultar bloque de horas
+  const hoursWrapper = document.getElementById('hours-config-wrapper');
+  if (hoursWrapper && (ev.guardado === 'si' || ev.festivo === 'si' || ev.vacaciones === 'si')) {
+    hoursWrapper.style.display = 'none';
   }
 
   openModal('add-modal');
@@ -4736,6 +4902,7 @@ function saveEvent() {
   const isSalaMode = currentMode === 'sala';
   const isActMode = currentMode === 'actuacion';
   const isLogMode = currentMode === 'logistica';
+  const isEspMode = currentMode === 'especial';
 
   const sala = isSalaMode ? document.getElementById('sala-input').value.trim().toUpperCase() : '';
   const actuacion = isActMode ? document.getElementById('actuacion-input').value.trim().toUpperCase() : '';
@@ -4759,16 +4926,15 @@ function saveEvent() {
   const dateStart = document.getElementById('date-start').value;
   const dateEnd = isRange ? document.getElementById('date-end').value : dateStart;
   
-  // Si estamos en Actuaciones (Festivo/Vacaciones) o en Logística (Guardado 'si'), las horas son nulas
-  const isCurrentlyFestivo = isActMode && (isFestivo === 'si');
-  const isCurrentlyVacaciones = isActMode && (isVacaciones === 'si');
+  // Comprobación de eventos especiales de todo el día
+  const isCurrentlyFestivo = isEspMode && (isFestivo === 'si');
+  const isCurrentlyVacaciones = isEspMode && (isVacaciones === 'si');
   const isCurrentlyGuardado = isLogMode && (isGuardado === 'si');
   const isAllDaySpecial = isCurrentlyFestivo || isCurrentlyVacaciones || isCurrentlyGuardado;
 
   const trayectoTipoVal = document.getElementById('trayecto-tipo')?.value;
   let timeStart = isAllDaySpecial ? null : document.getElementById('time-start').value;
 
-  // Si está en Logística y es "De A a B", tomar la hora del campo integrado
   if (isLogMode && trayectoTipoVal === 'De A a B') {
     timeStart = document.getElementById('deab-time-start').value || '08:30';
   }
@@ -4776,7 +4942,6 @@ function saveEvent() {
   let timeEnd = null;
   if (!isAllDaySpecial) {
     if (isActMode && !isHourRange && timeStart) {
-      // En Actuaciones sin rango manual: asignar automáticamente +1 hora
       const [h, m] = timeStart.split(':').map(Number);
       const nextH = (h + 1) % 24;
       timeEnd = `${String(nextH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -4787,7 +4952,6 @@ function saveEvent() {
 
   const notes = document.getElementById('event-notes').value.trim();
 
-  // Guardar fecha de autorización en Ensayo o Logística
   const allowsAuth = isSalaMode || isLogMode;
   const customAuthVal = document.getElementById('auth-datetime-input')?.value;
   const finalAuthDate = (allowsAuth && currentAuth === 'si' && customAuthVal) 
@@ -4804,6 +4968,10 @@ function saveEvent() {
   }
   if (isLogMode && !tipoLogistica && !notes && !ubicacion) {
     showToast('Selecciona una opción de logística o una ubicación', 'error');
+    return;
+  }
+  if (isEspMode && isFestivo !== 'si' && isVacaciones !== 'si') {
+    showToast('Selecciona si es Festivo o Vacaciones', 'error');
     return;
   }
   if (!dateStart) { showToast('Indica la fecha', 'error'); return; }
@@ -4825,8 +4993,8 @@ function saveEvent() {
     secondaryTime,
     autorizadoCultura: allowsAuth ? currentAuth : 'no',
     autorizadoFecha: allowsAuth ? finalAuthDate : null,
-    festivo: isActMode ? isFestivo : 'no',
-    vacaciones: isActMode ? isVacaciones : 'no',
+    festivo: isEspMode ? isFestivo : 'no',
+    vacaciones: isEspMode ? isVacaciones : 'no',
     guardado: isLogMode ? isGuardado : 'no',
     dateStart,
     dateEnd: isRange ? dateEnd : null,
