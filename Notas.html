@@ -92,19 +92,6 @@
       letter-spacing: -0.2px;
     }
 
-    /* BARRA SUPERIOR */
-    .top-toolbar {
-      height: 52px;
-      background: #fbfbfd;
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      gap: 10px;
-      user-select: none;
-      z-index: 10;
-    }
-
     .btn-back-nav {
       background-color: #4a5568;
       color: #ffffff;
@@ -243,40 +230,80 @@
       font-size: 11px;
       color: var(--text-muted);
     }
+/* BARRA SUPERIOR REESTRUCTURADA */
+    .top-toolbar {
+      height: 54px;
+      background: #fbfbfd;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      gap: 14px;
+      user-select: none;
+      z-index: 10;
+      position: relative;
+    }
 
     .toolbar-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-left: 10px;
+      gap: 10px; /* Mayor separación entre iconos */
+      margin-left: 6px;
+    }
+
+    .toolbar-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-left: auto;
     }
 
     .search-box {
-      margin-left: auto;
       position: relative;
-      width: 220px;
+      width: 280px; /* Caja más ancha para aprovechar el espacio */
       display: flex;
       align-items: center;
+      margin: 0 6px;
     }
-
     .search-box input {
       width: 100%;
       background: #e3e3e8;
       border: none;
       border-radius: 8px;
-      padding: 6px 12px 6px 30px;
+      padding: 6px 28px 6px 30px; /* Espacio extra a la derecha para el botón de limpiar */
       font-size: 13px;
       outline: none;
       height: 30px;
     }
 
-    .search-box svg {
+    .search-box > svg {
       position: absolute;
       left: 8px;
       width: 15px;
       height: 15px;
       color: #8e8e93;
       pointer-events: none;
+    }
+
+    .btn-clear-search {
+      position: absolute;
+      right: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      color: #8e8e93;
+      border-radius: 4px;
+      transition: color 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-clear-search:hover {
+      color: var(--apple-orange);
+      transform: scale(1.1);
     }
 
     /* POPOVER ESTILO APPLE NOTES */
@@ -819,52 +846,60 @@
 
 <div class="notes-app">
   <div class="top-toolbar">
-    <button onclick="window.history.back()" class="btn-back-nav" title="Volver atrás">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
-      <span>Volver</span>
-    </button>
+    <!-- BLOQUE IZQUIERDO: Navegación, Título, Deshacer/Rehacer y Buscador Ampliado -->
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <button onclick="window.history.back()" class="btn-back-nav" title="Volver atrás">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+        <span>Volver</span>
+      </button>
 
-    <button class="btn-icon" id="toggle-sidebar" title="Alternar Barra Lateral">
-      <i data-lucide="panel-left"></i>
-    </button>
+      <button class="btn-icon" id="toggle-sidebar" title="Alternar Barra Lateral">
+        <i data-lucide="panel-left"></i>
+      </button>
 
-    <div class="folder-title-display">
-      <h4 id="current-folder-title">Todas las notas</h4>
-      <span id="note-count-display">0 notas</span>
+      <div class="folder-title-display">
+        <h4 id="current-folder-title">Todas las notas</h4>
+        <span id="note-count-display">0 notas</span>
+      </div>
+
+      <div class="toolbar-actions">
+        <!-- DESHACER / REHACER -->
+        <button class="btn-icon" onclick="execUndo()" title="Deshacer (Ctrl+Z)">
+          <i data-lucide="undo-2"></i>
+        </button>
+        <button class="btn-icon" onclick="execRedo()" title="Rehacer (Ctrl+Y)">
+          <i data-lucide="redo-2"></i>
+        </button>
+      </div>
+
+      <!-- BUSCADOR MÁS ANCHO CON BOTÓN DE LIMPIAR -->
+      <div class="search-box">
+        <i data-lucide="search"></i>
+        <input type="text" id="search-input" placeholder="Buscar">
+        <button class="btn-clear-search" onclick="clearSearch()" title="Limpiar búsqueda">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-brush-cleaning-icon lucide-brush-cleaning"><path d="m16 22-1-4"/><path d="M19 14a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v1a1 1 0 0 0 1 1"/><path d="M19 14H5l-1.973 6.767A1 1 0 0 0 4 22h16a1 1 0 0 0 .973-1.233z"/><path d="m8 22 1-4"/></svg>
+        </button>
+      </div>
     </div>
 
-    <div class="toolbar-actions">
-      <!-- DESHACER / REHACER -->
-      <button class="btn-icon" onclick="execUndo()" title="Deshacer (Ctrl+Z)">
-        <i data-lucide="undo-2"></i>
-      </button>
-      <button class="btn-icon" onclick="execRedo()" title="Rehacer (Ctrl+Y)">
-        <i data-lucide="redo-2"></i>
-      </button>
-
-      <!-- BOTÓN GUARDAR EXPLÍCITO -->
-      <button class="btn-save-cloud" id="btn-save-cloud" onclick="manualSave()" title="Guardar cambios en Google Sheets">
-        <i data-lucide="save" style="width:16px; height:16px;"></i>
-        <span id="save-btn-text">Guardar</span>
-      </button>
-
+    <!-- BLOQUE DERECHO: Herramientas de Edición, Sincronización y Guardar -->
+    <div class="toolbar-right-actions">
+      <!-- 1. NUEVA NOTA Y ELIMINAR -->
       <button class="btn-icon" id="btn-new-note" title="Nueva Nota">
         <i data-lucide="square-pen" style="color: var(--apple-orange)"></i>
       </button>
-
-      <!-- BOTÓN PAPELERA EN ROJO -->
       <button class="btn-icon btn-delete-red" id="btn-delete-note" title="Eliminar Nota">
         <i data-lucide="trash-2"></i>
       </button>
 
-      <!-- BOTÓN Y CAJA FLOTANTE DE HERRAMIENTAS APPLE (Aa) -->
+      <!-- 2. MENÚ DE FORMATO (Aa) -->
       <div class="format-popover-container">
         <button class="btn-icon btn-format-trigger" id="btn-format-menu" title="Formato de texto" onclick="toggleFormatMenu(event)">
           Aa
         </button>
 
         <div class="apple-format-menu" id="apple-format-menu">
-          <!-- 1. Píldoras de Jerarquía de Texto -->
+          <!-- Píldoras de Jerarquía de Texto -->
           <div class="format-type-pill-group">
             <button class="pill-btn" onclick="applyBlockFormat('h1')">Título</button>
             <button class="pill-btn" onclick="applyBlockFormat('h2')">Encabezamiento</button>
@@ -872,7 +907,7 @@
             <button class="pill-btn active" onclick="applyBlockFormat('p')">Cuerpo</button>
           </div>
 
-          <!-- 2. Formato de Carácter y Resaltador -->
+          <!-- Formato de Carácter y Resaltadores -->
           <div class="format-row">
             <div class="format-segment-group">
               <button class="seg-btn" onclick="formatDoc('bold')" title="Negrita"><b>B</b></button>
@@ -881,7 +916,6 @@
               <button class="seg-btn" onclick="formatDoc('strikeThrough')" title="Tachado"><s>S</s></button>
             </div>
 
-            <!-- Paleta de color estilo pluma / bolita -->
             <div class="format-segment-group" style="flex: 0 0 auto; gap: 4px; padding: 2px 6px;">
               <span class="color-swatch-circle" style="background:#ff2d55;" onclick="applyHighlight('hl-pink')" title="Rosa"></span>
               <span class="color-swatch-circle" style="background:#ffd60a;" onclick="applyHighlight('hl-yellow')" title="Amarillo"></span>
@@ -891,7 +925,7 @@
             </div>
           </div>
 
-          <!-- 3. Listas y Sangrías -->
+          <!-- Listas y Sangrías -->
           <div class="format-row">
             <div class="format-segment-group">
               <button class="seg-btn" onclick="formatDoc('insertUnorderedList')" title="Lista con viñetas">
@@ -914,7 +948,7 @@
         </div>
       </div>
 
-      <!-- BOTONES ESTILO IOS (Checklist, Tabla, Dibujo, Compartir) -->
+      <!-- 3. HERRAMIENTAS IOS (Checklist, Tabla, Dibujo, Imprimir) -->
       <button class="btn-icon" onclick="insertChecklist()" title="Lista de comprobación">
         <i data-lucide="list-checks"></i>
       </button>
@@ -928,16 +962,17 @@
         <i data-lucide="printer"></i>
       </button>
 
-      <!-- BOTÓN DESCARGAR / RECARGAR NUBE -->
+      <!-- 4. BOTÓN ESTADO / RECARGAR NUBE -->
       <button class="sync-status-container" id="btn-sync" onclick="fetchChangesFromCloud(true)" title="Recargar desde la nube">
         <span class="status-dot green" id="sync-dot"></span>
         <i data-lucide="refresh-cw" style="width:16px; height:16px; color: #6b7280;"></i>
       </button>
-    </div>
 
-    <div class="search-box">
-      <i data-lucide="search"></i>
-      <input type="text" id="search-input" placeholder="Buscar">
+      <!-- 5. BOTÓN GUARDAR EXPLÍCITO -->
+      <button class="btn-save-cloud" id="btn-save-cloud" onclick="manualSave()" title="Guardar cambios en Google Sheets">
+        <i data-lucide="save" style="width:16px; height:16px;"></i>
+        <span id="save-btn-text">Guardar</span>
+      </button>
     </div>
   </div>
 
@@ -1306,6 +1341,18 @@
     };
   }
 
+  // --- CÓDIGO NUEVO Y CORREGIDO ---
+
+  let autoSaveTimeout = null;
+  let lastSaveTimestamp = 0; // Marca de tiempo del último guardado
+
+  function scheduleAutoSave() {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(() => {
+      sendPayloadDirectly();
+    }, 1500); // Guarda automáticamente 1.5s después de dejar de escribir
+  }
+
   function updateActiveNoteFromEditor() {
     const activeNote = notes.find(n => n.id === activeNoteId);
     if (!activeNote) return;
@@ -1317,6 +1364,7 @@
 
     markPendingChanges();
     renderNotesList();
+    scheduleAutoSave(); // Disparar auto-guardado en iPad y PC
   }
 
   document.getElementById('editor').addEventListener('input', updateActiveNoteFromEditor);
@@ -1335,11 +1383,14 @@
     };
     notes.unshift(newNote);
     activeNoteId = newNote.id;
-    markPendingChanges();
+    saveLocal();
     renderNotesList();
     renderFolders();
     selectNote(newNote.id);
     
+    // Al crear nota, enviamos de inmediato a Google Sheets
+    sendPayloadDirectly();
+
     const editor = document.getElementById('editor');
     editor.focus();
     const range = document.createRange();
@@ -1356,7 +1407,7 @@
   document.getElementById('btn-delete-note').addEventListener('click', () => {
     if (!activeNoteId) return;
     
-    // 1. Quitar la nota de la lista local
+    clearTimeout(autoSaveTimeout);
     notes = notes.filter(n => n.id !== activeNoteId);
     activeNoteId = notes.length > 0 ? notes[0].id : null;
     
@@ -1370,7 +1421,6 @@
       document.getElementById('editor-date-label').innerText = '';
     }
 
-    // 2. Enviar inmediatamente a Google Sheets sin pulsar guardar
     sendPayloadDirectly();
   });
 
@@ -1382,13 +1432,14 @@
       name: folderName,
       icon: 'folder'
     });
-    markPendingChanges();
+    saveLocal();
     renderFolders();
+    sendPayloadDirectly();
   }
 
   function formatDoc(cmd, value = null) {
     document.execCommand(cmd, false, value);
-    markPendingChanges();
+    updateActiveNoteFromEditor();
   }
 
   function applyHighlight(className) {
@@ -1400,7 +1451,6 @@
     span.appendChild(range.extractContents());
     range.insertNode(span);
     document.getElementById('editor').dispatchEvent(new Event('input'));
-    markPendingChanges();
   }
 
   document.getElementById('toggle-sidebar').addEventListener('click', () => {
@@ -1409,48 +1459,67 @@
 
   document.getElementById('search-input').addEventListener('input', renderNotesList);
 
-  // --- ENVÍO RÁPIDO Y DIRECTO A LA NUBE ---
-  function sendPayloadDirectly() {
-    const payload = JSON.stringify({ notes, folders });
-    markSavedChanges();
-
-    fetch(SYNC_API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: payload
-    }).catch(e => {
-      console.warn('Error en el envío directo:', e);
-      setSyncStatus('red', 'Error al sincronizar con Google Sheets');
-    });
+  // Función para limpiar la búsqueda y restaurar la lista
+  function clearSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.value = '';
+      renderNotesList();
+      searchInput.focus();
+    }
   }
 
-  // --- BOTÓN MANUAL GUARDAR (RESPUESTA INSTANTÁNEA) ---
+  // --- ENVÍO ROBUSTO A GOOGLE SHEETS ---
+  async function sendPayloadDirectly() {
+    clearTimeout(autoSaveTimeout);
+    isSending = true;
+    lastSaveTimestamp = Date.now();
+    saveLocal();
+    setSyncStatus('orange', 'Guardando en Google Sheets...');
+
+    const payload = JSON.stringify({ notes, folders });
+
+    try {
+      await fetch(SYNC_API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      });
+      markSavedChanges();
+    } catch (e) {
+      console.warn('Error en el envío directo:', e);
+      setSyncStatus('red', 'Error al sincronizar con Google Sheets');
+    } finally {
+      // Dejamos 3.5 segundos de margen antes de desbloquear la descarga en segundo plano
+      setTimeout(() => {
+        isSending = false;
+      }, 3500);
+    }
+  }
+
+  // --- BOTÓN MANUAL GUARDAR ---
   function manualSave() {
     const saveBtnText = document.getElementById('save-btn-text');
-    
-    // Feedback visual instantáneo
-    if (saveBtnText) saveBtnText.innerText = '¡Guardado!';
-    markSavedChanges();
+    if (saveBtnText) saveBtnText.innerText = 'Guardando...';
 
-    sendPayloadDirectly();
-
-    setTimeout(() => {
-      if (!hasLocalChanges && saveBtnText) saveBtnText.innerText = 'Guardar';
-    }, 1200);
+    sendPayloadDirectly().then(() => {
+      if (saveBtnText) saveBtnText.innerText = '¡Guardado!';
+      setTimeout(() => {
+        if (!hasLocalChanges && saveBtnText) saveBtnText.innerText = 'Guardar';
+      }, 1200);
+    });
   }
 
   let isFetching = false;
   let isEditorFocused = false;
 
-  // Detectar foco para no pisar el cursor mientras se escribe
   const editorEl = document.getElementById('editor');
   editorEl.addEventListener('focus', () => { isEditorFocused = true; });
   editorEl.addEventListener('blur', () => { isEditorFocused = false; });
 
   // --- DESCARGAR / SINCRONIZAR DESDE GOOGLE SHEETS ---
   async function fetchChangesFromCloud(isManual = false) {
-    // Si hay cambios locales sin guardar y es manual, confirmar; si es auto, cancelar
     if (hasLocalChanges) {
       if (isManual) {
         const confirmReload = confirm('Tienes cambios locales sin guardar. Si recargas se perderán. ¿Deseas recargar de todas formas?');
@@ -1460,7 +1529,9 @@
       }
     }
 
-    if (!isManual && (isEditorFocused || isFetching)) {
+    // Si se está enviando información o se guardó hace menos de 4 segundos, NO descargar (evita borrar la nota en iPad)
+    const timeSinceLastSave = Date.now() - lastSaveTimestamp;
+    if (!isManual && (isEditorFocused || isFetching || isSending || timeSinceLastSave < 4000)) {
       return;
     }
 
@@ -1481,30 +1552,33 @@
         const newNotes = Array.isArray(data.notes) ? data.notes : [];
         const newFolders = Array.isArray(data.folders) && data.folders.length > 0 ? data.folders : folders;
 
-        const hasDataChanged = JSON.stringify(newNotes) !== JSON.stringify(notes) ||
-                               JSON.stringify(newFolders) !== JSON.stringify(folders);
+        // Comprobación de seguridad: si tenemos notas locales creadas muy recientemente, no borrarlas
+        if (!hasLocalChanges && !isSending) {
+          const hasDataChanged = JSON.stringify(newNotes) !== JSON.stringify(notes) ||
+                                 JSON.stringify(newFolders) !== JSON.stringify(folders);
 
-        if (hasDataChanged) {
-          notes = newNotes;
-          folders = newFolders;
-          saveLocal();
-          markSavedChanges();
+          if (hasDataChanged) {
+            notes = newNotes;
+            folders = newFolders;
+            saveLocal();
+            markSavedChanges();
 
-          if (!notes.find(n => n.id === activeNoteId)) {
-            activeNoteId = notes.length > 0 ? notes[0].id : null;
-          }
-
-          renderFolders();
-          renderNotesList();
-
-          if (activeNoteId) {
-            const cur = notes.find(n => n.id === activeNoteId);
-            if (!isEditorFocused && cur) {
-              selectNote(activeNoteId);
+            if (!notes.find(n => n.id === activeNoteId)) {
+              activeNoteId = notes.length > 0 ? notes[0].id : null;
             }
-          } else {
-            editorEl.innerHTML = '';
-            document.getElementById('editor-date-label').innerText = '';
+
+            renderFolders();
+            renderNotesList();
+
+            if (activeNoteId) {
+              const cur = notes.find(n => n.id === activeNoteId);
+              if (!isEditorFocused && cur) {
+                selectNote(activeNoteId);
+              }
+            } else {
+              editorEl.innerHTML = '';
+              document.getElementById('editor-date-label').innerText = '';
+            }
           }
         }
         setSyncStatus('green');
@@ -1522,7 +1596,7 @@
 
   // --- INTERVALO DE SINCRONIZACIÓN AUTOMÁTICA CADA 5 SEGUNDOS ---
   setInterval(() => {
-    if (!hasLocalChanges && !isEditorFocused) {
+    if (!hasLocalChanges && !isEditorFocused && !isSending) {
       fetchChangesFromCloud(false);
     }
   }, 5000);
