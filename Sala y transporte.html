@@ -1406,6 +1406,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
           </div>
           <input type="text" id="actuacion-input" placeholder="Nombre o detalle de la actuación…" style="margin-top:6px" />
         </div>
+
+        <!-- LUGAR / UBICACIÓN DE LA ACTUACIÓN (COMPARTIDO CON LOGÍSTICA) -->
+        <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;display:flex;flex-direction:column;gap:6px;">
+          <div class="form-group">
+            <label style="font-size:11px;color:var(--actuacion-navy)">📍 Lugar de la Actuación</label>
+            <select id="actuacion-lugar-select" onchange="handleActuacionLugarSelectChange()">
+              <option value="">Selecciona ubicación...</option>
+              <option value="ALMACÉN BANDA">Almacén Banda</option>
+              <option value="CASA COLÓN">Casa Colón</option>
+              <option value="GRAN TEATRO">Gran Teatro</option>
+              <option value="LAZARETO">Lazareto</option>
+              <option value="SALA B">Sala B</option>
+              <option value="SANTA FE">Santa Fe</option>
+              <option value="_CUSTOM_">Añadir nueva ubicación...</option>
+            </select>
+          </div>
+          <input type="text" id="actuacion-lugar-custom" placeholder="Escribe el lugar o destino específico…" style="display:none;margin-top:2px;" />
+        </div>
       </div>
 
       <!-- SECCIÓN: LOGÍSTICA / SERVICIOS (SELECCIÓN EXCLUSIVA) -->
@@ -1983,6 +2001,11 @@ const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Ago
 /* ═══════════════════════════════════════
    UTILIDADES & FORMATEOS
 ═══════════════════════════════════════ */
+function removeAccents(str) {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
 
 function dateStr(d) {
@@ -2107,41 +2130,41 @@ function formatUbicacionDisplay(text) {
     const parts = res.split(' | Vuelta: De ');
     const mainParts = parts[0].replace(/^De\s+/i, '').split(/\s+a\s+/i);
     const returnParts = parts[1].split(/\s+a\s+/i);
-    const o1 = (mainParts[0] || '').trim().toUpperCase();
-    const d1 = (mainParts[1] || '').trim().toUpperCase();
-    const o2 = (returnParts[0] || '').trim().toUpperCase();
-    const d2 = (returnParts[1] || '').trim().toUpperCase();
+    const o1 = (mainParts[0] || '').trim();
+    const d1 = (mainParts[1] || '').trim();
+    const o2 = (returnParts[0] || '').trim();
+    const d2 = (returnParts[1] || '').trim();
     return `De ${o1} a ${d1} | Vuelta: De ${o2} a ${d2}`;
   }
 
   // 2. Caso: "De [Origen] a [Destino]"
   if (res.startsWith('De ') && res.includes(' a ')) {
     const mainParts = res.replace(/^De\s+/i, '').split(/\s+a\s+/i);
-    const o = (mainParts[0] || '').trim().toUpperCase();
-    const d = (mainParts[1] || '').trim().toUpperCase();
+    const o = (mainParts[0] || '').trim();
+    const d = (mainParts[1] || '').trim();
     return `De ${o} a ${d}`;
   }
 
   // 3. Caso: "Ida a [Lugar] y vuelta a [Lugar]"
   if (res.toLowerCase().startsWith('ida a ') && res.toLowerCase().includes(' y vuelta a ')) {
     const parts = res.replace(/^Ida a\s+/i, '').split(/\s+y vuelta a\s+/i);
-    const ida = (parts[0] || '').trim().toUpperCase();
-    const vuelta = (parts[1] || '').trim().toUpperCase();
+    const ida = (parts[0] || '').trim();
+    const vuelta = (parts[1] || '').trim();
     return `Ida a ${ida} y vuelta a ${vuelta}`;
   }
 
   // 4. Caso: "Ida a [Lugar]"
   if (res.toLowerCase().startsWith('ida a ')) {
-    return `Ida a ${res.replace(/^Ida a\s+/i, '').trim().toUpperCase()}`;
+    return `Ida a ${res.replace(/^Ida a\s+/i, '').trim()}`;
   }
 
   // 5. Caso: "Vuelta a [Lugar]"
   if (res.toLowerCase().startsWith('vuelta a ')) {
-    return `Vuelta a ${res.replace(/^Vuelta a\s+/i, '').trim().toUpperCase()}`;
+    return `Vuelta a ${res.replace(/^Vuelta a\s+/i, '').trim()}`;
   }
 
   // 6. Caso por defecto (lugar individual o personalizado)
-  return res.toUpperCase();
+  return res.trim();
 }
 
 function getEventStyle(ev) {
@@ -2400,11 +2423,17 @@ function quickDeleteEvent(id, targetDate, e) {
 /* ═══════════════════════════════════════
    BUSCADOR DE EVENTOS
 ═══════════════════════════════════════ */
+function removeAccents(str) {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 const searchInput = document.getElementById('calendar-search-input');
 const searchResults = document.getElementById('search-results');
 
 searchInput.addEventListener('input', (e) => {
-  const query = e.target.value.toLowerCase().trim();
+  // Normalizamos la búsqueda a minúsculas y sin acentos
+  const query = removeAccents(e.target.value.toLowerCase().trim());
   if (!query) {
     searchResults.style.display = 'none';
     searchResults.innerHTML = '';
@@ -2413,9 +2442,14 @@ searchInput.addEventListener('input', (e) => {
 
   const matchedEvents = [];
   events.forEach(ev => {
-    const title = getEventTitle(ev).toLowerCase();
-    const notes = (ev.notes || '').toLowerCase();
-    const ubi = (ev.ubicacion || '').toLowerCase();
+    // Normalizamos todos los campos del evento a minúsculas y sin acentos
+    const title = removeAccents(getEventTitle(ev).toLowerCase());
+    const notes = removeAccents((ev.notes || '').toLowerCase());
+    const ubi = removeAccents((ev.ubicacion || '').toLowerCase());
+    const carpetilla = removeAccents((ev.carpetilla || '').toLowerCase());
+    const sala = removeAccents((ev.sala || '').toLowerCase());
+    const actuacion = removeAccents((ev.actuacion || '').toLowerCase());
+    
     const dateStart = ev.dateStart || '';
     const dateEnd = ev.dateEnd || '';
     const time = `${ev.timeStart || ''} ${ev.timeEnd || ''} ${ev.secondaryTime || ''}`.toLowerCase();
@@ -2423,6 +2457,7 @@ searchInput.addEventListener('input', (e) => {
     const dateEndFormatted = formatDisplayDate(dateEnd);
 
     if (title.includes(query) || notes.includes(query) || ubi.includes(query) || 
+        carpetilla.includes(query) || sala.includes(query) || actuacion.includes(query) ||
         dateStart.includes(query) || dateEnd.includes(query) || 
         dateStartFormatted.includes(query) || dateEndFormatted.includes(query) || 
         time.includes(query)) {
@@ -2457,14 +2492,55 @@ searchInput.addEventListener('input', (e) => {
   searchResults.style.display = 'flex';
 });
 
+// Al hacer clic en un resultado de la lista
 searchResults.addEventListener('click', (e) => {
   const item = e.target.closest('.search-result-item');
   if (!item) return;
   const targetId = item.dataset.id;
   const targetDate = item.dataset.date;
+
+  if (targetDate) {
+    // 1. Mueve la fecha del calendario al día del evento seleccionado
+    currentDate = parseDate(targetDate);
+    // 2. Renderiza de inmediato la vista activa (Mes, Semana, Día, Agenda o Año)
+    render();
+  }
+
+  // 3. Cierra la lista de sugerencias y limpia el texto del buscador
   searchResults.style.display = 'none';
   searchInput.value = '';
+  searchInput.blur();
+
+  // 4. Abre el modal con los detalles completos del evento seleccionado
   openViewModal(targetId, targetDate);
+});
+
+// Al pulsar ENTER en el buscador
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    e.stopPropagation(); // Evita que se disparen otros atajos globales
+
+    const firstResult = searchResults.querySelector('.search-result-item');
+    if (firstResult) {
+      const targetDate = firstResult.dataset.date;
+      const targetId = firstResult.dataset.id;
+
+      if (targetDate) {
+        // Establecemos la fecha global al día del evento
+        currentDate = parseDate(targetDate);
+        // Actualizamos y renderizamos la vista activa en esa fecha exacta
+        render();
+        
+        showToast(`Ubicado en: ${formatDisplayDateWithDay(targetDate)}`, 'info');
+      }
+
+      searchResults.style.display = 'none';
+      searchInput.blur(); // Quita el foco del buscador
+    } else {
+      showToast('No hay resultados para navegar', 'error');
+    }
+  }
 });
 
 document.addEventListener('click', (e) => {
@@ -2811,7 +2887,7 @@ function renderWeek() {
         : `left:2px; right:2px;`;
 
       // Ubicación en línea separada para logística
-      const ubiHtml = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si' && ev.guardado !== 'si') 
+      const ubiHtml = (ev.ubicacion && !ev.sala && ev.festivo !== 'si' && ev.guardado !== 'si') 
         ? `<div style="font-size:10px;font-weight:700;opacity:0.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📍 ${ev.ubicacion}</div>` 
         : '';
 
@@ -2915,7 +2991,7 @@ function renderDay() {
       : `left:2px; right:2px;`;
 
     // Si tiene ubicación de logística, mostrarla con un badge o icono al lado del título
-    const ubiBadge = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si' && ev.guardado !== 'si')
+    const ubiBadge = (ev.ubicacion && !ev.sala && ev.festivo !== 'si' && ev.guardado !== 'si')
       ? `<span style="font-size:12px;font-weight:700;opacity:0.9;margin-left:8px;">(${ev.ubicacion})</span>`
       : '';
 
@@ -3000,7 +3076,7 @@ function renderAgenda() {
         const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:8px;margin-right:10px;"></span>` : '';
 
         // Si tiene ubicación de logística, mostrarla junto al título en la agenda
-        const ubiHtml = (ev.ubicacion && !ev.sala && !ev.actuacion && ev.festivo !== 'si')
+        const ubiHtml = (ev.ubicacion && !ev.sala && ev.festivo !== 'si')
           ? `<span style="font-size:14px;font-weight:700;opacity:0.9;margin-left:8px;">(${ev.ubicacion})</span>`
           : '';
 
@@ -3352,12 +3428,12 @@ let typeBadge = '';
     `;
   }
 
-  if (ev.ubicacion && !ev.sala && !ev.actuacion) {
+  if (ev.ubicacion && !ev.sala) {
     const cleanUbicacion = formatUbicacionDisplay(ev.ubicacion);
     html += `
       <div class="view-detail-row">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-        <div class="view-detail-label">Ubicación</div>
+        <div class="view-detail-label">Lugar / Ubicación</div>
         <div class="view-detail-value">${cleanUbicacion}</div>
       </div>
     `;
@@ -3476,16 +3552,28 @@ function deleteFromViewModal() {
    UBICACIÓN DINÁMICA & TRAYECTOS HANDLERS
 ═══════════════════════════════════════ */
 const BASE_LOCATIONS = [
-  'ALMACÉN BANDA',
-  'CASA COLÓN',
-  'GRAN TEATRO',
-  'LAZARETO',
-  'SALA B',
-  'SANTA FE'
+  'Almacén Banda',
+  'Casa Colón',
+  'Gran Teatro',
+  'Lazareto',
+  'Sala B',
+  'Santa Fe'
 ];
 
 function getAllKnownLocations() {
-  const locSet = new Set(BASE_LOCATIONS);
+  const locMap = new Map(); // Mapa [normalizado_minusculas -> texto_original] para evitar duplicados
+
+  const addLocation = (raw) => {
+    if (!raw) return;
+    const clean = raw.trim();
+    if (!clean) return;
+    const key = clean.toLowerCase();
+    if (!locMap.has(key)) {
+      locMap.set(key, clean);
+    }
+  };
+
+  BASE_LOCATIONS.forEach(addLocation);
 
   events.forEach(ev => {
     if (!ev.ubicacion) return;
@@ -3499,39 +3587,51 @@ function getAllKnownLocations() {
       const parts = u.split(' | Vuelta: De ');
       const mainParts = parts[0].replace(/^De\s+/i, '').split(/\s+a\s+/i);
       const retParts = parts[1].split(/\s+a\s+/i);
-      if (mainParts[0]) locSet.add(mainParts[0].trim().toUpperCase());
-      if (mainParts[1]) locSet.add(mainParts[1].trim().toUpperCase());
-      if (retParts[0]) locSet.add(retParts[0].trim().toUpperCase());
-      if (retParts[1]) locSet.add(retParts[1].trim().toUpperCase());
+      if (mainParts[0]) addLocation(mainParts[0]);
+      if (mainParts[1]) addLocation(mainParts[1]);
+      if (retParts[0]) addLocation(retParts[0]);
+      if (retParts[1]) addLocation(retParts[1]);
     } else if (u.startsWith('De ') && u.includes(' a ')) {
       const parts = u.replace(/^De\s+/i, '').split(/\s+a\s+/i);
-      if (parts[0]) locSet.add(parts[0].trim().toUpperCase());
-      if (parts[1]) locSet.add(parts[1].trim().toUpperCase());
+      if (parts[0]) addLocation(parts[0]);
+      if (parts[1]) addLocation(parts[1]);
     } else if (u.toLowerCase().startsWith('ida a ') && u.toLowerCase().includes(' y vuelta a ')) {
       const parts = u.replace(/^Ida a\s+/i, '').split(/\s+y vuelta a\s+/i);
-      if (parts[0]) locSet.add(parts[0].trim().toUpperCase());
-      if (parts[1]) locSet.add(parts[1].trim().toUpperCase());
+      if (parts[0]) addLocation(parts[0]);
+      if (parts[1]) addLocation(parts[1]);
     } else if (u.toLowerCase().startsWith('ida a ')) {
-      locSet.add(u.replace(/^Ida a\s+/i, '').trim().toUpperCase());
+      addLocation(u.replace(/^Ida a\s+/i, ''));
     } else if (u.toLowerCase().startsWith('vuelta a ')) {
-      locSet.add(u.replace(/^Vuelta a\s+/i, '').trim().toUpperCase());
+      addLocation(u.replace(/^Vuelta a\s+/i, ''));
     } else {
-      if (u) locSet.add(u.toUpperCase());
+      addLocation(u);
     }
   });
 
-  return Array.from(locSet).filter(Boolean).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+  return Array.from(locMap.values()).filter(Boolean).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+}
+
+function handleActuacionLugarSelectChange() {
+  const val = document.getElementById('actuacion-lugar-select').value;
+  const customInput = document.getElementById('actuacion-lugar-custom');
+  if (val === '_CUSTOM_') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
 }
 
 function populateLocationSelects() {
   const list = getAllKnownLocations();
 
   const selectsConfig = [
-    { id: 'ubicacion-select', defaultLabel: 'Seleccionar ubicación...', customLabel: 'Añadir nueva ubicación...' },
-    { id: 'deab-origen-select', defaultLabel: 'Seleccionar origen...', customLabel: 'Añadir origen específico...' },
-    { id: 'deab-destino-select', defaultLabel: 'Seleccionar destino...', customLabel: 'Añadir destino específico...' },
-    { id: 'ubicacion-secondary-select', defaultLabel: 'Seleccionar destino de vuelta...', customLabel: 'Añadir otro lugar específico...' },
-    { id: 'guardado-ubicacion-select', defaultLabel: 'Seleccionar ubicación...', customLabel: 'Añadir otra ubicación...' }
+    { id: 'ubicacion-select', defaultLabel: 'Seleccionar ubicación...', customLabel: '+ Añadir nueva ubicación...' },
+    { id: 'actuacion-lugar-select', defaultLabel: 'Seleccionar ubicación...', customLabel: '+ Añadir nueva ubicación...' },
+    { id: 'deab-origen-select', defaultLabel: 'Seleccionar origen...', customLabel: '+ Añadir origen específico...' },
+    { id: 'deab-destino-select', defaultLabel: 'Seleccionar destino...', customLabel: '+ Añadir destino específico...' },
+    { id: 'ubicacion-secondary-select', defaultLabel: 'Seleccionar destino de vuelta...', customLabel: '+ Añadir otro lugar específico...' },
+    { id: 'guardado-ubicacion-select', defaultLabel: 'Seleccionar ubicación...', customLabel: '+ Añadir otra ubicación...' }
   ];
 
   selectsConfig.forEach(cfg => {
@@ -3539,15 +3639,25 @@ function populateLocationSelects() {
     if (!el) return;
     const currentVal = el.value;
 
+    // 1. Opción por defecto
     let html = `<option value="">${cfg.defaultLabel}</option>`;
+    // 2. Opción de añadir nueva ubicación (arriba)
+    html += `<option value="_CUSTOM_">${cfg.customLabel}</option>`;
+    // 3. Separador visual opcional y listado alfabético
     list.forEach(loc => {
       html += `<option value="${loc}">${loc}</option>`;
     });
-    html += `<option value="_CUSTOM_">${cfg.customLabel}</option>`;
 
     el.innerHTML = html;
-    if (currentVal && (list.includes(currentVal) || currentVal === '_CUSTOM_')) {
-      el.value = currentVal;
+    
+    // Restaurar valor previo respetando case-insensitive
+    if (currentVal) {
+      if (currentVal === '_CUSTOM_') {
+        el.value = '_CUSTOM_';
+      } else {
+        const found = list.find(l => l.toLowerCase() === currentVal.toLowerCase());
+        if (found) el.value = found;
+      }
     }
   });
 }
@@ -3712,11 +3822,11 @@ function getFormattedUbicacion() {
 
   if (tipo === 'De A a B') {
     const origSel = document.getElementById('deab-origen-select').value;
-    const origCustom = document.getElementById('deab-origen-custom').value.trim().toUpperCase();
+    const origCustom = document.getElementById('deab-origen-custom').value.trim();
     const origen = origSel === '_CUSTOM_' ? origCustom : origSel;
 
     const destSel = document.getElementById('deab-destino-select').value;
-    const destCustom = document.getElementById('deab-destino-custom').value.trim().toUpperCase();
+    const destCustom = document.getElementById('deab-destino-custom').value.trim();
     const destino = destSel === '_CUSTOM_' ? destCustom : destSel;
 
     if (!origen && !destino) return '';
@@ -3727,7 +3837,7 @@ function getFormattedUbicacion() {
     }
 
     const secSel = document.getElementById('ubicacion-secondary-select').value;
-    const secCustom = document.getElementById('ubicacion-secondary-custom').value.trim().toUpperCase();
+    const secCustom = document.getElementById('ubicacion-secondary-custom').value.trim();
     const returnDestino = secSel === '_CUSTOM_' ? secCustom : (secSel || origen);
 
     return `De ${origen} a ${destino} | Vuelta: De ${destino} a ${returnDestino}`;
@@ -3943,8 +4053,9 @@ populateLocationSelects();
     return;
   }
 
-  if (presets.includes(val.toUpperCase())) {
-    ubiSel.value = val.toUpperCase();
+  const foundUbi = presets.find(p => p.toLowerCase() === val.toLowerCase());
+  if (foundUbi) {
+    ubiSel.value = foundUbi;
   } else {
     ubiSel.value = '_CUSTOM_';
     customInput.value = val;
@@ -4331,55 +4442,25 @@ function openEditModal(id) {
     setVacacionesStatus(ev.vacaciones || 'no');
     setMode('actuacion');
     setActuacion(ev.actuacion || '');
-  } else if (ev.sala) {
-    setMode('sala');
-    setSala(ev.sala);
-    setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
-  } else {
-    const t = ev.tipoLogistica || (ev.desmontaje ? 'desmontaje' : (ev.montaje ? 'montaje' : 'transporte'));
-    selectLogisticsOption(t);
 
-    // Restaurar selección de carpetillas si es mochila
-    const carpSelect = document.getElementById('carpetillas-select');
-    const carpCustom = document.getElementById('carpetillas-custom');
-    if (carpSelect) {
-      const presets = ['Atriles', 'Marchas Militares', 'Música de Cámara', 'Nada', 'Pasodobles', 'Marchas Procesionales'];
-      if (ev.carpetilla) {
-        if (presets.includes(ev.carpetilla)) {
-          carpSelect.value = ev.carpetilla;
-          if (carpCustom) carpCustom.style.display = 'none';
-        } else {
-          carpSelect.value = '_CUSTOM_';
-          if (carpCustom) {
-            carpCustom.value = ev.carpetilla;
-            carpCustom.style.display = 'block';
-          }
+    // Restaurar lugar de actuación si existe
+    const actSel = document.getElementById('actuacion-lugar-select');
+    const actCustom = document.getElementById('actuacion-lugar-custom');
+    if (actSel) {
+      const presets = getAllKnownLocations();
+      const cleanUbi = (ev.ubicacion || '').replace(/^Ubicación\s+/i, '').trim();
+      if (presets.includes(cleanUbi.toUpperCase())) {
+        actSel.value = cleanUbi.toUpperCase();
+        if (actCustom) actCustom.style.display = 'none';
+      } else if (cleanUbi) {
+        actSel.value = '_CUSTOM_';
+        if (actCustom) {
+          actCustom.value = cleanUbi;
+          actCustom.style.display = 'block';
         }
       } else {
-        carpSelect.value = '';
-        if (carpCustom) carpCustom.style.display = 'none';
-      }
-    }
-
-    setGuardadoStatus(ev.guardado || 'no');
-    setMode('logistica');
-    setFormattedUbicacion(ev.ubicacion || '', ev.secondaryTime || null);
-    setAuthStatus(ev.autorizadoCultura || 'no', ev.autorizadoFecha || null);
-
-    // Si está guardado, restaurar la ubicación seleccionada en el desplegable de Guardado
-    if (ev.guardado === 'si' && ev.ubicacion) {
-      const gSel = document.getElementById('guardado-ubicacion-select');
-      const gCustom = document.getElementById('guardado-ubicacion-custom');
-      const presets = getAllKnownLocations();
-      const cleanUbi = ev.ubicacion.replace(/^Ubicación\s+/i, '').trim();
-      
-      if (presets.includes(cleanUbi.toUpperCase())) {
-        gSel.value = cleanUbi.toUpperCase();
-        gCustom.style.display = 'none';
-      } else {
-        gSel.value = '_CUSTOM_';
-        gCustom.value = cleanUbi;
-        gCustom.style.display = 'block';
+        actSel.value = '';
+        if (actCustom) actCustom.style.display = 'none';
       }
     }
   }
@@ -4431,6 +4512,11 @@ function resetForm() {
 
   setActuacion('CONCIERTO');
   document.getElementById('actuacion-input').value = 'CONCIERTO';
+  
+  const actSel = document.getElementById('actuacion-lugar-select');
+  const actCustom = document.getElementById('actuacion-lugar-custom');
+  if (actSel) actSel.value = '';
+  if (actCustom) { actCustom.value = ''; actCustom.style.display = 'none'; }
 
   selectLogisticsOption('transporte');
   const carpSelect = document.getElementById('carpetillas-select');
@@ -4584,7 +4670,14 @@ function saveEvent() {
   const transport = isLogMode && selectedLogisticsType === 'transporte' ? 'si' : 'no';
   const montaje = isLogMode && (selectedLogisticsType === 'montaje' || selectedLogisticsType === 'montar_desmontar');
   const desmontaje = isLogMode && (selectedLogisticsType === 'desmontaje' || selectedLogisticsType === 'desmontar_montar');
-  const ubicacion = isLogMode ? getFormattedUbicacion() : '';
+  let ubicacion = '';
+  if (isLogMode) {
+    ubicacion = getFormattedUbicacion();
+  } else if (isActMode) {
+    const actSel = document.getElementById('actuacion-lugar-select')?.value;
+    const actCustom = document.getElementById('actuacion-lugar-custom')?.value.trim();
+    ubicacion = (actSel === '_CUSTOM_' ? actCustom : actSel) || '';
+  }
 
   const hasSec = isLogMode && document.getElementById('has-secondary-checkbox').classList.contains('checked');
   const secondaryTime = hasSec ? document.getElementById('secondary-time').value : null;
