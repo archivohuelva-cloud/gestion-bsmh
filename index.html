@@ -1056,19 +1056,20 @@
             }
         };
 
-// --- LÓGICA DE RECORDATORIOS CON GOOGLE SHEETS (SINCRONIZACIÓN EN TIEMPO REAL) ---
+// --- LÓGICA DE RECORDATORIOS CON GOOGLE SHEETS (SINCRONIZACIÓN FLUIDA Y DIRECTA) ---
         const REMINDERS_API_URL = "https://script.google.com/macros/s/AKfycbxrAZ3-Gw275iTv_sqYxfQntDyJKmrQHRvRpo-Milhb9zKfm50EOGfuKBw8guNCaxtT/exec";
 
         let reminders = JSON.parse(localStorage.getItem('bsmh_reminders')) || [];
+        let isSavingReminders = false; // Flag para evitar que descargas pisen ediciones locales
 
-        // Cargar datos en la nube forzando la no utilización de caché
+        // Cargar datos en la nube únicamente si no estamos en proceso de guardar
         async function fetchReminders() {
+            if (isSavingReminders) return; // Si estamos guardando un cambio, ignoramos descargas viejas
             try {
-                // Añadimos timestamp ?t= y cache: 'no-store' para que Safari/Firefox/iPad nunca guarden datos viejos
                 const noCacheUrl = `${REMINDERS_API_URL}?t=${new Date().getTime()}`;
                 const res = await fetch(noCacheUrl, { cache: 'no-store' });
                 
-                if (res.ok) {
+                if (res.ok && !isSavingReminders) {
                     const cloudData = await res.json();
                     if (Array.isArray(cloudData)) {
                         reminders = cloudData;
@@ -1103,8 +1104,10 @@
             const isShowing = dropdown.classList.toggle('show');
             if (isShowing) {
                 overlay.classList.remove('hidden');
-                // Cada vez que abres la ventana, comprueba si hay cambios nuevos en la hoja
-                fetchReminders();
+                // Al abrir, si no se está guardando activamente, sincroniza en segundo plano
+                if (!isSavingReminders) {
+                    fetchReminders();
+                }
             } else {
                 overlay.classList.add('hidden');
             }
@@ -1189,8 +1192,8 @@
             if (dragStartIndex !== dragEndIndex) {
                 const itemToMove = reminders.splice(dragStartIndex, 1)[0];
                 reminders.splice(dragEndIndex, 0, itemToMove);
-                saveReminders();
                 renderReminders();
+                saveReminders();
             }
             return false;
         }
@@ -1202,25 +1205,26 @@
 
         function addReminder() {
             const input = document.getElementById('reminder-input');
-            if(input.value.trim()){
-                reminders.push({ text: input.value, completed: false });
+            const val = input.value.trim();
+            if (val) {
+                reminders.push({ text: val, completed: false });
                 input.value = '';
-                saveReminders();
                 renderReminders();
+                saveReminders();
             }
         }
 
         function toggleReminder(i) {
             reminders[i].completed = !reminders[i].completed;
-            saveReminders();
             renderReminders();
+            saveReminders();
         }
 
         function deleteReminder(i, event) {
             if (event) event.stopPropagation();
             reminders.splice(i, 1);
-            saveReminders();
             renderReminders();
+            saveReminders();
             const dropdown = document.getElementById('reminders-dropdown');
             if (dropdown) dropdown.classList.add('show');
         }
@@ -1233,7 +1237,6 @@
             const indexInput = document.getElementById('edit-reminder-index');
             const dropdown = document.getElementById('reminders-dropdown');
 
-            // Cierra el desplegable para dejar el fondo limpio y difuminado
             if (dropdown) dropdown.classList.remove('show');
 
             indexInput.value = i;
@@ -1242,20 +1245,17 @@
             textarea.focus();
         }
 
-        // Cierra el modal de edición y mantiene abierta la lista de recordatorios
         function closeEditModal(event) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('edit-reminder-modal');
             modal.classList.add('hidden');
             
-            // Mantiene abierta la ventana principal de recordatorios
             const dropdown = document.getElementById('reminders-dropdown');
             if (dropdown) {
                 dropdown.classList.add('show');
             }
         }
 
-        // Guarda el texto multilínea editado y regresa a la lista de recordatorios
         function saveEditedReminder(event) {
             if (event) event.stopPropagation();
             const index = document.getElementById('edit-reminder-index').value;
@@ -1263,40 +1263,58 @@
 
             if (newText !== "" && index !== "") {
                 reminders[index].text = newText;
-                saveReminders();
                 renderReminders();
+                saveReminders();
             }
             closeEditModal(event);
         }
 
         function toggleAllReminders(state) {
             reminders.forEach(r => r.completed = state);
-            saveReminders();
             renderReminders();
+            saveReminders();
             document.getElementById('reminders-dropdown').classList.add('show');
         }
 
         function deleteAllReminders() {
-          if (reminders.length === 0) return;
+            if (reminders.length === 0) return;
 
-          const confirmed = confirm("¿Está seguro de eliminar todos los recordatorios de una vez?");
-          if (confirmed) {
-              reminders = [];
-              saveReminders();
-              renderReminders();
-          }
-    document.getElementById('reminders-dropdown').classList.add('show');
-}
+            const confirmed = confirm("¿Está seguro de eliminar todos los recordatorios de una vez?");
+            if (confirmed) {
+                reminders = [];
+                renderReminders();
+                saveReminders();
+            }
+            document.getElementById('reminders-dropdown').classList.add('show');
+        }
 
-        // Guarda localmente y sincroniza en segundo plano con Google Sheets
+        // Guarda localmente de inmediato y envía a Google Sheets con control de colisiones
+        let saveTimeout = null;
         function saveReminders() {
             localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
             renderTicker();
-            fetch(REMINDERS_API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(reminders)
-            }).catch(e => console.error("Error al sincronizar con Google Sheets:", e));
+            
+            isSavingReminders = true; // Bloquea descargas mientras se envía
+
+            if (saveTimeout) clearTimeout(saveTimeout);
+            
+            // Envío con debounce leve para agrupar pulsaciones rápidas
+            saveTimeout = setTimeout(async () => {
+                try {
+                    await fetch(REMINDERS_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(reminders)
+                    });
+                } catch (e) {
+                    console.error("Error al sincronizar con Google Sheets:", e);
+                } finally {
+                    // Mantenemos el bloqueo 1 segundo extra para asegurar que Google Sheets haya persistido
+                    setTimeout(() => {
+                        isSavingReminders = false;
+                    }, 1000);
+                }
+            }, 300);
         }
 
         window.onload = function() {
@@ -1305,24 +1323,26 @@
             updateUI();
             renderReminders();
             renderTicker();
-            fetchReminders(); // Descarga inicial al arrancar
+            fetchReminders();
 
-            // 1. Sincronización automática cada 5 segundos en segundo plano
+            // 1. Sincronización automática cada 5 segundos en segundo plano (solo si no hay guardado pendiente)
             setInterval(() => {
                 const isLoggedIn = sessionStorage.getItem('bsmh_session');
-                if (isLoggedIn === 'true') {
+                if (isLoggedIn === 'true' && !isSavingReminders) {
                     fetchReminders();
                 }
             }, 5000);
 
-            // 2. Sincronización instantánea al volver a la pestaña o desbloquear el iPad
+            // 2. Sincronización instantánea al volver a la pestaña o desbloquear el dispositivo
             document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'visible') {
+                if (document.visibilityState === 'visible' && !isSavingReminders) {
                     fetchReminders();
                 }
             });
             window.addEventListener('focus', () => {
-                fetchReminders();
+                if (!isSavingReminders) {
+                    fetchReminders();
+                }
             });
 
             // Detección de dispositivos iOS / iPad
@@ -1347,19 +1367,16 @@
         // Cerrar ventana de recordatorios y modales al pulsar la tecla ESC
         window.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' || e.key === 'Esc') {
-                // 1. Cerrar ventana de recordatorios y su fondo difuminado
                 const remindersDropdown = document.getElementById('reminders-dropdown');
                 const remindersOverlay = document.getElementById('reminders-overlay');
                 if (remindersDropdown) remindersDropdown.classList.remove('show');
                 if (remindersOverlay) remindersOverlay.classList.add('hidden');
 
-                // 2. Cerrar modal de editar recordatorio si estuviera abierto
                 const editModal = document.getElementById('edit-reminder-modal');
                 if (editModal && !editModal.classList.contains('hidden')) {
                     editModal.classList.add('hidden');
                 }
 
-                // 3. Cerrar modal de búsqueda Biblio si estuviera abierto
                 const biblioModal = document.getElementById('biblio-modal');
                 if (biblioModal && !biblioModal.classList.contains('hidden')) {
                     closeBiblioModal();
