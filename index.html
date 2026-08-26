@@ -1305,10 +1305,30 @@
             updateUI();
             renderReminders();
             renderTicker();
-            fetchReminders(); // <--- Descarga los recordatorios de Sheets al iniciar
+            fetchReminders(); // Descarga inicial al arrancar
+
+            // 1. Sincronización automática cada 5 segundos en segundo plano
+            setInterval(() => {
+                const isLoggedIn = sessionStorage.getItem('bsmh_session');
+                if (isLoggedIn === 'true') {
+                    fetchReminders();
+                }
+            }, 5000);
+
+            // 2. Sincronización instantánea al volver a la pestaña o desbloquear el iPad
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    fetchReminders();
+                }
+            });
+            window.addEventListener('focus', () => {
+                fetchReminders();
+            });
+
+            // Detección de dispositivos iOS / iPad
             const userAgent = window.navigator.userAgent;
             if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-                document.body.classList.add('ios-device');
+                document.body.classList.add('os-ios');
             }
         };
 
