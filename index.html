@@ -920,6 +920,7 @@
             document.getElementById('main-content').style.display = 'block';
             updateUI();
             fetchWeather();
+            fetchReminders();
         }
 
         function handleLogin(event) {
@@ -1055,21 +1056,26 @@
             }
         };
 
-// --- LÓGICA DE RECORDATORIOS CON GOOGLE SHEETS ---
+// --- LÓGICA DE RECORDATORIOS CON GOOGLE SHEETS (SINCRONIZACIÓN EN TIEMPO REAL) ---
         const REMINDERS_API_URL = "https://script.google.com/macros/s/AKfycbxrAZ3-Gw275iTv_sqYxfQntDyJKmrQHRvRpo-Milhb9zKfm50EOGfuKBw8guNCaxtT/exec";
 
         let reminders = JSON.parse(localStorage.getItem('bsmh_reminders')) || [];
 
-        // Cargar datos en la nube al abrir
+        // Cargar datos en la nube forzando la no utilización de caché
         async function fetchReminders() {
             try {
-                const res = await fetch(REMINDERS_API_URL);
+                // Añadimos timestamp ?t= y cache: 'no-store' para que Safari/Firefox/iPad nunca guarden datos viejos
+                const noCacheUrl = `${REMINDERS_API_URL}?t=${new Date().getTime()}`;
+                const res = await fetch(noCacheUrl, { cache: 'no-store' });
+                
                 if (res.ok) {
                     const cloudData = await res.json();
-                    reminders = cloudData;
-                    localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
-                    renderReminders();
-                    renderTicker();
+                    if (Array.isArray(cloudData)) {
+                        reminders = cloudData;
+                        localStorage.setItem('bsmh_reminders', JSON.stringify(reminders));
+                        renderReminders();
+                        renderTicker();
+                    }
                 }
             } catch (err) {
                 console.warn("Modo offline o error al conectar con Google Sheets:", err);
@@ -1097,6 +1103,8 @@
             const isShowing = dropdown.classList.toggle('show');
             if (isShowing) {
                 overlay.classList.remove('hidden');
+                // Cada vez que abres la ventana, comprueba si hay cambios nuevos en la hoja
+                fetchReminders();
             } else {
                 overlay.classList.add('hidden');
             }
