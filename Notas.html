@@ -806,6 +806,12 @@
       min-height: 100%;
     }
 
+    .note-content a {
+      color: var(--apple-blue);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
     .note-content h1 { 
       font-size: 26px; 
       font-weight: 700; 
@@ -1370,6 +1376,28 @@
   document.getElementById('editor').addEventListener('input', updateActiveNoteFromEditor);
   document.getElementById('editor').addEventListener('keyup', updateActiveNoteFromEditor);
 
+  // Apertura directa de enlaces al hacer clic en ellos dentro del editor
+  document.getElementById('editor').addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+      window.open(link.href, '_blank', 'noopener,noreferrer');
+    }
+  });
+
+  // Convertir automáticamente texto plano que contenga URLs a hipervínculos interactivos al pegar
+  document.getElementById('editor').addEventListener('paste', (e) => {
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+    
+    if (urlRegex.test(text)) {
+      e.preventDefault();
+      const linkedHtml = text.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+                             .replace(/\n/g, '<br>');
+      document.execCommand('insertHTML', false, linkedHtml);
+      updateActiveNoteFromEditor();
+    }
+  });
+
   document.getElementById('btn-new-note').addEventListener('click', () => {
     const now = new Date().toISOString();
     const newNote = {
@@ -1404,7 +1432,7 @@
   });
 
   // --- ELIMINAR DIRECTAMENTE Y SINCRONIZAR DE INMEDIATO ---
-  document.getElementById('btn-delete-note').addEventListener('click', () => {
+  function deleteCurrentActiveNote() {
     if (!activeNoteId) return;
     
     clearTimeout(autoSaveTimeout);
@@ -1422,7 +1450,9 @@
     }
 
     sendPayloadDirectly();
-  });
+  }
+
+  document.getElementById('btn-delete-note').addEventListener('click', deleteCurrentActiveNote);
 
   function createNewFolder() {
     const folderName = prompt('Nombre de la nueva carpeta:');
@@ -1648,6 +1678,13 @@
   document.addEventListener('keydown', (e) => {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+    // Eliminar nota con tecla Suprimir (Delete) cuando no se esté editando texto ni escribiendo en inputs
+    if (e.key === 'Delete' && !isEditorFocused && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      deleteCurrentActiveNote();
+      return;
+    }
 
     if (modifier && e.key.toLowerCase() === 'z') {
       if (e.shiftKey) {
