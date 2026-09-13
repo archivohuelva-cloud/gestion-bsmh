@@ -51,7 +51,7 @@
                 <div class="border-l border-white/30 h-6"></div>
                 <h1 class="text-sm md:text-xl font-bold tracking-wide flex items-center gap-2">
                     <i data-lucide="music" class="w-4 h-4 md:w-5 md:h-5"></i>
-                    BSMH <span class="font-light hidden lg:inline">| Generador de Repertorios</span>
+                    BSMH <span class="font-light hidden lg:inline">| Generador de Repertorios en formato .JSON y PDF</span>
                 </h1>
             </div>
             <!-- Botones móviles (solo iconos o texto corto) -->
@@ -176,7 +176,7 @@
             <div id="listaBorrador" class="flex-1 overflow-y-auto custom-scrollbar bg-white border border-slate-300 rounded-lg shadow-sm mb-6 p-1 md:p-2 min-h-[300px]">
                 <div class="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6 empty-state">
                     <i data-lucide="file-audio" class="w-10 h-10 mb-3 opacity-50"></i>
-                    <p class="text-sm">No hay obras seleccionadas.</p>
+                    <p class="text-sm">No hay obras seleccionadas. Arrastra directamente el archivo .JSON a esta ventana del navegador o pulsa el botón de arriba "Abrir Repertorio" para cargar todos los datos.</p>
                 </div>
             </div>
 
@@ -435,9 +435,13 @@
             downloadAnchorNode.remove();
         };
 
-        window.importarJSON = function(event) {
-            const file = event.target.files[0];
+        // Función centralizada para procesar el archivo JSON
+        function procesarArchivoJSON(file) {
             if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.json')) {
+                alert("Por favor, arrastra o selecciona un archivo .json válido.");
+                return;
+            }
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -449,13 +453,33 @@
                     document.getElementById('conciertoNotas').value = datos.notas || '';
                     repertorioSeleccionado = datos.repertorio || [];
                     actualizarBorrador();
-                    event.target.value = '';
                 } catch (err) {
-                    alert("Error al leer el archivo JSON.");
+                    alert("Error al leer o interpretar el archivo JSON.");
                 }
             };
             reader.readAsText(file);
+        }
+
+        // Carga mediante el botón tradicional "Abrir Repertorio"
+        window.importarJSON = function(event) {
+            const file = event.target.files[0];
+            procesarArchivoJSON(file);
+            event.target.value = ''; // Resetear el input
         };
+
+        // Escuchadores para Drag & Drop en toda la ventana del navegador
+        window.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        }, false);
+
+        window.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                procesarArchivoJSON(file);
+            }
+        }, false);
 
         function actualizarBorrador() {
             contadorObras.textContent = `${repertorioSeleccionado.length} obras`;
