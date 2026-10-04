@@ -483,6 +483,16 @@ body {
 .month-day.is-weekend { background: var(--bg-weekend); }
 .month-day.is-weekend:hover { background: var(--bg-weekend-hover); }
 .month-day.drag-over { background: #e8f0fe !important; }
+/* Sombreado gris para días pasados ya consumidos */
+.month-day.is-past {
+  background-color: #e5e5ea !important;
+}
+.month-day.is-past .day-num {
+  color: #8e8e93;
+}
+.month-day.is-past .event-chip {
+  opacity: 0.72;
+}
 
 /* Resaltado amarillo de búsqueda temporal */
 .highlight-search-day {
@@ -1763,10 +1773,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       <button class="modal-close" onclick="closeModal('export-modal')">✕</button>
     </div>
     <div class="modal-body">
+      <!-- SECCIÓN 1: TIPO DE VISTA -->
       <div class="form-group">
-        <label>Alcance de la exportación</label>
-        <select id="export-scope" onchange="handleExportScopeChange()">
-          <option value="all_views">📦 Paquete Completo (Todas las Vistas en ZIP)</option>
+        <label>Tipo de Vista</label>
+        <select id="export-view-type">
+          <option value="all">📦 Todo (Todas las Vistas)</option>
+          <option value="year">📅 Anual</option>
+          <option value="month">🗓 Mensual</option>
+          <option value="week">📆 Semanal</option>
+          <option value="day">📌 Día</option>
+          <option value="agenda">📋 Agenda</option>
+        </select>
+      </div>
+
+      <!-- SECCIÓN 2: SELECCIONAR FECHA -->
+      <div class="form-group">
+        <label>Seleccionar Fecha</label>
+        <select id="export-date-scope" onchange="handleExportDateScopeChange()">
           <option value="year">📅 Año actual</option>
           <option value="month">🗓 Mes actual</option>
           <option value="day">📌 Día actual</option>
@@ -1774,6 +1797,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </select>
       </div>
 
+      <!-- CAMPOS FECHA DESDE / HASTA (SOLO RANGO DE DÍAS) -->
       <div class="form-row" id="export-custom-dates" style="display:none;">
         <div class="form-group">
           <label>Desde</label>
@@ -1785,7 +1809,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         </div>
       </div>
 
-<div class="form-group">
+      <!-- SECCIÓN 3: FILTRAR TIPO DE ELEMENTOS -->
+      <div class="form-group">
         <label>Filtrar Tipo de Elementos</label>
         <select id="export-filter">
           <option value="all">Todo</option>
@@ -2054,6 +2079,14 @@ function isToday(d) {
 function isWeekendDay(d) {
   const day = d.getDay();
   return day === 0 || day === 6; // 0 = Domingo, 6 = Sábado
+}
+
+function isPastDay(d) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(d);
+  target.setHours(0, 0, 0, 0);
+  return target.getTime() < today.getTime();
 }
 
 function formatTimeH(t) {
@@ -2780,13 +2813,14 @@ function renderMonthCell(d, otherMonth) {
   const todayClass = isToday(d) ? 'today' : '';
   const otherClass = otherMonth ? 'other-month' : '';
   const weekendClass = isWeekendDay(d) ? 'is-weekend' : '';
+  const pastClass = isPastDay(d) ? 'is-past' : '';
 
   let evHTML = '';
   dayEvents.forEach(ev => {
     const style = getEventStyle(ev);
     const title = getEventTitle(ev);
 
-// En mes: mostrar hora limpia solo si no es festivo, vacaciones o instrumental guardado
+    // En mes: mostrar hora limpia solo si no es festivo, vacaciones o instrumental guardado
     let timeLabel = '';
     if (ev.festivo !== 'si' && ev.vacaciones !== 'si' && ev.guardado !== 'si' && ev.timeStart) {
       timeLabel = ` ${formatTimeH(ev.timeStart)}`;
@@ -2807,7 +2841,7 @@ function renderMonthCell(d, otherMonth) {
     countdownHTML = `<span class="month-countdown-badge" id="month-live-countdown" style="${cdText ? '' : 'display:none;'}">${cdText}</span>`;
   }
 
-  return `<div class="month-day ${todayClass} ${otherClass} ${weekendClass}" data-date="${ds}">
+  return `<div class="month-day ${todayClass} ${otherClass} ${weekendClass} ${pastClass}" data-date="${ds}">
     <div class="month-day-top-bar">
       <div class="day-num">${d.getDate()}</div>
       ${countdownHTML}
@@ -5049,11 +5083,14 @@ function openExportModal() {
   const dStr = dateStr(new Date());
   document.getElementById('export-date-from').value = dStr;
   document.getElementById('export-date-to').value = dStr;
+  document.getElementById('export-date-scope').value = 'year';
+  document.getElementById('export-custom-dates').style.display = 'none';
   openModal('export-modal');
 }
 
-function handleExportScopeChange() {
-  const sc = document.getElementById('export-scope').value;
+
+function handleExportDateScopeChange() {
+  const sc = document.getElementById('export-date-scope').value;
   document.getElementById('export-custom-dates').style.display = (sc === 'custom_range') ? 'grid' : 'none';
 }
 
@@ -5703,7 +5740,8 @@ function generatePDFDocument(titleHeader, subTitleHeader, listEvents, explicitRa
 }
 
 async function executeExportPDF() {
-  const scope = document.getElementById('export-scope').value;
+  const viewType = document.getElementById('export-view-type').value;
+  const dateScope = document.getElementById('export-date-scope').value;
   const filter = document.getElementById('export-filter').value;
   const btn = document.getElementById('btn-do-export');
   
@@ -5726,60 +5764,99 @@ async function executeExportPDF() {
     const fileStamp = `${dateFormatted} - ${hStr}.${minStr}h`;
     const headerDateStamp = `Generado: ${dayName}, ${dateFormatted} | ${hStr}:${minStr}h`;
 
-    const zip = new JSZip();
+    // 1. Filtrar eventos según el alcance de fecha seleccionado
+    let scopedEvents = [];
+    let rangeLabel = '';
+    let explicitRange = null;
 
-    if (scope === 'all_views') {
-      // 1. PDF Anual (Listado)
-      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`)) || (e.dateEnd && e.dateEnd.startsWith(`${curYear}`))), filter);
-      const docAnual = generatePDFDocument(`Sala y transporte — Vista Anual ${curYear}`, headerDateStamp, yearEvents);
-      zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, docAnual.output('blob'));
-
-      // Eventos del mes
+    if (dateScope === 'year') {
+      scopedEvents = events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`)) || (e.dateEnd && e.dateEnd.startsWith(`${curYear}`)));
+      rangeLabel = `Año ${curYear}`;
+    } else if (dateScope === 'month') {
       const monthPrefix = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
-      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix))), filter);
-      
-      // 2. PDF Mensual (Listado desglosado)
-      const docMensual = generatePDFDocument(`Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp, monthEvents);
-      zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, docMensual.output('blob'));
-
-      // 3. NUEVO: PDF Mensual Cuadrícula (Tabla idéntica a la pantalla)
-      const docMensualTabla = generateMonthlyGridPDF(curYear, curMonth, monthEvents, `Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp);
-      zip.file(`Sala y transporte (tabla mensual) - ${fileStamp}.pdf`, docMensualTabla.output('blob'));
-
-      // 4. PDF Agenda Completa
-      const allSortedEvents = filterEventsByType([...events], filter);
-      const docAgenda = generatePDFDocument(`Sala y transporte — Agenda Completa`, headerDateStamp, allSortedEvents);
-      zip.file(`Sala y transporte (agenda) - ${fileStamp}.pdf`, docAgenda.output('blob'));
-
-    } else if (scope === 'year') {
-      const yearEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(`${curYear}`)) || (e.dateEnd && e.dateEnd.startsWith(`${curYear}`))), filter);
-      const doc = generatePDFDocument(`Sala y transporte — Anual ${curYear}`, headerDateStamp, yearEvents);
-      zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, doc.output('blob'));
-
-    } else if (scope === 'month') {
-      const monthPrefix = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
-      const monthEvents = filterEventsByType(events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix))), filter);
-      
-      // 1. PDF Mensual en Listado
-      const doc = generatePDFDocument(`Sala y transporte — ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp, monthEvents);
-      zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, doc.output('blob'));
-
-      // 2. NUEVO: PDF Mensual Cuadrícula (Tabla idéntica a la pantalla)
-      const docGrid = generateMonthlyGridPDF(curYear, curMonth, monthEvents, `Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp);
-      zip.file(`Sala y transporte (tabla mensual) - ${fileStamp}.pdf`, docGrid.output('blob'));
-
-    } else if (scope === 'day') {
-      const ds = dateStr(currentDate);
-      const dayEvs = filterEventsByType(eventsOnDate(ds), filter);
-      const doc = generatePDFDocument(`Sala y transporte — Día ${formatDisplayDateWithDay(ds)}`, headerDateStamp, dayEvs, { from: ds, to: ds });
-      zip.file(`Sala y transporte (dia_${formatDisplayDate(ds)}) - ${fileStamp}.pdf`, doc.output('blob'));
-
-    } else if (scope === 'custom_range') {
+      scopedEvents = events.filter(e => (e.dateStart && e.dateStart.startsWith(monthPrefix)) || (e.dateEnd && e.dateEnd.startsWith(monthPrefix)));
+      rangeLabel = `${MONTHS_ES[curMonth]} ${curYear}`;
+    } else if (dateScope === 'day') {
+      const todayStr = dateStr(currentDate);
+      scopedEvents = eventsOnDate(todayStr);
+      rangeLabel = `Día ${formatDisplayDateWithDay(todayStr)}`;
+      explicitRange = { from: todayStr, to: todayStr };
+    } else if (dateScope === 'custom_range') {
       const from = document.getElementById('export-date-from').value;
       const to = document.getElementById('export-date-to').value;
-      const rangeEvents = filterEventsByType(events.filter(e => (e.dateStart <= to && (e.dateEnd || e.dateStart) >= from)), filter);
-      const doc = generatePDFDocument(`Sala y transporte — Rango (${formatDisplayDateWithDay(from)} al ${formatDisplayDateWithDay(to)})`, headerDateStamp, rangeEvents, { from, to });
-      zip.file(`Sala y transporte (rango_${formatDisplayDate(from)}_a_${formatDisplayDate(to)}) - ${fileStamp}.pdf`, doc.output('blob'));
+      scopedEvents = events.filter(e => (e.dateStart <= to && (e.dateEnd || e.dateStart) >= from));
+      rangeLabel = `Rango (${formatDisplayDate(from)} al ${formatDisplayDate(to)})`;
+      explicitRange = { from, to };
+    }
+
+    // 2. Aplicar filtro de tipo de elementos
+    const finalEvents = filterEventsByType(scopedEvents, filter);
+
+    const zip = new JSZip();
+
+    // 3. Generar los PDFs según el Tipo de Vista seleccionado
+    if (viewType === 'all') {
+      // Vista Anual
+      const docAnual = generatePDFDocument(`Sala y transporte — Vista Anual (${rangeLabel})`, headerDateStamp, finalEvents, explicitRange);
+      zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, docAnual.output('blob'));
+
+      // Vista Mensual (Listado)
+      const docMensual = generatePDFDocument(`Sala y transporte — Vista Mensual (${rangeLabel})`, headerDateStamp, finalEvents, explicitRange);
+      zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, docMensual.output('blob'));
+
+      // Vista Mensual (Tabla cuadrícula idéntica a pantalla)
+      const docTabla = generateMonthlyGridPDF(curYear, curMonth, finalEvents, `Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp);
+      zip.file(`Sala y transporte (tabla mensual) - ${fileStamp}.pdf`, docTabla.output('blob'));
+
+      // Vista Semanal
+      const mon = mondayOf(currentDate);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const monStr = dateStr(mon);
+      const sunStr = dateStr(sun);
+      const weekEvents = filterEventsByType(events.filter(e => (e.dateStart <= sunStr && (e.dateEnd || e.dateStart) >= monStr)), filter);
+      const docSemana = generatePDFDocument(`Sala y transporte — Vista Semanal (${formatDisplayDate(monStr)} al ${formatDisplayDate(sunStr)})`, headerDateStamp, weekEvents, { from: monStr, to: sunStr });
+      zip.file(`Sala y transporte (semanal) - ${fileStamp}.pdf`, docSemana.output('blob'));
+
+      // Vista Día
+      const dTarget = dateStr(currentDate);
+      const dayEvs = filterEventsByType(eventsOnDate(dTarget), filter);
+      const docDia = generatePDFDocument(`Sala y transporte — Vista Día (${formatDisplayDateWithDay(dTarget)})`, headerDateStamp, dayEvs, { from: dTarget, to: dTarget });
+      zip.file(`Sala y transporte (dia) - ${fileStamp}.pdf`, docDia.output('blob'));
+
+      // Vista Agenda
+      const docAgenda = generatePDFDocument(`Sala y transporte — Vista Agenda (${rangeLabel})`, headerDateStamp, finalEvents, explicitRange);
+      zip.file(`Sala y transporte (agenda) - ${fileStamp}.pdf`, docAgenda.output('blob'));
+
+    } else if (viewType === 'year') {
+      const doc = generatePDFDocument(`Sala y transporte — Vista Anual (${rangeLabel})`, headerDateStamp, finalEvents, explicitRange);
+      zip.file(`Sala y transporte (anual) - ${fileStamp}.pdf`, doc.output('blob'));
+
+    } else if (viewType === 'month') {
+      const docList = generatePDFDocument(`Sala y transporte — Vista Mensual (${rangeLabel})`, headerDateStamp, finalEvents, explicitRange);
+      zip.file(`Sala y transporte (mensual) - ${fileStamp}.pdf`, docList.output('blob'));
+
+      const docGrid = generateMonthlyGridPDF(curYear, curMonth, finalEvents, `Sala y transporte — Mes de ${MONTHS_ES[curMonth]} ${curYear}`, headerDateStamp);
+      zip.file(`Sala y transporte (tabla mensual) - ${fileStamp}.pdf`, docGrid.output('blob'));
+
+    } else if (viewType === 'week') {
+      const mon = mondayOf(currentDate);
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const monStr = dateStr(mon);
+      const sunStr = dateStr(sun);
+      const weekEvents = (dateScope === 'custom_range') ? finalEvents : filterEventsByType(events.filter(e => (e.dateStart <= sunStr && (e.dateEnd || e.dateStart) >= monStr)), filter);
+      const expR = (dateScope === 'custom_range') ? explicitRange : { from: monStr, to: sunStr };
+      const doc = generatePDFDocument(`Sala y transporte — Vista Semanal (${formatDisplayDate(monStr)} al ${formatDisplayDate(sunStr)})`, headerDateStamp, weekEvents, expR);
+      zip.file(`Sala y transporte (semanal) - ${fileStamp}.pdf`, doc.output('blob'));
+
+    } else if (viewType === 'day') {
+      const targetDay = dateStr(currentDate);
+      const expR = explicitRange || { from: targetDay, to: targetDay };
+      const doc = generatePDFDocument(`Sala y transporte — Vista Día (${rangeLabel})`, headerDateStamp, finalEvents, expR);
+      zip.file(`Sala y transporte (dia) - ${fileStamp}.pdf`, doc.output('blob'));
+
+    } else if (viewType === 'agenda') {
+      const doc = generatePDFDocument(`Sala y transporte — Vista Agenda (${rangeLabel})`, headerDateStamp, finalEvents, explicitRange);
+      zip.file(`Sala y transporte (agenda) - ${fileStamp}.pdf`, doc.output('blob'));
     }
 
     const content = await zip.generateAsync({ type: 'blob' });
