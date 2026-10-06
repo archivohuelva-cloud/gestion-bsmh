@@ -265,8 +265,8 @@ body {
   top: calc(100% + 6px);
   left: 0;
   width: 100%;
-  max-width: 400px;
-  max-height: 380px;
+  max-width: 440px;
+  max-height: 420px;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -276,25 +276,98 @@ body {
   display: none;
   flex-direction: column;
 }
+.search-date-header {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #555559;
+  padding: 11px 14px 5px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  letter-spacing: -0.2px;
+}
+.search-date-header:first-child {
+  border-top: none;
+  padding-top: 9px;
+}
 .search-result-item {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 14px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.05);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 10px;
   transition: background 0.15s;
+  background: var(--surface);
 }
-.search-result-item:last-child { border-bottom: none; }
+.search-result-item:last-child {
+  border-bottom: none;
+}
 .search-result-item:hover,
 .search-result-item.keyboard-selected { 
   background: var(--surface2); 
   outline: 2px solid var(--accent-blue);
   outline-offset: -2px;
 }
-.search-result-title { font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; justify-content: space-between; }
-.search-result-sub { font-size: 11px; color: var(--text-dim); display: flex; gap: 6px; }
-.search-result-notes { font-size: 11px; color: var(--text); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-item-strip {
+  width: 3.5px;
+  min-width: 3.5px;
+  height: 32px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.search-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.search-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-item-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+}
+.search-item-location {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-item-notes {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-item-time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+.search-item-time-allday {
+  font-size: 12px;
+  color: var(--text-dim);
+}
 
 .header-nav {
   display: flex;
@@ -2885,20 +2958,195 @@ function quickDeleteEvent(id, targetDate, e) {
 function toggleMobileSearch(e) {
   if (e) e.stopPropagation();
   const container = document.getElementById('search-container');
-  const input = document.getElementById('calendar-search-input');
+  const input = document.getElementById('calendar-search-input-m');
   container.classList.toggle('mobile-search-open');
   if (container.classList.contains('mobile-search-open')) {
-    input.focus();
+    if (input) input.focus();
   } else {
-    document.getElementById('search-results').style.display = 'none';
+    const resM = document.getElementById('search-results-m');
+    if (resM) resM.style.display = 'none';
   }
 }
 
-// Cerrar el buscador móvil al pulsar fuera
+// --- FUNCIONES DEL DISEÑO DE BÚSQUEDA TIPO IPHONE ---
+function formatSearchDateHeader(dateStrVal) {
+  if (!dateStrVal) return '';
+  const d = parseDate(dateStrVal);
+  if (isNaN(d.getTime())) return dateStrVal;
+  const dow = (d.getDay() + 6) % 7;
+  const dayName = DAYS_FULL[dow];
+  const monthsShort = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+  const monthName = monthsShort[d.getMonth()];
+  
+  const currentYear = new Date().getFullYear();
+  const eventYear = d.getFullYear();
+
+  // Si el evento es de un año pasado (o distinto al actual), muestra el año al lado
+  if (eventYear !== currentYear) {
+    return `${dayName} – ${d.getDate()} ${monthName} ${eventYear}`;
+  }
+  
+  return `${dayName} – ${d.getDate()} ${monthName}`;
+}
+
+function getSearchTimeColHtml(ev) {
+  if (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si' || !ev.timeStart) {
+    return `<span class="search-item-time-allday">todo el día</span>`;
+  }
+  const cleanStart = String(ev.timeStart).replace(/h$/i, '').trim();
+  let cleanEnd = ev.timeEnd ? String(ev.timeEnd).replace(/h$/i, '').trim() : '';
+  if (!cleanEnd && ev.secondaryTime) {
+    cleanEnd = String(ev.secondaryTime).replace(/h$/i, '').trim();
+  }
+
+  if (cleanEnd && cleanEnd !== cleanStart) {
+    return `<span>${cleanStart}</span><span>${cleanEnd}</span>`;
+  }
+  return `<span>${cleanStart}</span>`;
+}
+
+function buildSearchResultsHTML(matchedEvents) {
+  if (matchedEvents.length === 0) {
+    return '<div style="padding:14px;font-size:12.5px;color:var(--text-dim);text-align:center">No se encontraron resultados</div>';
+  }
+
+  let html = '';
+  let lastDate = null;
+
+  matchedEvents.slice(0, 25).forEach(ev => {
+    const style = getEventStyle(ev);
+    const title = getEventTitle(ev);
+    const evDate = ev.dateStart;
+
+    // Cabecera separadora por fecha estilo iPhone (ej: "Sábado – 26 sept")
+    if (evDate !== lastDate) {
+      lastDate = evDate;
+      html += `<div class="search-date-header">${formatSearchDateHeader(evDate)}</div>`;
+    }
+
+    const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas"></span>` : '';
+    const timeColHtml = getSearchTimeColHtml(ev);
+
+    let locationHtml = '';
+    if (ev.ubicacion) {
+      locationHtml = `<div class="search-item-location">📍 ${formatUbicacionDisplay(ev.ubicacion)}</div>`;
+    } else if (ev.sala && !ev.actuacion) {
+      locationHtml = `<div class="search-item-location">📍 ${ev.sala}</div>`;
+    }
+
+    let notesHtml = '';
+    if (ev.notes) {
+      notesHtml = `<div class="search-item-notes">${ev.notes}</div>`;
+    }
+
+    html += `<div class="search-result-item" data-date="${ev.dateStart}" data-id="${ev.id}">
+      <div class="search-item-strip" style="background:${style.color};"></div>
+      <div class="search-item-content">
+        <div class="search-item-title-row">
+          <span class="search-item-title">${title}</span>
+          ${noteDot}
+        </div>
+        ${locationHtml}
+        ${notesHtml}
+      </div>
+      <div class="search-item-time-col">
+        ${timeColHtml}
+      </div>
+    </div>`;
+  });
+
+  return html;
+}
+
+// --- FUNCIÓN DEL BUSCADOR MÓVIL ---
+function handleMobileSearch(e) {
+  const searchResultsM = document.getElementById('search-results-m');
+  if (!searchResultsM) return;
+  const query = removeAccents(e.target.value.toLowerCase().trim());
+  if (!query) {
+    searchResultsM.style.display = 'none';
+    searchResultsM.innerHTML = '';
+    return;
+  }
+
+  const matchedEvents = [];
+  events.forEach(ev => {
+    const title = removeAccents(getEventTitle(ev).toLowerCase());
+    const notes = removeAccents((ev.notes || '').toLowerCase());
+    const ubi = removeAccents((ev.ubicacion || '').toLowerCase());
+    const carpetilla = removeAccents((ev.carpetilla || '').toLowerCase());
+    const sala = removeAccents((ev.sala || '').toLowerCase());
+    const actuacion = removeAccents((ev.actuacion || '').toLowerCase());
+    
+    const dateStart = ev.dateStart || '';
+    const dateEnd = ev.dateEnd || '';
+    const time = `${ev.timeStart || ''} ${ev.timeEnd || ''} ${ev.secondaryTime || ''}`.toLowerCase();
+    const dateStartFormatted = formatDisplayDate(dateStart);
+    const dateEndFormatted = formatDisplayDate(dateEnd);
+
+    if (title.includes(query) || notes.includes(query) || ubi.includes(query) || 
+        carpetilla.includes(query) || sala.includes(query) || actuacion.includes(query) ||
+        dateStart.includes(query) || dateEnd.includes(query) || 
+        dateStartFormatted.includes(query) || dateEndFormatted.includes(query) || 
+        time.includes(query)) {
+      matchedEvents.push(ev);
+    }
+  });
+
+  const getMinutes = (ev) => {
+    let t = ev.timeStart || '00:00';
+    if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+      t = ev.secondaryTime;
+    }
+    const parts = String(t).replace(/h$/i, '').trim().split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return (h * 60) + m;
+  };
+
+  matchedEvents.sort((a, b) => {
+    const dateComp = (b.dateStart || '').localeCompare(a.dateStart || '');
+    if (dateComp !== 0) return dateComp;
+    return getMinutes(a) - getMinutes(b);
+  });
+
+  searchResultsM.innerHTML = buildSearchResultsHTML(matchedEvents);
+  searchResultsM.style.display = 'flex';
+}
+
+// Interacción con los resultados del buscador móvil al hacer clic
 document.addEventListener('click', (e) => {
   const container = document.getElementById('search-container');
+  const searchResultsM = document.getElementById('search-results-m');
+  const searchInputM = document.getElementById('calendar-search-input-m');
+
+  const clickedItem = e.target.closest('#search-results-m .search-result-item');
+  if (clickedItem) {
+    const targetId = clickedItem.dataset.id;
+    const targetDate = clickedItem.dataset.date;
+
+    if (targetDate) {
+      currentDate = parseDate(targetDate);
+      selectedMobileDateStr = targetDate;
+      render();
+      highlightDayInCalendar(targetDate);
+    }
+
+    if (searchResultsM) searchResultsM.style.display = 'none';
+    if (searchInputM) {
+      searchInputM.value = '';
+      searchInputM.blur();
+    }
+    if (container) container.classList.remove('mobile-search-open');
+
+    openViewModal(targetId, targetDate);
+    return;
+  }
+
+  // Cerrar el buscador móvil al pulsar fuera de él
   if (container && !container.contains(e.target)) {
     container.classList.remove('mobile-search-open');
+    if (searchResultsM) searchResultsM.style.display = 'none';
   }
 });
 
@@ -2927,7 +3175,7 @@ function updateSearchKeyboardSelection(items) {
 }
 
 searchInput.addEventListener('input', (e) => {
-  selectedSearchIndex = -1; // Reiniciar índice al escribir
+  selectedSearchIndex = -1;
   const query = removeAccents(e.target.value.toLowerCase().trim());
   if (!query) {
     searchResults.style.display = 'none';
@@ -2959,30 +3207,24 @@ searchInput.addEventListener('input', (e) => {
     }
   });
 
-  if (matchedEvents.length === 0) {
-    searchResults.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-dim);text-align:center">No se encontraron resultados</div>';
-  } else {
-    let html = '';
-    matchedEvents.slice(0, 15).forEach(ev => {
-      const style = getEventStyle(ev);
-      const title = getEventTitle(ev);
-      const dates = formatDisplayRange(ev.dateStart, ev.dateEnd);
-      const hours = formatTimeRangeDisplay(ev);
-      const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:6px;"></span>` : '';
+  const getMinutes = (ev) => {
+    let t = ev.timeStart || '00:00';
+    if (!ev.sala && ev.secondaryTime && ev.ubicacion && ev.ubicacion.startsWith('Vuelta a')) {
+      t = ev.secondaryTime;
+    }
+    const parts = String(t).replace(/h$/i, '').trim().split(':');
+    const h = parseInt(parts[0], 10) || 0;
+    const m = parseInt(parts[1], 10) || 0;
+    return (h * 60) + m;
+  };
 
-      html += `<div class="search-result-item" data-date="${ev.dateStart}" data-id="${ev.id}">
-        <div class="search-result-title">
-          <span style="color:${style.color};display:flex;align-items:center;">${title} ${noteDot}</span>
-          <span style="font-size:11px;font-weight:500;color:var(--text-dim);">${hours}</span>
-        </div>
-        <div class="search-result-sub">
-          <span>📅 ${dates}</span>
-        </div>
-        ${ev.notes ? `<div class="search-result-notes">${ev.notes}</div>` : ''}
-      </div>`;
-    });
-    searchResults.innerHTML = html;
-  }
+  matchedEvents.sort((a, b) => {
+    const dateComp = (b.dateStart || '').localeCompare(a.dateStart || '');
+    if (dateComp !== 0) return dateComp;
+    return getMinutes(a) - getMinutes(b);
+  });
+
+  searchResults.innerHTML = buildSearchResultsHTML(matchedEvents);
   searchResults.style.display = 'flex';
 });
 
