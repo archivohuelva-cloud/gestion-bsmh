@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Divisor de Partituras A3 a A4</title>
+    <title>Divisor y Normalizador de Partituras A3 a A4</title>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -11,7 +11,6 @@
         :root { --primary: #1a73e8; --success: #27ae60; --bg: #f8f9fa; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #333; }
         
-        /* Overlay de arrastre */
         #drop-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26, 115, 232, 0.9); 
             color: white; display: none; align-items: center; justify-content: center; z-index: 2000; border: 10px dashed white; pointer-events: none; }
         #drop-overlay.active { display: flex; }
@@ -25,7 +24,6 @@
         
         .upload-zone { border: 2px dashed var(--primary); background: #f1f7ff; padding: 30px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 20px; }
         
-        /* Lista de archivos */
         .file-list { margin: 20px 0; max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
         .file-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fff; }
         .file-item:last-child { border-bottom: none; }
@@ -36,11 +34,10 @@
 
         .controls { display: flex; gap: 10px; margin-top: 20px; }
         .btn-process { flex-grow: 1; background: var(--success); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; display: none; }
-        .btn-process:disabled { background: #ccc; }
+        .btn-process:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Modal de Vista Previa */
         #preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 3000; flex-direction: column; padding: 20px; box-sizing: border-box; }
-        #preview-modal iframe { width: 100%; height: 90%; border: none; background: white; }
+        #preview-frame { width: 100%; height: 90%; border: none; background: white; }
         .close-preview { align-self: flex-end; color: white; font-size: 30px; cursor: pointer; margin-bottom: 10px; }
 
         #status { margin-top: 15px; text-align: center; font-weight: bold; }
@@ -53,13 +50,17 @@
 <div class="container">
     <div class="header">
         <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Volver</button>
-        <h2 style="margin:0; color: var(--primary);">Divisor de partituras A3 a A4</h2>
+        <h2 style="margin:0; color: var(--primary);">Divisor y Normalizador A3 a A4</h2>
     </div>
 
     <div class="main-card">
+        <p style="font-size: 14px; color: #555; margin-top: 0;">
+            Divide pliegos A3 en dos A4 independientes y repara/limpia PDFs ya divididos previamente que conservaban recortes ocultos.
+        </p>
+
         <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
             <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--primary)"></i>
-            <p>Arrastra carpetas aquí o archivos pdf o haz clic para seleccionar</p>
+            <p>Arrastra carpetas o archivos PDF aquí o haz clic para seleccionar</p>
             <input type="file" id="fileInput" multiple accept="application/pdf" style="display:none">
         </div>
 
@@ -88,7 +89,7 @@
 <script>
     const { PDFDocument } = PDFLib;
     let queue = [];
-    let zipNameBase = "Partituras";
+    let zipNameBase = "Partituras A4";
 
     const fileInput = document.getElementById('fileInput');
     const fileListDiv = document.getElementById('fileList');
@@ -96,7 +97,6 @@
     const statusDiv = document.getElementById('status');
     const overlay = document.getElementById('drop-overlay');
 
-    // --- Gestión de Arrastre ---
     window.addEventListener('dragover', (e) => { e.preventDefault(); overlay.classList.add('active'); });
     window.addEventListener('dragleave', (e) => { if (e.relatedTarget === null) overlay.classList.remove('active'); });
     window.addEventListener('drop', async (e) => {
@@ -107,7 +107,7 @@
             for (let i = 0; i < items.length; i++) {
                 const item = items[i].webkitGetAsEntry();
                 if (item) {
-                    if (item.isDirectory) zipNameBase = item.name; // Coger nombre de la carpeta
+                    if (item.isDirectory) zipNameBase = item.name + " - A4 Limpios";
                     await scanFiles(item);
                 }
             }
@@ -119,7 +119,9 @@
         if (item.isFile) {
             const file = await new Promise(resolve => item.file(resolve));
             if (file.name.toLowerCase().endsWith('.pdf')) {
-                if (queue.length === 0 && zipNameBase === "Partituras") zipNameBase = file.name.replace(".pdf", "");
+                if (queue.length === 0 && zipNameBase === "Partituras A4") {
+                    zipNameBase = file.name.replace(".pdf", "") + " - A4 Limpios";
+                }
                 queue.push(file);
             }
         } else if (item.isDirectory) {
@@ -132,7 +134,7 @@
     fileInput.onchange = (e) => {
         const files = Array.from(e.target.files);
         if (files.length > 0) {
-            if (queue.length === 0) zipNameBase = files[0].name.replace(".pdf", "");
+            if (queue.length === 0) zipNameBase = files[0].name.replace(".pdf", "") + " - A4 Limpios";
             queue = queue.concat(files.filter(f => f.name.toLowerCase().endsWith('.pdf')));
             renderQueue();
         }
@@ -170,11 +172,10 @@
 
     function clearQueue() {
         queue = [];
-        zipNameBase = "Partituras";
+        zipNameBase = "Partituras A4";
         renderQueue();
     }
 
-    // --- Vista Previa ---
     function previewFile(index) {
         const file = queue[index];
         const url = URL.createObjectURL(file);
@@ -187,47 +188,86 @@
         document.getElementById('preview-frame').src = '';
     }
 
-    // --- Procesamiento ---
     processBtn.onclick = async () => {
         processBtn.disabled = true;
-        statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando archivos...`;
+        statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando partituras...`;
         
         try {
             const zip = new JSZip();
+
             for (let i = 0; i < queue.length; i++) {
                 const file = queue[i];
+                statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Procesando (${i + 1}/${queue.length}): ${file.name}`;
+                
                 const arrayBuffer = await file.arrayBuffer();
                 const originalPdf = await PDFDocument.load(arrayBuffer);
                 const newPdf = await PDFDocument.create();
                 const pages = originalPdf.getPages();
 
                 for (let j = 0; j < pages.length; j++) {
-                    const { width, height } = pages[j].getSize();
-                    if (width > height) {
-                        const [p1, p2] = await newPdf.copyPages(originalPdf, [j, j]);
-                        p1.setCropBox(0, 0, width / 2, height);
-                        newPdf.addPage(p1);
-                        p2.setCropBox(width / 2, 0, width / 2, height);
-                        newPdf.addPage(p2);
-                    } else {
+                    const page = pages[j];
+                    const cropBox = page.getCropBox() || page.getMediaBox();
+                    const mediaBox = page.getMediaBox();
+
+                    // CASO 1: Es un pliego apaisado (A3 u horizontal sin dividir)
+                    if (cropBox.width > cropBox.height) {
+                        const halfW = cropBox.width / 2;
+                        const pageH = cropBox.height;
+                        const [embedded] = await newPdf.embedPdf(originalPdf, [j]);
+
+                        // Mitad Izquierda (A4 limpia)
+                        const pLeft = newPdf.addPage([halfW, pageH]);
+                        pLeft.drawPage(embedded, {
+                            x: -cropBox.x,
+                            y: -cropBox.y,
+                            width: embedded.width,
+                            height: embedded.height
+                        });
+
+                        // Mitad Derecha (A4 limpia)
+                        const pRight = newPdf.addPage([halfW, pageH]);
+                        pRight.drawPage(embedded, {
+                            x: -(cropBox.x + halfW),
+                            y: -cropBox.y,
+                            width: embedded.width,
+                            height: embedded.height
+                        });
+                    } 
+                    // CASO 2: Es vertical pero tiene un recorte virtual (proviene de un divisor anterior)
+                    else if (Math.abs(cropBox.width - mediaBox.width) > 5 || Math.abs(cropBox.x) > 5) {
+                        const targetW = cropBox.width;
+                        const targetH = cropBox.height;
+                        const [embedded] = await newPdf.embedPdf(originalPdf, [j]);
+
+                        const pClean = newPdf.addPage([targetW, targetH]);
+                        pClean.drawPage(embedded, {
+                            x: -cropBox.x,
+                            y: -cropBox.y,
+                            width: embedded.width,
+                            height: embedded.height
+                        });
+                    }
+                    // CASO 3: Es una página A4 vertical ya normalizada
+                    else {
                         const [p] = await newPdf.copyPages(originalPdf, [j]);
                         newPdf.addPage(p);
                     }
                 }
+
                 const pdfBytes = await newPdf.save();
-                zip.file(file.name.replace(".pdf", ".pdf"), pdfBytes);
+                zip.file(file.name, pdfBytes);
             }
 
             const zipBlob = await zip.generateAsync({ type: "blob" });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(zipBlob);
-            link.download = `${zipNameBase} - Dividido en A4.zip`;
+            link.download = `${zipNameBase}.zip`;
             link.click();
 
-            statusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito!. Has dividido 1 partitura A3 en 2 partituras en A4.</span>`;
+            statusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito! Todas las partituras son ahora páginas A4 físicas independientes.</span>`;
         } catch (err) {
             console.error(err);
-            statusDiv.innerHTML = `<span style="color:red">Error al procesar.</span>`;
+            statusDiv.innerHTML = `<span style="color:red">Error al procesar los archivos.</span>`;
         } finally {
             processBtn.disabled = false;
         }
