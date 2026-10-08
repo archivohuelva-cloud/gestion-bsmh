@@ -553,7 +553,7 @@
         printerRenderQueue();
     }
 
-    // Procesa e imprime virtualmente usando PDF.js renderizando en Canvas y guardando con PDF-Lib
+    // Procesa e imprime virtualmente con calidad nativa (300 DPI y PNG sin pérdida)
     printerProcessBtn.onclick = async () => {
         printerProcessBtn.disabled = true;
         printerStatusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Inicializando cola de impresión...`;
@@ -574,24 +574,30 @@
                 for (let pageNum = 1; pageNum <= loadedPdf.numPages; pageNum++) {
                     const page = await loadedPdf.getPage(pageNum);
                     
-                    // Renderizamos a escala 2.0 (aprox. 150-200 DPI de alta nitidez sin saturar memoria)
-                    const viewport = page.getViewport({ scale: 2.0 });
+                    // 300 DPI reales (300 / 72 puntos por pulgada de PDF): nitidez nítida de imprenta
+                    const scaleFactor = 300 / 72;
+                    const viewport = page.getViewport({ scale: scaleFactor });
+                    
                     const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
                     canvas.width = viewport.width;
                     canvas.height = viewport.height;
+                    const ctx = canvas.getContext('2d', { alpha: false });
+
+                    // Fondo blanco limpio por si el escaneo tiene transparencias
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
                     await page.render({
                         canvasContext: ctx,
                         viewport: viewport
                     }).promise;
 
-                    // Convertir a JPEG estándar limpio
-                    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                    const imgBytes = await fetch(imgDataUrl).then(res => res.arrayBuffer());
-                    const embeddedImage = await newDoc.embedJpg(imgBytes);
+                    // PNG SIN PÉRDIDA (Lossless): evita el desenfoque y artefactos en pentagramas/notas
+                    const imgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    const imgBytes = await imgBlob.arrayBuffer();
+                    const embeddedImage = await newDoc.embedPng(imgBytes);
 
-                    // Reconstruimos la página con las dimensiones físicas exactas del PDF original
+                    // Dimensiones físicas exactas de la página original
                     const origViewport = page.getViewport({ scale: 1.0 });
                     const pdfPage = newDoc.addPage([origViewport.width, origViewport.height]);
                     
@@ -601,10 +607,14 @@
                         width: origViewport.width,
                         height: origViewport.height
                     });
+
+                    // Limpieza explícita del canvas para liberar memoria RAM
+                    canvas.width = 0;
+                    canvas.height = 0;
                 }
 
                 const pdfBytes = await newDoc.save();
-                zip.file(file.name, pdfBytes); // Mantiene exactamente el nombre original
+                zip.file(file.name, pdfBytes); // Mantiene el nombre exacto original
             }
 
             printerStatusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Empaquetando ZIP...`;
@@ -614,7 +624,7 @@
             link.download = `${printerZipNameBase}.zip`;
             link.click();
 
-            printerStatusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito! Se han re-impreso y aplanado todas las partituras respetando los nombres originales.</span>`;
+            printerStatusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito! Se han re-impreso a 300 DPI sin pérdida de nitidez.</span>`;
         } catch (err) {
             console.error(err);
             printerStatusDiv.innerHTML = `<span style="color:red">Error al imprimir las partituras en PDF.</span>`;
