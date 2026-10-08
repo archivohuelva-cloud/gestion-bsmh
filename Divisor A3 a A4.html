@@ -3,29 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Divisor y Normalizador de Partituras A3 a A4</title>
+    <title>Suite de Herramientas de Partituras</title>
+    <!-- pdf-lib -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <!-- jszip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- pdf.js para re-renderizado / impresión virtual de páginas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary: #1a73e8; --success: #27ae60; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #333; }
-        
-        #drop-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(26, 115, 232, 0.9); 
-            color: white; display: none; align-items: center; justify-content: center; z-index: 2000; border: 10px dashed white; pointer-events: none; }
-        #drop-overlay.active { display: flex; }
+        :root { 
+            --primary: #2563eb; 
+            --primary-hover: #1d4ed8;
+            --success: #27ae60; 
+            --bg: #f8fafc;
+            --sidebar-w: 220px;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: #333; display: flex; height: 100vh; overflow: hidden; }
 
-        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
+        /* Layout con Sidebar */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 10px;
+            flex-shrink: 0;
+        }
+        .sidebar-menu { display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            color: #475569;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-item:hover, .sidebar-item.active { background: #f1f5f9; color: var(--primary); }
+        .sidebar-item i { width: 18px; text-align: center; }
+
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Vistas */
+        .view-section { display: none; width: 100%; height: 100%; padding: 40px; }
+        .view-section.active { display: block; }
+
+        /* Dashboard Hub */
+        .hub-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+        .hub-title { font-size: 26px; font-weight: 700; color: #1e293b; margin-bottom: 40px; }
+        .hub-grid {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .hub-card {
+            background: var(--primary);
+            color: white;
+            width: 250px;
+            height: 180px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+            text-align: center;
+            padding: 15px;
+            text-decoration: none;
+        }
+        .hub-card:hover {
+            transform: translateY(-4px);
+            background: var(--primary-hover);
+            box-shadow: 0 14px 26px rgba(37, 99, 235, 0.3);
+        }
+        .hub-card i { font-size: 38px; }
+        .hub-card span { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; }
+
+        /* Estilos de las Herramientas */
+        .tool-container { max-width: 800px; margin: 0 auto; }
         .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-        
-        .back-btn { background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
-        
-        .main-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        
-        .upload-zone { border: 2px dashed var(--primary); background: #f1f7ff; padding: 30px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 20px; }
-        
-        .file-list { margin: 20px 0; max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
-        .file-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; background: #fff; }
+        .back-btn { background: #64748b; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .back-btn:hover { background: #475569; }
+
+        .main-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+        .upload-zone { border: 2px dashed var(--primary); background: #eff6ff; padding: 35px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 20px; transition: background 0.2s; }
+        .upload-zone:hover { background: #dbeafe; }
+
+        .file-list { margin: 20px 0; max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .file-item { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #e2e8f0; background: #fff; }
         .file-item:last-child { border-bottom: none; }
         .file-info { flex-grow: 1; font-size: 14px; }
         .file-actions { display: flex; gap: 15px; }
@@ -36,49 +129,125 @@
         .btn-process { flex-grow: 1; background: var(--success); color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; display: none; }
         .btn-process:disabled { background: #ccc; cursor: not-allowed; }
 
-        #preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 3000; flex-direction: column; padding: 20px; box-sizing: border-box; }
-        #preview-frame { width: 100%; height: 90%; border: none; background: white; }
-        .close-preview { align-self: flex-end; color: white; font-size: 30px; cursor: pointer; margin-bottom: 10px; }
+        #drop-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(37, 99, 235, 0.9); 
+            color: white; display: none; align-items: center; justify-content: center; z-index: 2000; border: 10px dashed white; pointer-events: none; }
+        #drop-overlay.active { display: flex; }
 
-        #status { margin-top: 15px; text-align: center; font-weight: bold; }
+        #preview-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 3000; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        #preview-frame { width: 100%; height: 90%; border: none; background: white; border-radius: 8px; }
+        .close-preview { align-self: flex-end; color: white; font-size: 28px; cursor: pointer; margin-bottom: 10px; font-weight: bold; }
+
+        .status-msg { margin-top: 15px; text-align: center; font-weight: 600; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div id="drop-overlay"><h1><i class="fas fa-file-import"></i> Suelta para añadir a la cola</h1></div>
 
-<div class="container">
-    <div class="header">
-        <button class="back-btn" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Volver</button>
-        <h2 style="margin:0; color: var(--primary);">Divisor y Normalizador A3 a A4</h2>
+<!-- MENÚ LATERAL -->
+<aside class="sidebar">
+    <div class="sidebar-menu">
+        <button class="sidebar-item active" onclick="showView('hub')"><i class="fas fa-home"></i> Inicio</button>
+        <button class="sidebar-item" onclick="showView('splitter')"><i class="fas fa-columns"></i> Divisor A3 => A4</button>
+        <button class="sidebar-item" onclick="showView('printer')"><i class="fas fa-print"></i> Imprimir nuevo PDF</button>
     </div>
+    <div>
+        <button class="sidebar-item" onclick="history.back()"><i class="fas fa-arrow-left"></i> Volver</button>
+    </div>
+</aside>
 
-    <div class="main-card">
-        <p style="font-size: 14px; color: #555; margin-top: 0;">
-            Divide pliegos A3 en dos A4 independientes y repara/limpia PDFs ya divididos previamente que conservaban recortes ocultos.
-        </p>
+<main class="main-content">
 
-        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
-            <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--primary)"></i>
-            <p>Arrastra carpetas o archivos PDF aquí o haz clic para seleccionar</p>
-            <input type="file" id="fileInput" multiple accept="application/pdf" style="display:none">
-        </div>
-
-        <div id="file-list-container" style="display:none;">
-            <h4 id="queue-title">Archivos en cola:</h4>
-            <div class="file-list" id="fileList"></div>
-            
-            <div class="controls">
-                <button class="btn-process" id="processBtn">
-                    <i class="fas fa-cogs"></i> PROCESAR Y GENERAR ZIP
-                </button>
-                <button onclick="clearQueue()" style="border:none; background:none; color:red; cursor:pointer;">Limpiar</button>
+    <!-- VISTA INICIAL: HUB PRINCIPAL -->
+    <section id="view-hub" class="view-section active">
+        <div class="hub-container">
+            <h1 class="hub-title">Selecciona una herramienta:</h1>
+            <div class="hub-grid">
+                <div class="hub-card" onclick="showView('splitter')">
+                    <i class="fas fa-columns"></i>
+                    <span>DIVISOR<br>A3 &rArr; A4</span>
+                </div>
+                <div class="hub-card" onclick="showView('printer')">
+                    <i class="fas fa-print"></i>
+                    <span>IMPRIMIR<br>NUEVO PDF</span>
+                </div>
             </div>
         </div>
+    </section>
 
-        <div id="status"></div>
-    </div>
-</div>
+    <!-- HERRAMIENTA 1: DIVISOR A3 => A4 -->
+    <section id="view-splitter" class="view-section">
+        <div class="tool-container">
+            <div class="header">
+                <button class="back-btn" onclick="showView('hub')"><i class="fas fa-arrow-left"></i> Volver al Inicio</button>
+                <h2 style="margin:0; color: var(--primary);">Divisor y Normalizador A3 a A4</h2>
+            </div>
+
+            <div class="main-card">
+                <p style="font-size: 14px; color: #555; margin-top: 0;">
+                    Divide pliegos A3 en dos A4 independientes y repara/limpia PDFs ya divididos previamente que conservaban recortes ocultos.
+                </p>
+
+                <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--primary)"></i>
+                    <p style="margin: 10px 0 0 0;">Arrastra carpetas o archivos PDF aquí o haz clic para seleccionar</p>
+                    <input type="file" id="fileInput" multiple accept="application/pdf" style="display:none">
+                </div>
+
+                <div id="file-list-container" style="display:none;">
+                    <h4 id="queue-title" style="margin-top:0;">Archivos en cola:</h4>
+                    <div class="file-list" id="fileList"></div>
+                    
+                    <div class="controls">
+                        <button class="btn-process" id="processBtn">
+                            <i class="fas fa-cogs"></i> PROCESAR Y GENERAR ZIP
+                        </button>
+                        <button onclick="clearQueue()" style="border:none; background:none; color:red; cursor:pointer;">Limpiar</button>
+                    </div>
+                </div>
+
+                <div id="status" class="status-msg"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HERRAMIENTA 2: IMPRIMIR NUEVO PDF (FLATTEN/PRINT A PDF) -->
+    <section id="view-printer" class="view-section">
+        <div class="tool-container">
+            <div class="header">
+                <button class="back-btn" onclick="showView('hub')"><i class="fas fa-arrow-left"></i> Volver al Inicio</button>
+                <h2 style="margin:0; color: var(--primary);">Imprimir Nuevo PDF (Re-impresión Masiva)</h2>
+            </div>
+
+            <div class="main-card">
+                <p style="font-size: 14px; color: #555; margin-top: 0;">
+                    Re-renderiza e imprime limpiamente las partituras tal como lo haría <em>Microsoft Print to PDF</em> en Windows. Elimina capas conflictivas, metadatos y repara archivos escaneados problemáticos para dejarlos listos para editar.
+                </p>
+
+                <div class="upload-zone" onclick="document.getElementById('printerFileInput').click()">
+                    <i class="fas fa-print fa-3x" style="color: var(--primary)"></i>
+                    <p style="margin: 10px 0 0 0;">Arrastra carpetas o archivos PDF aquí o haz clic para seleccionar</p>
+                    <input type="file" id="printerFileInput" multiple accept="application/pdf" style="display:none">
+                </div>
+
+                <div id="printer-list-container" style="display:none;">
+                    <h4 style="margin-top:0;">Partituras en cola para imprimir:</h4>
+                    <div class="file-list" id="printerFileList"></div>
+                    
+                    <div class="controls">
+                        <button class="btn-process" id="printerProcessBtn">
+                            <i class="fas fa-print"></i> IMPRIMIR TODO Y GENERAR ZIP
+                        </button>
+                        <button onclick="printerClearQueue()" style="border:none; background:none; color:red; cursor:pointer;">Limpiar</button>
+                    </div>
+                </div>
+
+                <div id="printerStatus" class="status-msg"></div>
+            </div>
+        </div>
+    </section>
+
+</main>
 
 <!-- Modal Vista Previa -->
 <div id="preview-modal">
@@ -87,6 +256,38 @@
 </div>
 
 <script>
+    // Configuración de PDF.js Worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    /* --- NAVEGACIÓN ENTRE VISTAS --- */
+    function showView(viewId) {
+        document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+        document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
+        
+        const target = document.getElementById('view-' + viewId);
+        if (target) target.classList.add('active');
+
+        // Marcar botón activo en sidebar
+        const navIndex = { 'hub': 0, 'splitter': 1, 'printer': 2 };
+        if (navIndex[viewId] !== undefined) {
+            document.querySelectorAll('.sidebar-item')[navIndex[viewId]].classList.add('active');
+        }
+    }
+
+    /* --- MODAL DE VISTA PREVIA COMPARTIDO --- */
+    function showPreviewUrl(file) {
+        const url = URL.createObjectURL(file);
+        document.getElementById('preview-frame').src = url;
+        document.getElementById('preview-modal').style.display = 'flex';
+    }
+    function closePreview() {
+        document.getElementById('preview-modal').style.display = 'none';
+        document.getElementById('preview-frame').src = '';
+    }
+
+    /* ==========================================
+       LÓGICA HERRAMIENTA 1: DIVISOR A3 => A4 (ORIGINAL)
+       ========================================== */
     const { PDFDocument } = PDFLib;
     let queue = [];
     let zipNameBase = "Partituras A4";
@@ -103,7 +304,21 @@
         e.preventDefault();
         overlay.classList.remove('active');
         const items = e.dataTransfer.items;
-        if (items) {
+        if (!items) return;
+
+        // Detectar si estamos en Divisor o en Impresora
+        const isPrinterActive = document.getElementById('view-printer').classList.contains('active');
+
+        if (isPrinterActive) {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i].webkitGetAsEntry();
+                if (item) {
+                    if (item.isDirectory) printerZipNameBase = item.name + " - Impresos";
+                    await printerScanFiles(item);
+                }
+            }
+            printerRenderQueue();
+        } else {
             for (let i = 0; i < items.length; i++) {
                 const item = items[i].webkitGetAsEntry();
                 if (item) {
@@ -177,15 +392,7 @@
     }
 
     function previewFile(index) {
-        const file = queue[index];
-        const url = URL.createObjectURL(file);
-        document.getElementById('preview-frame').src = url;
-        document.getElementById('preview-modal').style.display = 'flex';
-    }
-
-    function closePreview() {
-        document.getElementById('preview-modal').style.display = 'none';
-        document.getElementById('preview-frame').src = '';
+        showPreviewUrl(queue[index]);
     }
 
     processBtn.onclick = async () => {
@@ -270,6 +477,149 @@
             statusDiv.innerHTML = `<span style="color:red">Error al procesar los archivos.</span>`;
         } finally {
             processBtn.disabled = false;
+        }
+    };
+
+
+    /* ==========================================
+       LÓGICA HERRAMIENTA 2: IMPRIMIR NUEVO PDF
+       ========================================== */
+    let printerQueue = [];
+    let printerZipNameBase = "Partituras Impresas";
+
+    const printerFileInput = document.getElementById('printerFileInput');
+    const printerFileListDiv = document.getElementById('printerFileList');
+    const printerProcessBtn = document.getElementById('printerProcessBtn');
+    const printerStatusDiv = document.getElementById('printerStatus');
+
+    async function printerScanFiles(item) {
+        if (item.isFile) {
+            const file = await new Promise(resolve => item.file(resolve));
+            if (file.name.toLowerCase().endsWith('.pdf')) {
+                if (printerQueue.length === 0 && printerZipNameBase === "Partituras Impresas") {
+                    printerZipNameBase = file.name.replace(".pdf", "") + " - Impresos";
+                }
+                printerQueue.push(file);
+            }
+        } else if (item.isDirectory) {
+            const reader = item.createReader();
+            const entries = await new Promise(resolve => reader.readEntries(resolve));
+            for (const entry of entries) await printerScanFiles(entry);
+        }
+    }
+
+    printerFileInput.onchange = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            if (printerQueue.length === 0) printerZipNameBase = files[0].name.replace(".pdf", "") + " - Impresos";
+            printerQueue = printerQueue.concat(files.filter(f => f.name.toLowerCase().endsWith('.pdf')));
+            printerRenderQueue();
+        }
+    };
+
+    function printerRenderQueue() {
+        printerFileListDiv.innerHTML = '';
+        if (printerQueue.length > 0) {
+            document.getElementById('printer-list-container').style.display = 'block';
+            printerProcessBtn.style.display = 'block';
+            printerQueue.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <div class="file-info">
+                        <strong>${file.name}</strong><br>
+                        <small>${(file.size / 1024).toFixed(1)} KB</small>
+                    </div>
+                    <div class="file-actions">
+                        <i class="fas fa-eye btn-preview" title="Vista Previa" onclick="showPreviewUrl(printerQueue[${index}])"></i>
+                        <i class="fas fa-trash btn-remove" title="Quitar" onclick="printerRemoveFromQueue(${index})"></i>
+                    </div>
+                `;
+                printerFileListDiv.appendChild(item);
+            });
+        } else {
+            document.getElementById('printer-list-container').style.display = 'none';
+        }
+    }
+
+    function printerRemoveFromQueue(index) {
+        printerQueue.splice(index, 1);
+        printerRenderQueue();
+    }
+
+    function printerClearQueue() {
+        printerQueue = [];
+        printerZipNameBase = "Partituras Impresas";
+        printerRenderQueue();
+    }
+
+    // Procesa e imprime virtualmente usando PDF.js renderizando en Canvas y guardando con PDF-Lib
+    printerProcessBtn.onclick = async () => {
+        printerProcessBtn.disabled = true;
+        printerStatusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Inicializando cola de impresión...`;
+        
+        try {
+            const zip = new JSZip();
+
+            for (let i = 0; i < printerQueue.length; i++) {
+                const file = printerQueue[i];
+                printerStatusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Imprimiendo (${i + 1}/${printerQueue.length}): <strong>${file.name}</strong>`;
+                
+                const arrayBuffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                const loadedPdf = await loadingTask.promise;
+                
+                const newDoc = await PDFDocument.create();
+
+                for (let pageNum = 1; pageNum <= loadedPdf.numPages; pageNum++) {
+                    const page = await loadedPdf.getPage(pageNum);
+                    
+                    // Renderizamos a escala 2.0 (aprox. 150-200 DPI de alta nitidez sin saturar memoria)
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: viewport
+                    }).promise;
+
+                    // Convertir a JPEG estándar limpio
+                    const imgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                    const imgBytes = await fetch(imgDataUrl).then(res => res.arrayBuffer());
+                    const embeddedImage = await newDoc.embedJpg(imgBytes);
+
+                    // Reconstruimos la página con las dimensiones físicas exactas del PDF original
+                    const origViewport = page.getViewport({ scale: 1.0 });
+                    const pdfPage = newDoc.addPage([origViewport.width, origViewport.height]);
+                    
+                    pdfPage.drawImage(embeddedImage, {
+                        x: 0,
+                        y: 0,
+                        width: origViewport.width,
+                        height: origViewport.height
+                    });
+                }
+
+                const pdfBytes = await newDoc.save();
+                zip.file(file.name, pdfBytes); // Mantiene exactamente el nombre original
+            }
+
+            printerStatusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Empaquetando ZIP...`;
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = `${printerZipNameBase}.zip`;
+            link.click();
+
+            printerStatusDiv.innerHTML = `<span style="color:var(--success)">¡Completado con éxito! Se han re-impreso y aplanado todas las partituras respetando los nombres originales.</span>`;
+        } catch (err) {
+            console.error(err);
+            printerStatusDiv.innerHTML = `<span style="color:red">Error al imprimir las partituras en PDF.</span>`;
+        } finally {
+            printerProcessBtn.disabled = false;
         }
     };
 </script>
