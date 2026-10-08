@@ -1381,143 +1381,76 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     display: flex !important;
   }
 
-  /* Cabecera móvil en 2 filas limpias */
+  /* Cabecera ultra-compacta estilo iOS */
   .header { 
-    padding: 8px 10px; 
-    gap: 8px; 
+    padding: 6px 10px; 
+    gap: 4px; 
     display: flex;
     flex-direction: column;
-    width: 100%;
   }
 
-  /* FILA 1: Deshacer/Rehacer | ‹ Mes y Año › | Acciones derechas */
   .mobile-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    gap: 4px;
+  }
+  .mobile-top-left {
+    display: flex;
+    align-items: center;
     gap: 6px;
   }
-
-  /* Botones Deshacer y Rehacer redondos con fondo blanco y flechas negras */
-  .mobile-top-bar .history-controls {
-    display: flex;
-    gap: 5px;
-    background: transparent;
-    border: none;
-    padding: 0;
-  }
-  .mobile-top-bar .btn-history {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: #000000 !important;
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    padding: 0;
-    border-radius: 50%;
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-  .mobile-top-bar .btn-history svg {
-    width: 15px;
-    height: 15px;
-  }
-  .mobile-top-bar .btn-history:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-
-  /* Bloque central: ‹ Mes y Año › */
-  .mobile-nav-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex: 1;
-    min-width: 0;
-  }
-  .mobile-nav-center .btn-nav {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    padding: 0;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 15px;
-    font-weight: 700;
-  }
-  .mobile-nav-center .period-label {
-    font-size: 14px;
-    font-weight: 700;
-    padding: 2px 4px;
-    min-width: unset;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: center;
-  }
-
-  /* Botones derechos: Lupa, +, Sincronizar, PDF */
   .mobile-top-right {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
+    margin-left: auto;
   }
-  .mobile-top-right .btn-action {
-    padding: 0;
+
+  .header-current-time {
+    display: none !important;
+  }
+
+  .btn-back-custom {
+    padding: 6px;
+    border-radius: 50%;
     width: 32px;
     height: 32px;
     min-width: 32px;
     justify-content: center;
+  }
+  .btn-back-custom span { display: none; }
+
+  .mobile-top-right .btn-action {
+    padding: 6px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    justify-content: center;
     border-radius: 50%;
   }
+  .mobile-top-right .btn-action span.btn-label-text { display: none; }
 
-  /* FILA 2: Agenda | Día | Mes | Año | Hoy */
-  .mobile-tabs-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    background: rgba(118, 118, 128, 0.12);
-    border-radius: 9px;
-    padding: 2px;
-    gap: 2px;
-  }
-  .mobile-tabs-row .view-tab,
-  .mobile-tabs-row .btn-today-tab {
-    flex: 1;
-    text-align: center;
-    padding: 6px 0;
-    font-size: 12.5px;
-    border-radius: 7px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-weight: 500;
-    color: var(--text);
-  }
-  .mobile-tabs-row .view-tab.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    font-weight: 700;
-  }
-  .mobile-tabs-row .btn-today-tab {
-    font-weight: 700;
-    color: var(--accent-blue);
+  .modal .btn-action, 
+  .modal-footer .btn-action {
+    width: auto !important;
+    min-width: unset !important;
+    height: auto !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    display: inline-flex !important;
   }
 
-  /* Ocultar barra clásica de PC para que no colisione */
-  .header-nav { display: none !important; }
-  .view-tabs:not(.mobile-tabs-row) { display: none !important; }
-  .header-current-time { display: none !important; }
+  .btn-action.btn-add-header {
+    display: flex !important;
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+  }
 
-  /* Buscador superpuesto */
   .search-container {
     position: static;
     width: auto;
@@ -1554,6 +1487,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     background: transparent;
     font-size: 14px;
   }
+  .search-input:focus {
+    box-shadow: none;
+  }
   .search-results-dropdown {
     top: 92px;
     left: 12px;
@@ -1565,20 +1501,58 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     z-index: 401;
   }
 
-  #calendar-container { padding: 8px 10px; }
+  .header-nav {
+    width: 100%;
+    justify-content: space-between;
+    margin: 2px 0 0 0;
+  }
+  .period-label {
+    font-size: 15px;
+    min-width: unset;
+    padding: 2px 4px;
+  }
+  .btn-nav {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
 
-  /* ESTRUCTURA VERTICAL CORREGIDA: Calendario arriba, lista de eventos abajo */
+  .view-tabs {
+    width: 100%;
+    margin-top: 2px;
+    justify-content: center;
+  }
+  .view-tab {
+    flex: 1;
+    text-align: center;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+
+  #calendar-container { padding: 8px; }
+  .month-day { min-height: 80px; padding: 3px; }
+  .day-num { font-size: 11px; min-width: 18px; height: 18px; }
+  .event-chip { font-size: 9px; padding: 2px 4px; }
+  .btn-event-quick-delete { display: flex !important; }
+  .modal, .modal-wide {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 20px 20px 0 0;
+    position: fixed;
+    bottom: 0;
+    transform: translateY(100%);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-overlay { align-items: flex-end; }
+  .view-detail-card { grid-template-columns: 1fr; }
+
+  /* CUADRÍCULA Y PANEL MÓVIL ESTILO iOS */
   .ios-month-wrapper {
     display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    gap: 12px !important;
+    flex-direction: column;
+    gap: 14px;
     padding-bottom: 20px;
   }
   .ios-month-grid {
-    width: 100% !important;
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important;
     background: var(--surface) !important;
     border: none !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
@@ -1593,7 +1567,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     color: var(--text-dim);
     background: transparent !important;
     border: none !important;
-    text-align: center;
   }
   .ios-month-grid .month-header.weekend-col {
     color: #9d174d;
@@ -1667,9 +1640,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     flex-shrink: 0;
   }
 
-  /* Tarjeta de eventos debajo del mes */
   .ios-month-day-detail {
-    width: 100% !important;
     background: var(--surface);
     border-radius: 14px;
     padding: 14px 16px;
@@ -1680,7 +1651,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 10px;
+    padding-bottom: 12px;
     border-bottom: 0.5px solid var(--border);
     margin-bottom: 12px;
   }
@@ -1689,65 +1660,176 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     font-weight: 700;
     color: var(--text);
   }
+  .ios-day-detail-add {
+    display: none !important;
+  }
+  .agenda-add-btn {
+    display: none !important;
+  }
   .ios-day-events-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    width: 100%;
   }
   .ios-day-event-card {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 12px;
+    padding: 10px 14px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
     cursor: pointer;
-    width: 100%;
+  }
+  .ios-day-event-card.is-past-card {
+    opacity: 0.65;
   }
   .ios-day-event-left {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
     min-width: 0;
     flex: 1;
   }
   .ios-event-strip {
     width: 4px;
-    height: 36px;
+    height: 32px;
     border-radius: 3px;
     flex-shrink: 0;
-    margin-top: 2px;
   }
   .ios-day-event-info {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
-    flex: 1;
   }
   .ios-day-event-name {
-    font-size: 13.5px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text);
-    word-break:
-
-   /* Notas en las tarjetas móviles: separación clara con línea horizontal */
-  .ios-day-event-notes {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ios-day-event-sub {
     font-size: 12px;
-    color: #374151;
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.45;
-    margin-top: 10px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ios-day-event-right {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
     display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    width: 100%;
+    align-items: center;
+    gap: 10px;
+  }
+  /* Optimización barra de filtros de Año en móvil (solo iconos) */
+  .year-filters {
+    padding: 8px 12px;
+    gap: 12px;
+    justify-content: space-around;
+    border-radius: 12px;
+  }
+  .year-filters .filter-label {
+    display: none !important;
+  }
+  .year-filters .filter-text {
+    display: none !important;
+  }
+  .year-filters .range-toggle {
+    gap: 5px;
+  }
+}
+
+/* Filtros de la vista Año en móvil: 4 columnas con icono arriba y texto centrado abajo */
+  @media (max-width: 768px) {
+    .year-filters {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 4px !important;
+      padding: 8px 4px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      justify-content: stretch !important;
+    }
+    .year-filters .filter-label {
+      display: none !important;
+    }
+    .year-filters .range-toggle {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      gap: 3px !important;
+      margin: 0 !important;
+      padding: 4px 2px !important;
+      min-width: 0 !important;
+      cursor: pointer;
+    }
+    .year-filters .range-toggle > span:not(.filter-text) {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 3px !important;
+    }
+    .year-filters .filter-text {
+      display: block !important;
+      font-size: 10.5px !important;
+      font-weight: 700 !important;
+      color: var(--text) !important;
+      line-height: 1.1 !important;
+      white-space: nowrap !important;
+      text-align: center !important;
+    }
+    .year-filters .checkbox {
+      width: 16px !important;
+      height: 16px !important;
+      min-width: 16px !important;
+    }
+  }
+
+  /* Sombreado para eventos pasados de hora */
+  .ios-day-event-card.is-event-expired {
+    opacity: 0.45 !important;
+    background-color: #f3f4f6 !important;
+    border-color: #e5e7eb !important;
+  }
+  .ios-day-event-card.is-event-expired .ios-event-strip {
+    filter: grayscale(70%) !important;
+  }
+  .ios-day-event-card.is-event-expired .ios-day-event-name,
+  .ios-day-event-card.is-event-expired .ios-day-event-right {
+    color: #9ca3af !important;
+  }
+
+  /* Círculo azul para días con actuación en móvil (Mes y Año) */
+  @media (max-width: 768px) {
+    /* En vista Mes: rodea el número con círculo azul, excepto si es hoy (predomina rojo) */
+    .ios-month-grid .month-day.has-actuacion:not(.today) .day-num {
+      border: 2px solid var(--accent-blue) !important;
+      color: var(--accent-blue) !important;
+      font-weight: 700 !important;
+      border-radius: 50% !important;
+    }
+
+    /* En vista Año: rodea el número con círculo azul, excepto si es hoy (predomina rojo) */
+    .year-mini-day.has-actuacion:not(.today) .day-number-span {
+      border: 1.5px solid var(--accent-blue) !important;
+      border-radius: 50% !important;
+      width: 20px !important;
+      height: 20px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      color: var(--accent-blue) !important;
+      font-weight: 700 !important;
+    }
   }
 </style>
 </head>
@@ -1762,24 +1844,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 <!-- HEADER -->
 <header class="header" id="main-header">
   
-  <!-- BARRA MÓVIL (2 FILAS) -->
-  <!-- FILA 1: Deshacer/Rehacer | ‹ Mes y Año › | Buscar, Añadir, Sinc, Descargar -->
+  <!-- BARRA MÓVIL (Solo se muestra en iPhone/Móvil) -->
   <div class="mobile-top-bar mobile-only">
-    <div class="history-controls">
-      <button class="btn-history" id="btn-undo-m" onclick="undo()" title="Deshacer" disabled>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+    <div class="mobile-top-left">
+      <button onclick="window.history.back()" class="btn-back-custom" title="Volver">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       </button>
-      <button class="btn-history" id="btn-redo-m" onclick="redo()" title="Rehacer" disabled>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg>
-      </button>
+      <div class="history-controls">
+        <button class="btn-history" id="btn-undo-m" onclick="undo()" title="Deshacer" disabled>↶</button>
+        <button class="btn-history" id="btn-redo-m" onclick="redo()" title="Rehacer" disabled>↷</button>
+      </div>
     </div>
-
-    <div class="mobile-nav-center">
-      <button class="btn-nav" onclick="navigate(-1)">‹</button>
-      <div class="period-label" id="period-label-m" ondblclick="openQuickJumpModal()">—</div>
-      <button class="btn-nav" onclick="navigate(1)">›</button>
-    </div>
-
     <div class="mobile-top-right header-actions">
       <div class="search-container" id="search-container">
         <button type="button" class="btn-action search-toggle-btn" onclick="toggleMobileSearch(event)" title="Buscar">
@@ -1800,15 +1875,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       </button>
     </div>
-  </div>
-
-  <!-- FILA 2: Agenda | Día | Mes | Año | Hoy -->
-  <div class="mobile-tabs-row mobile-only">
-    <button class="view-tab" data-view="agenda">Agenda</button>
-    <button class="view-tab" data-view="dia">Día</button>
-    <button class="view-tab active" data-view="mes">Mes</button>
-    <button class="view-tab" data-view="ano">Año</button>
-    <button class="btn-today-tab" onclick="goToday()">Hoy</button>
   </div>
 
   <!-- BARRA ESCRITORIO PC ORIGINAL (Exactamente como 1.txt) -->
@@ -3442,32 +3508,13 @@ document.querySelectorAll('.view-tab').forEach(btn => {
 /* ═══════════════════════════════════════
    RENDER DISPATCHER
 ═══════════════════════════════════════ */
-function updateViewTabsUI() {
-  document.querySelectorAll('.view-tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === currentView);
-  });
-}
-
-function updateMobilePeriodLabel(text) {
-  const pLabelM = document.getElementById('period-label-m');
-  if (pLabelM) pLabelM.textContent = text;
-}
-
 function render() {
-  updateViewTabsUI();
   if (currentView === 'mes') renderMonth();
   else if (currentView === 'semana') renderWeek();
   else if (currentView === 'dia') renderDay();
   else if (currentView === 'agenda') renderAgenda();
   else if (currentView === 'ano') renderYear();
 }
-
-document.querySelectorAll('.view-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentView = btn.dataset.view;
-    render();
-  });
-});
 
 /* ═══════════════════════════════════════
    MONTH VIEW (HÍBRIDA PURA POR CSS)
@@ -3477,9 +3524,7 @@ let selectedMobileDateStr = null;
 function renderMonth() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const titleTxt = `${MONTHS_ES[month]} ${year}`;
-  document.getElementById('period-label').textContent = titleTxt;
-  updateMobilePeriodLabel(titleTxt);
+  document.getElementById('period-label').textContent = `${MONTHS_ES[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -3498,7 +3543,7 @@ function renderMonth() {
     }
   }
 
-  // 1. VISTA ESCRITORIO PC
+  // 1. GENERAR VISTA ESCRITORIO PC (Exactamente la original de 1.txt)
   let desktopHtml = '<div class="desktop-only" style="width:100%;"><div class="month-grid" style="width:100%;">';
   DAYS_ES.forEach((d, idx) => {
     const isWk = idx >= 5;
@@ -3521,9 +3566,8 @@ function renderMonth() {
   }
   desktopHtml += '</div></div>';
 
-  // 2. VISTA MÓVIL (Calendario arriba y detalle debajo a pantalla completa)
-  let mobileHtml = '<div class="mobile-only ios-month-wrapper">';
-  mobileHtml += '<div class="ios-month-grid">';
+  // 2. GENERAR VISTA MÓVIL (Estilo iOS de 7.txt)
+  let mobileHtml = '<div class="mobile-only ios-month-wrapper" style="width:100%;"><div class="month-grid ios-month-grid" style="width:100%;">';
   DAYS_ES.forEach((d, idx) => {
     const isWk = idx >= 5;
     mobileHtml += `<div class="month-header ${isWk ? 'weekend-col' : ''}">${d.slice(0, 1).toUpperCase()}</div>`;
@@ -3545,6 +3589,7 @@ function renderMonth() {
   mobileHtml += renderIOSDayDetailBlock(selectedMobileDateStr);
   mobileHtml += '</div>';
 
+  // Inyectar ambos bloques
   document.getElementById('calendar-container').innerHTML = desktopHtml + mobileHtml;
 
   // Listeners versión PC
@@ -3585,6 +3630,7 @@ function renderIOSMonthCell(d, otherMonth) {
   const weekendClass = isWeekendDay(d) ? 'is-weekend' : '';
   const pastClass = isPastDay(d) ? 'is-past' : '';
   const selectedClass = (selectedMobileDateStr === ds) ? 'ios-selected' : '';
+  const actuacionClass = dayEvents.some(ev => !!ev.actuacion) ? 'has-actuacion' : '';
 
   let dotsHtml = '<div class="ios-dots-row">';
   dayEvents.slice(0, 4).forEach(ev => {
@@ -3600,7 +3646,7 @@ function renderIOSMonthCell(d, otherMonth) {
   });
   dotsHtml += '</div>';
 
-  return `<div class="month-day ${todayClass} ${otherClass} ${weekendClass} ${pastClass} ${selectedClass}" data-date="${ds}">
+  return `<div class="month-day ${todayClass} ${otherClass} ${weekendClass} ${pastClass} ${selectedClass} ${actuacionClass}" data-date="${ds}">
     <div class="month-day-top-bar">
       <div class="day-num">${d.getDate()}</div>
     </div>
@@ -3613,6 +3659,8 @@ function renderIOSDayDetailBlock(ds) {
   const dObj = parseDate(ds);
   const dow = (dObj.getDay() + 6) % 7;
   const isPast = isPastDay(dObj);
+  const isTargetToday = isToday(dObj);
+  const now = new Date();
   const fechaCompleta = `${DAYS_FULL[dow]}, ${dObj.getDate()} de ${MONTHS_ES[dObj.getMonth()]}`;
 
   let html = `<div class="ios-month-day-detail">
@@ -3629,15 +3677,31 @@ function renderIOSDayDetailBlock(ds) {
       const title = getEventTitle(ev);
       const timeDisplay = formatTimeRangeDisplay(ev);
       const ubi = ev.ubicacion ? `📍 ${formatUbicacionDisplay(ev.ubicacion)}` : '';
-      
-      // Fila inferior con salto de línea real, borde horizontal claro y emoji alineado
+
+      // Comprobación de si ha pasado de hora
+      let isExpired = false;
+      if (isPast) {
+        isExpired = true;
+      } else if (isTargetToday) {
+        const isAllDay = (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si');
+        if (!isAllDay) {
+          const { endObj } = getEventStartAndEndDates(ev, ds);
+          if (now.getTime() > endObj.getTime()) {
+            isExpired = true;
+          }
+        }
+      }
+
+      const expiredClass = isExpired ? 'is-event-expired' : '';
+
+      // Notas con separación y emoji
       const notesHtml = ev.notes ? `
         <div style="width:100%; margin-top:8px; padding-top:6px; border-top:1px solid rgba(0,0,0,0.12); display:flex; align-items:flex-start; gap:6px; font-size:12px; color:#374151; line-height:1.4; word-break:break-word;">
           <span style="flex-shrink:0;">📝</span>
           <span style="flex:1;">${ev.notes}</span>
         </div>` : '';
 
-      html += `<div class="ios-day-event-card ${isPast ? 'is-past-card' : ''}" data-id="${ev.id}" style="display:flex; flex-direction:column; padding:10px 12px; gap:0;">
+      html += `<div class="ios-day-event-card ${expiredClass}" data-id="${ev.id}" style="display:flex; flex-direction:column; padding:10px 12px; gap:0;">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; width:100%; gap:10px;">
           <div class="ios-day-event-left" style="display:flex; align-items:flex-start; gap:10px; min-width:0; flex:1;">
             <div class="ios-event-strip" style="background:${style.color};"></div>
@@ -4072,28 +4136,32 @@ function renderYear() {
     <div class="year-filters">
       <span class="filter-label">FILTRAR POR CATEGORÍAS:</span>
       <label class="range-toggle" onclick="toggleYearFilter('ensayos')">
-        <div class="checkbox ${yearFilterEnsayos ? 'checked' : ''}" id="filter-ensayos-cb"></div>
         <span style="display:flex;align-items:center;gap:4px;">
-          <span class="year-dot ensayo" style="display:inline-block;"></span> 🎵<span class="filter-text"> Sala de Ensayo</span>
+          <div class="checkbox ${yearFilterEnsayos ? 'checked' : ''}" id="filter-ensayos-cb"></div>
+          <span class="year-dot ensayo" style="display:inline-block;"></span> 🎵
         </span>
+        <span class="filter-text">Ensayo</span>
       </label>
       <label class="range-toggle" onclick="toggleYearFilter('logistica')">
-        <div class="checkbox ${yearFilterLogistica ? 'checked' : ''}" id="filter-logistica-cb"></div>
         <span style="display:flex;align-items:center;gap:4px;">
-          <span class="year-dot logistica" style="display:inline-block;"></span> 🚚<span class="filter-text"> Logística</span>
+          <div class="checkbox ${yearFilterLogistica ? 'checked' : ''}" id="filter-logistica-cb"></div>
+          <span class="year-dot logistica" style="display:inline-block;"></span> 🚚
         </span>
+        <span class="filter-text">Transporte</span>
       </label>
       <label class="range-toggle" onclick="toggleYearFilter('actuaciones')">
-        <div class="checkbox ${yearFilterActuaciones ? 'checked' : ''}" id="filter-actuaciones-cb"></div>
         <span style="display:flex;align-items:center;gap:4px;">
-          <span class="year-dot actuacion" style="display:inline-block;"></span> 🎺<span class="filter-text"> Actuaciones</span>
+          <div class="checkbox ${yearFilterActuaciones ? 'checked' : ''}" id="filter-actuaciones-cb"></div>
+          <span class="year-dot actuacion" style="display:inline-block;"></span> 🎺
         </span>
+        <span class="filter-text">Actuación</span>
       </label>
       <label class="range-toggle" onclick="toggleYearFilter('especial')">
-        <div class="checkbox ${yearFilterEspecial ? 'checked' : ''}" id="filter-especial-cb"></div>
         <span style="display:flex;align-items:center;gap:4px;">
-          <span class="year-dot especial" style="display:inline-block;"></span> ⭐<span class="filter-text"> Especial</span>
+          <div class="checkbox ${yearFilterEspecial ? 'checked' : ''}" id="filter-especial-cb"></div>
+          <span class="year-dot especial" style="display:inline-block;"></span> ⭐
         </span>
+        <span class="filter-text">Especial</span>
       </label>
     </div>
     <div class="year-grid">`;
@@ -4146,7 +4214,9 @@ function renderYear() {
       }
       dotsHtml += '</div>';
 
-      html += `<div class="year-mini-day ${isTod} ${wkClass}" data-date="${ds}">
+      const actClass = hasActuacion ? 'has-actuacion' : '';
+
+      html += `<div class="year-mini-day ${isTod} ${wkClass} ${actClass}" data-date="${ds}">
         <span class="day-number-span">${d}</span>
         ${dotsHtml}
       </div>`;
