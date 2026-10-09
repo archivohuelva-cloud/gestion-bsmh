@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Calendario de Ensayos y Transporte — Banda</title>
 <!-- Librerías jsPDF, AutoTable y JSZip -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1996,6 +1996,47 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     .mobile-tabs-row.mobile-only {
       margin-top: 0 !important;
       width: 100% !important;
+    }
+  }
+
+  /* 1. Elimina el zoom por doble toque en toda la aplicación y botones */
+  html, body, button, input, select, textarea, .period-label {
+    touch-action: manipulation !important;
+  }
+
+  /* 2. Evita zoom automático de Safari en iPhone manteniendo font-size >= 16px al enfocar */
+  @media (max-width: 768px) {
+    #calendar-search-input-m,
+    .search-input {
+      font-size: 16px !important; /* En iOS previene 100% el auto-zoom al escribir */
+    }
+
+    /* 3. Asegura que la caja de búsqueda y su lista encajen perfectamente en pantalla sin cortarse a la derecha */
+    .search-input-wrapper {
+      left: 10px !important;
+      right: 10px !important;
+      width: auto !important;
+      max-width: calc(100vw - 20px) !important;
+      box-sizing: border-box !important;
+    }
+
+    .search-results-dropdown {
+      left: 10px !important;
+      right: 10px !important;
+      width: auto !important;
+      max-width: calc(100vw - 20px) !important;
+      box-sizing: border-box !important;
+    }
+
+    .search-result-item {
+      padding: 8px 10px !important;
+      gap: 8px !important;
+    }
+
+    .search-item-time-col {
+      max-width: 80px !important;
+      text-align: right !important;
+      flex-shrink: 0 !important;
     }
   }
 </style>
