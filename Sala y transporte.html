@@ -1982,6 +1982,22 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     padding-top: 2px;
     border-top: 0.5px dashed rgba(0, 0, 0, 0.15);
   }
+
+  /* Separación real y hueco de seguridad entre la Fila 1 y la Fila 2 en móvil */
+  @media (max-width: 768px) {
+    header#main-header {
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+    }
+    .mobile-top-bar.mobile-only {
+      margin-bottom: 28px !important; /* Crea el hueco físico entre Fila 1 y Fila 2 */
+      width: 100% !important;
+    }
+    .mobile-tabs-row.mobile-only {
+      margin-top: 0 !important;
+      width: 100% !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1993,7 +2009,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 </div>
 
 <!-- HEADER -->
-<!-- BARRA MÓVIL (2 FILAS) -->
+<header class="header" id="main-header">
+  
+  <!-- BARRA MÓVIL (2 FILAS) -->
   <!-- FILA 1: Deshacer/Rehacer | ‹ Mes y Año › | Buscar, Añadir, Sinc, Descargar -->
   <div class="mobile-top-bar mobile-only">
     <div class="history-controls">
@@ -2040,7 +2058,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     <button class="view-tab active" data-view="mes">Mes</button>
     <button class="view-tab" data-view="ano">Año</button>
     <button class="btn-today-tab" onclick="goToday()">Hoy</button>
-  </div>
   </div>
 
   <!-- BARRA ESCRITORIO PC ORIGINAL (Exactamente como 1.txt) -->
