@@ -1381,76 +1381,142 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     display: flex !important;
   }
 
-  /* Cabecera ultra-compacta estilo iOS */
+  /* Cabecera ultra-compacta estilo iOS en 2 filas limpias */
   .header { 
-    padding: 6px 10px; 
-    gap: 4px; 
+    padding: 8px 10px; 
+    gap: 8px; 
     display: flex;
     flex-direction: column;
+    width: 100%;
   }
 
+  /* FILA 1: Deshacer/Rehacer | ‹ Mes y Año › | Buscar, Añadir, Sinc, Descargar */
   .mobile-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    gap: 4px;
-  }
-  .mobile-top-left {
-    display: flex;
-    align-items: center;
     gap: 6px;
   }
+
+  /* Botones Deshacer y Rehacer circulares en blanco con flechas vectoriales negras */
+  .mobile-top-bar .history-controls {
+    display: flex;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+  .mobile-top-bar .btn-history {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: #000000 !important;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .mobile-top-bar .btn-history svg {
+    width: 15px;
+    height: 15px;
+  }
+  .mobile-top-bar .btn-history:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  /* Selector central de mes/año y flechas en Fila 1 */
+  .mobile-nav-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+  }
+  .mobile-nav-center .btn-nav {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .mobile-nav-center .period-label {
+    font-size: 14px;
+    font-weight: 700;
+    padding: 2px 4px;
+    min-width: unset;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
   .mobile-top-right {
     display: flex;
     align-items: center;
-    gap: 4px;
-    margin-left: auto;
+    gap: 5px;
   }
-
-  .header-current-time {
-    display: none !important;
-  }
-
-  .btn-back-custom {
-    padding: 6px;
-    border-radius: 50%;
+  .mobile-top-right .btn-action {
+    padding: 0;
     width: 32px;
     height: 32px;
     min-width: 32px;
     justify-content: center;
-  }
-  .btn-back-custom span { display: none; }
-
-  .mobile-top-right .btn-action {
-    padding: 6px;
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    justify-content: center;
     border-radius: 50%;
   }
-  .mobile-top-right .btn-action span.btn-label-text { display: none; }
 
-  .modal .btn-action, 
-  .modal-footer .btn-action {
-    width: auto !important;
-    min-width: unset !important;
-    height: auto !important;
-    padding: 8px 16px !important;
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    display: inline-flex !important;
+  /* FILA 2: Pestañas de vista con botón Hoy integrado y sin Semana */
+  .mobile-tabs-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: rgba(118, 118, 128, 0.12);
+    border-radius: 9px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .mobile-tabs-row .view-tab,
+  .mobile-tabs-row .btn-today-tab {
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12.5px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .mobile-tabs-row .view-tab.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-weight: 700;
+  }
+  .mobile-tabs-row .btn-today-tab {
+    font-weight: 700;
+    color: var(--accent-blue);
   }
 
-  .btn-action.btn-add-header {
-    display: flex !important;
-    background: var(--accent);
-    color: #ffffff;
-    border-color: var(--accent);
-  }
+  /* Ocultar elementos de escritorio que puedan duplicarse */
+  .header-nav { display: none !important; }
+  .view-tabs:not(.mobile-tabs-row) { display: none !important; }
+  .header-current-time { display: none !important; }
 
+  /* Buscador superpuesto */
   .search-container {
     position: static;
     width: auto;
@@ -1487,9 +1553,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     background: transparent;
     font-size: 14px;
   }
-  .search-input:focus {
-    box-shadow: none;
-  }
   .search-results-dropdown {
     top: 92px;
     left: 12px;
@@ -1501,58 +1564,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     z-index: 401;
   }
 
-  .header-nav {
-    width: 100%;
-    justify-content: space-between;
-    margin: 2px 0 0 0;
-  }
-  .period-label {
-    font-size: 15px;
-    min-width: unset;
-    padding: 2px 4px;
-  }
-  .btn-nav {
-    padding: 4px 10px;
-    font-size: 12px;
-  }
-
-  .view-tabs {
-    width: 100%;
-    margin-top: 2px;
-    justify-content: center;
-  }
-  .view-tab {
-    flex: 1;
-    text-align: center;
-    padding: 4px 0;
-    font-size: 12px;
-  }
-
-  #calendar-container { padding: 8px; }
-  .month-day { min-height: 80px; padding: 3px; }
-  .day-num { font-size: 11px; min-width: 18px; height: 18px; }
-  .event-chip { font-size: 9px; padding: 2px 4px; }
-  .btn-event-quick-delete { display: flex !important; }
-  .modal, .modal-wide {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    border-radius: 20px 20px 0 0;
-    position: fixed;
-    bottom: 0;
-    transform: translateY(100%);
-  }
-  .modal-overlay.open .modal { transform: translateY(0); }
-  .modal-overlay { align-items: flex-end; }
-  .view-detail-card { grid-template-columns: 1fr; }
+  #calendar-container { padding: 8px 10px; }
 
   /* CUADRÍCULA Y PANEL MÓVIL ESTILO iOS */
   .ios-month-wrapper {
     display: flex !important;
-    flex-direction: column;
-    gap: 14px;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
     padding-bottom: 20px;
   }
   .ios-month-grid {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important;
     background: var(--surface) !important;
     border: none !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
@@ -1567,6 +1592,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     color: var(--text-dim);
     background: transparent !important;
     border: none !important;
+    text-align: center;
   }
   .ios-month-grid .month-header.weekend-col {
     color: #9d174d;
@@ -1640,7 +1666,29 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     flex-shrink: 0;
   }
 
+  /* Círculo azul para días con actuación en móvil (Mes y Año) */
+  .ios-month-grid .month-day.has-actuacion:not(.today) .day-num {
+    border: 2px solid var(--accent-blue) !important;
+    color: var(--accent-blue) !important;
+    font-weight: 700 !important;
+    border-radius: 50% !important;
+  }
+
+  .year-mini-day.has-actuacion:not(.today) .day-number-span {
+    border: 1.5px solid var(--accent-blue) !important;
+    border-radius: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: var(--accent-blue) !important;
+    font-weight: 700 !important;
+  }
+
+  /* Tarjeta de eventos debajo del mes */
   .ios-month-day-detail {
+    width: 100% !important;
     background: var(--surface);
     border-radius: 14px;
     padding: 14px 16px;
@@ -1651,7 +1699,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 0.5px solid var(--border);
     margin-bottom: 12px;
   }
@@ -1660,64 +1708,69 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     font-weight: 700;
     color: var(--text);
   }
-  .ios-day-detail-add {
-    display: none !important;
-  }
-  .agenda-add-btn {
-    display: none !important;
-  }
   .ios-day-events-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    width: 100%;
   }
   .ios-day-event-card {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 10px;
+    padding: 10px 12px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
     cursor: pointer;
-  }
-  .ios-day-event-card.is-past-card {
-    opacity: 0.65;
+    width: 100%;
   }
   .ios-day-event-left {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     min-width: 0;
     flex: 1;
   }
   .ios-event-strip {
     width: 4px;
-    height: 32px;
+    height: 36px;
     border-radius: 3px;
     flex-shrink: 0;
+    margin-top: 2px;
   }
   .ios-day-event-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
+    flex: 1;
   }
   .ios-day-event-name {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 700;
     color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
   .ios-day-event-sub {
     font-size: 12px;
     color: var(--text-dim);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
+  }
+  .ios-day-event-notes {
+    font-size: 12px;
+    color: #374151;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.45;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
   }
   .ios-day-event-right {
     font-size: 12px;
@@ -1726,72 +1779,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     white-space: nowrap;
     display: flex;
     align-items: center;
-    gap: 10px;
-  }
-  /* Optimización barra de filtros de Año en móvil (solo iconos) */
-  .year-filters {
-    padding: 8px 12px;
-    gap: 12px;
-    justify-content: space-around;
-    border-radius: 12px;
-  }
-  .year-filters .filter-label {
-    display: none !important;
-  }
-  .year-filters .filter-text {
-    display: none !important;
-  }
-  .year-filters .range-toggle {
-    gap: 5px;
-  }
-}
-
-/* Filtros de la vista Año en móvil: 4 columnas con icono arriba y texto centrado abajo */
-  @media (max-width: 768px) {
-    .year-filters {
-      display: grid !important;
-      grid-template-columns: repeat(4, 1fr) !important;
-      gap: 4px !important;
-      padding: 8px 4px !important;
-      width: 100% !important;
-      box-sizing: border-box !important;
-      justify-content: stretch !important;
-    }
-    .year-filters .filter-label {
-      display: none !important;
-    }
-    .year-filters .range-toggle {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      text-align: center !important;
-      gap: 3px !important;
-      margin: 0 !important;
-      padding: 4px 2px !important;
-      min-width: 0 !important;
-      cursor: pointer;
-    }
-    .year-filters .range-toggle > span:not(.filter-text) {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 3px !important;
-    }
-    .year-filters .filter-text {
-      display: block !important;
-      font-size: 10.5px !important;
-      font-weight: 700 !important;
-      color: var(--text) !important;
-      line-height: 1.1 !important;
-      white-space: nowrap !important;
-      text-align: center !important;
-    }
-    .year-filters .checkbox {
-      width: 16px !important;
-      height: 16px !important;
-      min-width: 16px !important;
-    }
+    gap: 8px;
+    flex-shrink: 0;
   }
 
   /* Sombreado para eventos pasados de hora */
@@ -1808,28 +1797,190 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
     color: #9ca3af !important;
   }
 
-  /* Círculo azul para días con actuación en móvil (Mes y Año) */
+  /* Filtros de la vista Año en móvil */
+  .year-filters {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4px !important;
+    padding: 8px 4px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: stretch !important;
+  }
+  .year-filters .filter-label {
+    display: none !important;
+  }
+  .year-filters .range-toggle {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 3px !important;
+    margin: 0 !important;
+    padding: 4px 2px !important;
+    min-width: 0 !important;
+    cursor: pointer;
+  }
+  .year-filters .range-toggle > span:not(.filter-text) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 3px !important;
+  }
+  .year-filters .filter-text {
+    display: block !important;
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+  .year-filters .checkbox {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+  }
+
+  /* Modal y detalles a 1 columna completa */
+  .modal, .modal-wide {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 20px 20px 0 0;
+    position: fixed;
+    bottom: 0;
+    transform: translateY(100%);
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-overlay { align-items: flex-end; }
+
+  #view-modal .view-detail-card {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+  #view-modal .view-detail-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 14px !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  #view-modal .view-detail-label {
+    min-width: 90px !important;
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+  }
+  #view-modal .view-detail-value {
+    font-size: 13.5px !important;
+    text-align: right !important;
+    word-break: break-word !important;
+    flex: 1 !important;
+  }
+  #view-modal .view-detail-row.full-width {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 6px !important;
+  }
+  #view-modal .view-detail-row.full-width .view-detail-value {
+    text-align: left !important;
+  }
+}
+
+/* Sombreado de eventos pasados de hora en vistas Día y Agenda (solo móvil) */
   @media (max-width: 768px) {
-    /* En vista Mes: rodea el número con círculo azul, excepto si es hoy (predomina rojo) */
-    .ios-month-grid .month-day.has-actuacion:not(.today) .day-num {
-      border: 2px solid var(--accent-blue) !important;
-      color: var(--accent-blue) !important;
-      font-weight: 700 !important;
-      border-radius: 50% !important;
+    .agenda-event.is-event-expired {
+      opacity: 0.42 !important;
+      background: #f3f4f6 !important;
+      border-color: #d1d5db !important;
+    }
+    .agenda-event.is-event-expired .agenda-time,
+    .agenda-event.is-event-expired .agenda-title,
+    .agenda-event.is-event-expired .agenda-notes {
+      color: #9ca3af !important;
     }
 
-    /* En vista Año: rodea el número con círculo azul, excepto si es hoy (predomina rojo) */
-    .year-mini-day.has-actuacion:not(.today) .day-number-span {
-      border: 1.5px solid var(--accent-blue) !important;
-      border-radius: 50% !important;
-      width: 20px !important;
-      height: 20px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      color: var(--accent-blue) !important;
-      font-weight: 700 !important;
+    .event-timespan-block.is-event-expired {
+      opacity: 0.42 !important;
+      background: #f3f4f6 !important;
+      border-color: #d1d5db !important;
     }
+    .event-timespan-block.is-event-expired * {
+      color: #9ca3af !important;
+    }
+  }
+
+  /* Borde continuo homogéneo, esquinas redondeadas completas y mejor aprovechamiento del espacio */
+  .event-timespan-block {
+    border-left-width: 1px !important; /* Elimina la franja gruesa izquierda que cortaba las curvas */
+    border-radius: 8px !important;
+    overflow: hidden !important; /* Garantiza que las curvas se vean perfectas sin cortes */
+  }
+
+  .event-timespan-block .event-sticky-content {
+    top: 0 !important;
+    padding: 6px 7px !important;
+    background: transparent !important;
+    border-radius: 7px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Distribución vertical flexible para que el título y la hora aprovechen todo el ancho */
+  .day-col-content .event-timespan-block .event-card-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    min-width: 0;
+  }
+  .day-col-content .event-timespan-block .event-card-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .day-col-content .event-timespan-block .event-card-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    word-break: break-word;
+    flex: 1;
+    min-width: 0;
+  }
+  .day-col-content .event-timespan-block .event-card-time {
+    font-size: 10.5px;
+    font-weight: 600;
+    opacity: 0.95;
+    white-space: nowrap;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+  .day-col-content .event-timespan-block .event-card-ubi {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.9;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+  .day-col-content .event-timespan-block .event-card-notes {
+    font-size: 10px;
+    opacity: 0.85;
+    line-height: 1.25;
+    word-break: break-word;
+    margin-top: 2px;
+    padding-top: 2px;
+    border-top: 0.5px dashed rgba(0, 0, 0, 0.15);
   }
 </style>
 </head>
@@ -1842,19 +1993,24 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 </div>
 
 <!-- HEADER -->
-<header class="header" id="main-header">
-  
-  <!-- BARRA MÓVIL (Solo se muestra en iPhone/Móvil) -->
+<!-- BARRA MÓVIL (2 FILAS) -->
+  <!-- FILA 1: Deshacer/Rehacer | ‹ Mes y Año › | Buscar, Añadir, Sinc, Descargar -->
   <div class="mobile-top-bar mobile-only">
-    <div class="mobile-top-left">
-      <button onclick="window.history.back()" class="btn-back-custom" title="Volver">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    <div class="history-controls">
+      <button class="btn-history" id="btn-undo-m" onclick="undo()" title="Deshacer" disabled>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
       </button>
-      <div class="history-controls">
-        <button class="btn-history" id="btn-undo-m" onclick="undo()" title="Deshacer" disabled>↶</button>
-        <button class="btn-history" id="btn-redo-m" onclick="redo()" title="Rehacer" disabled>↷</button>
-      </div>
+      <button class="btn-history" id="btn-redo-m" onclick="redo()" title="Rehacer" disabled>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg>
+      </button>
     </div>
+
+    <div class="mobile-nav-center">
+      <button class="btn-nav" onclick="navigate(-1)">‹</button>
+      <div class="period-label" id="period-label-m" ondblclick="openQuickJumpModal()">—</div>
+      <button class="btn-nav" onclick="navigate(1)">›</button>
+    </div>
+
     <div class="mobile-top-right header-actions">
       <div class="search-container" id="search-container">
         <button type="button" class="btn-action search-toggle-btn" onclick="toggleMobileSearch(event)" title="Buscar">
@@ -1875,6 +2031,16 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
       </button>
     </div>
+  </div>
+
+  <!-- FILA 2: Agenda | Día | Mes | Año | Hoy -->
+  <div class="mobile-tabs-row mobile-only">
+    <button class="view-tab" data-view="agenda">Agenda</button>
+    <button class="view-tab" data-view="dia">Día</button>
+    <button class="view-tab active" data-view="mes">Mes</button>
+    <button class="view-tab" data-view="ano">Año</button>
+    <button class="btn-today-tab" onclick="goToday()">Hoy</button>
+  </div>
   </div>
 
   <!-- BARRA ESCRITORIO PC ORIGINAL (Exactamente como 1.txt) -->
@@ -3525,6 +3691,8 @@ function renderMonth() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   document.getElementById('period-label').textContent = `${MONTHS_ES[month]} ${year}`;
+  const pLabelM = document.getElementById('period-label-m');
+  if (pLabelM) pLabelM.textContent = `${MONTHS_ES[month]} ${year}`;
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -3765,6 +3933,73 @@ function renderMonthCell(d, otherMonth) {
   </div>`;
 }
 
+/* Calcula columnas en paralelo/escalonadas para eventos que coinciden en horas (estilo iOS) */
+function computeOverlappingLayout(dayEvs, targetDateStr) {
+  const timed = [];
+  dayEvs.forEach(ev => {
+    const isAllDay = (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si');
+    if (isAllDay) return; // Los de todo el día se gestionan por separado
+
+    const { startObj, endObj } = getEventStartAndEndDates(ev, targetDateStr);
+    const startMs = startObj.getTime();
+    const endMs = Math.max(endObj.getTime(), startMs + 30 * 60 * 1000);
+    timed.push({ ev, startMs, endMs, col: 0, totalCols: 1 });
+  });
+
+  // Ordenar por hora de inicio (y los más largos primero si empiezan a la vez)
+  timed.sort((a, b) => a.startMs - b.startMs || (b.endMs - b.startMs) - (a.endMs - a.startMs));
+
+  const clusters = [];
+  let curCluster = [];
+  let clusterEnd = -1;
+
+  timed.forEach(item => {
+    if (curCluster.length === 0) {
+      curCluster.push(item);
+      clusterEnd = item.endMs;
+    } else {
+      if (item.startMs < clusterEnd) {
+        curCluster.push(item);
+        clusterEnd = Math.max(clusterEnd, item.endMs);
+      } else {
+        clusters.push(curCluster);
+        curCluster = [item];
+        clusterEnd = item.endMs;
+      }
+    }
+  });
+  if (curCluster.length > 0) clusters.push(curCluster);
+
+  const resultMap = new Map();
+
+  clusters.forEach(group => {
+    const colEndTimes = [];
+    group.forEach(item => {
+      let placedCol = -1;
+      for (let i = 0; i < colEndTimes.length; i++) {
+        if (item.startMs >= colEndTimes[i]) {
+          placedCol = i;
+          colEndTimes[i] = item.endMs;
+          break;
+        }
+      }
+      if (placedCol === -1) {
+        placedCol = colEndTimes.length;
+        colEndTimes.push(item.endMs);
+      }
+      item.col = placedCol;
+    });
+
+    const numCols = Math.max(1, colEndTimes.length);
+    group.forEach(item => {
+      item.totalCols = numCols;
+      resultMap.set(item.ev.id, { col: item.col, totalCols: item.totalCols });
+    });
+  });
+
+  return resultMap;
+}
+
 /* ═══════════════════════════════════════
    CÁLCULOS DE POSICIÓN PARA FRANJA HORARIA
 ═══════════════════════════════════════ */
@@ -3986,6 +4221,8 @@ function renderDay() {
     html += `<div class="week-cell" data-date="${ds}" data-hour="${h}"></div>`;
   });
 
+  const overlapMap = computeOverlappingLayout(dayEvs, ds);
+
   dayEvs.forEach(ev => {
     const pos = calculateSpanPosition(ev, dayEvs);
     const style = getEventStyle(ev);
@@ -3993,25 +4230,53 @@ function renderDay() {
     const timeDisplay = formatTimeRangeDisplay(ev);
     const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas" style="margin-left:4px;"></span>` : '';
 
-    // Posicionamiento horizontal cuando comparte columna con otros eventos de día completo
-    const horizPosStyle = pos.isCustomWidth 
-      ? `left:${pos.leftStyle}; width:${pos.widthStyle}; right:auto;` 
-      : `left:2px; right:2px;`;
+    // Posicionamiento horizontal: escalonado/cascada estilo iOS si coinciden en horas
+    let horizPosStyle = `left:2px; right:2px;`;
+    if (pos.isCustomWidth) {
+      horizPosStyle = `left:${pos.leftStyle}; width:${pos.widthStyle}; right:auto;`;
+    } else if (overlapMap.has(ev.id)) {
+      const layout = overlapMap.get(ev.id);
+      if (layout.totalCols > 1) {
+        const colWidthPct = 100 / layout.totalCols;
+        const leftPct = layout.col * colWidthPct;
+        horizPosStyle = `left:calc(${leftPct}% + 2px); width:calc(${colWidthPct}% - 4px); right:auto;`;
+      }
+    }
 
     // Si tiene ubicación de logística, mostrarla con un badge o icono al lado del título
     const ubiBadge = (ev.ubicacion && !ev.sala && ev.festivo !== 'si' && ev.guardado !== 'si')
       ? `<span style="font-size:12px;font-weight:700;opacity:0.9;margin-left:8px;">(${ev.ubicacion})</span>`
       : '';
 
-    html += `<div class="event-timespan-block" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${pos.topPx}px; height:${pos.heightPx}px; ${horizPosStyle} background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
-      <div class="event-sticky-content" style="top: 55px; padding: 8px 12px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-right:18px;">
-          <strong style="font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;">
-            ${title} ${ubiBadge} ${noteDot}
-          </strong>
-          <span style="font-size:12px;font-weight:700;">${timeDisplay}</span>
+    let isExpired = false;
+    const dObj = parseDate(ds);
+    if (isPastDay(dObj)) {
+      isExpired = true;
+    } else if (isToday(dObj)) {
+      const isAllDay = (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si');
+      if (!isAllDay) {
+        const { endObj } = getEventStartAndEndDates(ev, ds);
+        if (new Date().getTime() > endObj.getTime()) {
+          isExpired = true;
+        }
+      }
+    }
+    const expiredClass = isExpired ? 'is-event-expired' : '';
+
+    const ubiText = (ev.ubicacion && !ev.sala && ev.festivo !== 'si' && ev.guardado !== 'si')
+      ? `<div class="event-card-ubi">📍 ${formatUbicacionDisplay(ev.ubicacion)}</div>`
+      : '';
+
+    html += `<div class="event-timespan-block ${expiredClass}" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="top:${pos.topPx}px; height:${pos.heightPx}px; ${horizPosStyle} background:${style.bg}; color:${style.color}; border:1px solid ${style.color};">
+      <div class="event-sticky-content">
+        <div class="event-card-inner">
+          <div class="event-card-header">
+            <span class="event-card-title">${title} ${noteDot}</span>
+            <span class="event-card-time">${timeDisplay}</span>
+          </div>
+          ${ubiText}
+          ${ev.notes ? `<div class="event-card-notes">${ev.notes}</div>` : ''}
         </div>
-        ${ev.notes ? `<div style="font-size:12px;opacity:0.9;margin-top:4px;white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;">${ev.notes}</div>` : ''}
         <div class="btn-event-quick-delete" title="Eliminar evento de este día" onclick="quickDeleteEvent('${ev.id}', '${ds}', event)">✕</div>
       </div>
     </div>`;
@@ -4093,7 +4358,22 @@ function renderAgenda() {
           ? `<span class="agenda-ubicacion-text">(${formatUbicacionDisplay(ev.ubicacion)})</span>`
           : '';
 
-        html += `<div class="agenda-event" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
+        let isExpired = false;
+        const dObj = parseDate(ds);
+        if (isPastDay(dObj)) {
+          isExpired = true;
+        } else if (isToday(dObj)) {
+          const isAllDay = (ev.festivo === 'si' || ev.vacaciones === 'si' || ev.guardado === 'si');
+          if (!isAllDay) {
+            const { endObj } = getEventStartAndEndDates(ev, ds);
+            if (new Date().getTime() > endObj.getTime()) {
+              isExpired = true;
+            }
+          }
+        }
+        const expiredClass = isExpired ? 'is-event-expired' : '';
+
+        html += `<div class="agenda-event ${expiredClass}" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
           <div class="agenda-event-header">
             <span class="agenda-time" style="color:${style.color};">${timeDisplay}</span>
             <span class="agenda-title" style="color:${style.color};">
