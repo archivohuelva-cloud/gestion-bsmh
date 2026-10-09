@@ -2039,6 +2039,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       flex-shrink: 0 !important;
     }
   }
+
+  /* Margen de seguridad superior al enfocar el mes actual en vista Año */
+  .year-month-card[id^="year-month-card-"] {
+    scroll-margin-top: 130px;
+  }
 </style>
 </head>
 <body>
@@ -4508,7 +4513,7 @@ function renderYear() {
     const isCurrentMonth = isCurrentYear && realToday.getMonth() === m;
     const titleClass = isCurrentMonth ? 'year-month-title current-month-title' : 'year-month-title';
 
-    html += `<div class="year-month-card">
+    html += `<div class="year-month-card" id="year-month-card-${m}">
       <div class="${titleClass}">${MONTHS_ES[m]}</div>
       <div class="year-mini-table">`;
     
@@ -4577,6 +4582,15 @@ function renderYear() {
       render();
     });
   });
+  // En móvil: desplaza automáticamente la vista al mes actual
+  if (window.innerWidth <= 768) {
+    setTimeout(() => {
+      const targetMonthCard = document.getElementById(`year-month-card-${realToday.getMonth()}`);
+      if (targetMonthCard) {
+        targetMonthCard.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }
+    }, 20);
+  }
 }
 
 function toggleYearFilter(type) {
