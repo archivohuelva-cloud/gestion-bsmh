@@ -607,7 +607,7 @@
 </div>
 
 <!-- MODAL EDITAR RECORDATORIO (MULTILÍNEA Y ORIGEN) -->
-<div id="edit-reminder-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[2000] hidden flex items-center justify-center p-4">
+<div id="edit-reminder-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[4px] z-[2000] hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col transform transition-all">
         <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
             <div class="flex items-center gap-2">
@@ -616,7 +616,7 @@
                 </span>
                 <h3 class="font-bold text-slate-800 text-base">Editar Recordatorio</h3>
             </div>
-            <button onclick="closeEditModal(event)" class="text-slate-400 hover:text-slate-600 transition text-2xl font-semibold leading-none">&times;</button>
+            <button type="button" onclick="closeEditModal(event)" class="text-slate-400 hover:text-slate-600 transition text-2xl font-semibold leading-none">&times;</button>
         </div>
         <div class="p-6">
             <input type="hidden" id="edit-reminder-index">
@@ -626,11 +626,11 @@
                 <!-- Selector de etiqueta en la edición -->
                 <div class="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded-lg p-1">
                     <span class="text-[10px] font-bold text-slate-400 uppercase px-1">Origen:</span>
-                    <button type="button" id="edit-source-tag-wa" onclick="toggleEditSourceTag('whatsapp')" title="Origen WhatsApp" class="p-1 rounded-md text-slate-400 hover:text-green-600 transition-colors">
-                        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.765.782 2.791.783 3.181 0 5.767-2.587 5.768-5.766.001-3.182-2.585-5.769-5.768-5.769zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-12.416c-5.514 0-10 4.486-10 10 0 1.763.459 3.42 1.263 4.866l-1.343 4.908 5.039-1.321c1.396.762 2.99 1.191 4.685 1.191 5.514 0 10-4.486 10-10s-4.486-10-10-10z"/></svg>
+                    <button type="button" id="edit-source-tag-wa" onclick="toggleEditSourceTag('whatsapp', event)" title="Origen WhatsApp" class="p-1 rounded-md text-slate-400 hover:text-green-600 transition-colors">
+                        <svg class="w-4 h-4 fill-current pointer-events-none" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.765.782 2.791.783 3.181 0 5.767-2.587 5.768-5.766.001-3.182-2.585-5.769-5.768-5.769zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-12.416c-5.514 0-10 4.486-10 10 0 1.763.459 3.42 1.263 4.866l-1.343 4.908 5.039-1.321c1.396.762 2.99 1.191 4.685 1.191 5.514 0 10-4.486 10-10s-4.486-10-10-10z"/></svg>
                     </button>
-                    <button type="button" id="edit-source-tag-mail" onclick="toggleEditSourceTag('email')" title="Origen @Email" class="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors">
-                        <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                    <button type="button" id="edit-source-tag-mail" onclick="toggleEditSourceTag('email', event)" title="Origen Correo Electrónico" class="p-1 rounded-md text-slate-400 hover:text-blue-600 transition-colors">
+                        <svg class="w-4 h-4 fill-none stroke-current pointer-events-none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                     </button>
                 </div>
             </div>
@@ -640,8 +640,8 @@
                 placeholder="Escribe tu recordatorio aquí..."></textarea>
         </div>
         <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-            <button onclick="saveEditedReminder(event)" class="px-5 py-2 text-sm font-bold bg-[#0000bd] text-white hover:bg-blue-800 rounded-xl shadow-md transition">Guardar Cambios</button>
-            <button onclick="closeEditModal(event)" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition">Cancelar</button>
+            <button type="button" onclick="saveEditedReminder(event)" class="px-5 py-2 text-sm font-bold bg-[#0000bd] text-white hover:bg-blue-800 rounded-xl shadow-md transition">Guardar Cambios</button>
+            <button type="button" onclick="closeEditModal(event)" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition">Cancelar</button>
         </div>
     </div>
 </div>
@@ -1149,7 +1149,11 @@
             }
         }
 
-        function toggleEditSourceTag(type) {
+        function toggleEditSourceTag(type, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             const btnWa = document.getElementById('edit-source-tag-wa');
             const btnMail = document.getElementById('edit-source-tag-mail');
             if (!btnWa || !btnMail) return;
@@ -1392,8 +1396,12 @@
             modal.classList.add('hidden');
             
             const dropdown = document.getElementById('reminders-dropdown');
+            const overlay = document.getElementById('reminders-overlay');
             if (dropdown) {
                 dropdown.classList.add('show');
+            }
+            if (overlay) {
+                overlay.classList.remove('hidden');
             }
         }
 
