@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Super Biblio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -311,6 +311,19 @@
             }
         }
     </style>
+
+    <!-- ================= PREVENIR AUTO-ZOOM EN SAFARI iOS ================= -->
+<style>
+    @media (max-width: 768px) {
+        input[type="text"],
+        input[type="password"],
+        input[type="search"],
+        textarea,
+        select {
+            font-size: 16px !important; /* Mínimo requerido por iOS Safari para no hacer zoom */
+        }
+    }
+</style>
 
 </head>
 <body class="p-4 md:p-8">
