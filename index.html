@@ -397,19 +397,20 @@
             cursor: pointer;
         }
 
-        /* Cabecera general */
+        /* Cabecera general con margen hacia el buscador */
         #main-content > header {
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
-            margin-bottom: 12px !important;
+            margin-bottom: 22px !important;
             gap: 8px !important;
-            padding: 0 42px !important;
+            padding: 0 !important;
         }
 
         #main-content > header > div:first-child {
             text-align: center !important;
             align-items: center !important;
+            padding: 0 42px !important;
         }
         #main-content > header h1 {
             font-size: 1.15rem !important;
@@ -421,59 +422,66 @@
             text-align: center !important;
         }
 
-        /* CONTENEDOR EN UNA SOLA FILA: Tiempo (izq) | Recordatorios + Fecha (centro) | Reloj + Salir (der) */
+        /* CONTENEDOR MÓVIL PRINCIPAL (Azul pastel claro) en columna: Arriba los 3 controles con espacio, abajo la fecha a lo ancho */
         #mobile-single-row {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            justify-content: flex-start !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            background: #e0f2fe !important; /* Azul pastel claro */
+            border-radius: 16px !important;
+            border: 1.5px solid #bae6fd !important;
+            padding: 10px 14px 10px 14px !important;
+            gap: 8px !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+            box-sizing: border-box !important;
+        }
+
+        /* FILA SUPERIOR: Tiempo | Recordatorios | Reloj (con mayor espacio entre ellos) */
+        #mobile-top-bar {
             display: flex !important;
             flex-direction: row !important;
             align-items: center !important;
             justify-content: space-between !important;
-            width: 100vw !important;
-            max-width: calc(100% + 64px) !important;
-            margin-left: -32px !important;
-            margin-right: -32px !important;
-            background: #ffffff;
-            border-radius: 14px;
-            border: 1px solid #e2e8f0;
-            padding: 8px 10px !important;
-            gap: 4px !important;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            box-sizing: border-box !important;
+            width: 100% !important;
+            gap: 12px !important; /* Más separación entre los tres elementos */
         }
 
         /* 1. Izquierda: Widget del Tiempo */
-        #mobile-single-row #weather-widget {
+        #mobile-top-bar #weather-widget {
             display: flex !important;
             align-items: center !important;
-            gap: 4px !important;
+            gap: 5px !important;
             border-right: none !important;
             padding-right: 0 !important;
             margin: 0 !important;
             flex-shrink: 0 !important;
         }
-        #mobile-single-row #weather-icon {
-            font-size: 1.3rem !important;
+        #mobile-top-bar #weather-icon {
+            font-size: 1.35rem !important;
             line-height: 1 !important;
         }
-        #mobile-single-row #weather-temp {
-            font-size: 0.95rem !important;
+        #mobile-top-bar #weather-temp {
+            font-size: 1rem !important;
             font-weight: 800 !important;
         }
-        #mobile-single-row #weather-widget .flex.gap-2 {
+        #mobile-top-bar #weather-widget .flex.gap-2 {
             font-size: 7.5px !important;
             gap: 2px !important;
         }
 
-        /* 2. Centro: Columna con Botón de Recordatorios + Fecha con mayor separación */
+        /* 2. Centro: Botón de Recordatorios centrado */
         #mobile-center-col {
             display: flex !important;
-            flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
-            flex: 1 !important;
-            min-width: 0 !important;
-            gap: 5px !important; /* Más separación entre botón y texto */
+            flex-shrink: 0 !important;
+            margin: 0 !important;
         }
-
         #mobile-center-col .relative.inline-block {
             display: flex !important;
             justify-content: center !important;
@@ -481,28 +489,16 @@
             margin: 0 !important;
         }
         #mobile-center-col .relative.inline-block > button {
-            padding: 4px 8px !important;
-            font-size: 11.5px !important;
-            gap: 4px !important;
-            border-radius: 8px !important;
+            padding: 5px 12px !important;
+            font-size: 12px !important;
+            gap: 5px !important;
+            border-radius: 10px !important;
             white-space: nowrap !important;
+            background-color: #ffffff !important;
         }
         #mobile-center-col .relative.inline-block > button svg {
-            width: 14px !important;
-            height: 14px !important;
-        }
-
-        /* Fecha centrada bajo el botón con mayor tamaño y nitidez */
-        #mobile-center-col #current-date {
-            font-size: 11px !important;       /* Fuente mayor */
-            font-weight: 600 !important;      /* Seminegrita para mejor lectura */
-            line-height: 1.25 !important;
-            color: #475569 !important;       /* Tono de texto más visible */
-            text-align: center !important;
-            white-space: normal !important;
-            margin-top: 2px !important;
-            width: 100% !important;
-            display: block !important;
+            width: 15px !important;
+            height: 15px !important;
         }
 
         /* 3. Derecha: Reloj y Botón Salir */
@@ -516,6 +512,7 @@
         #mobile-right-group #clock {
             font-size: 1.15rem !important;
             line-height: 1 !important;
+            font-weight: 900 !important;
         }
         #mobile-right-group button[title="Cerrar Sesión"] {
             margin-top: 0 !important;
@@ -524,6 +521,23 @@
         #mobile-right-group button[title="Cerrar Sesión"] svg {
             width: 18px !important;
             height: 18px !important;
+        }
+
+        /* FILA COMPLETA INFERIOR: Fecha actual en una sola línea ocupando todo el ancho */
+        #mobile-single-row #current-date {
+            width: 100% !important;
+            display: block !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            color: #0369a1 !important;
+            text-align: center !important;
+            white-space: nowrap !important; /* Fuerza a estar en 1 sola línea */
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            line-height: 1.2 !important;
+            margin-top: 2px !important;
+            padding-top: 4px !important;
+            border-top: 1px solid rgba(186, 230, 253, 0.7) !important;
         }
 
         /* ================= MENÚ LATERAL COMPACTO ================= */
@@ -697,27 +711,35 @@
                 singleRow = document.createElement('div');
                 singleRow.id = 'mobile-single-row';
                 
+                // Fila superior para los 3 controles
+                const topBar = document.createElement('div');
+                topBar.id = 'mobile-top-bar';
+
                 const weather = document.getElementById('weather-widget');
                 const reminders = header.querySelector('.relative.inline-block');
                 const clock = document.getElementById('clock');
                 const currentDate = document.getElementById('current-date');
                 const logoutBtn = header.querySelector('button[title="Cerrar Sesión"]');
 
-                // Contenedor central (Recordatorios + Fecha)
+                // Contenedor central (solo botón de recordatorios)
                 const centerCol = document.createElement('div');
                 centerCol.id = 'mobile-center-col';
                 if (reminders) centerCol.appendChild(reminders);
-                if (currentDate) centerCol.appendChild(currentDate);
 
-                // Contenedor derecho (Reloj + Logout)
+                // Contenedor derecho (Reloj + Salir)
                 const rightGroup = document.createElement('div');
                 rightGroup.id = 'mobile-right-group';
                 if (clock) rightGroup.appendChild(clock);
                 if (logoutBtn) rightGroup.appendChild(logoutBtn);
 
-                if (weather) singleRow.appendChild(weather);
-                singleRow.appendChild(centerCol);
-                singleRow.appendChild(rightGroup);
+                if (weather) topBar.appendChild(weather);
+                topBar.appendChild(centerCol);
+                topBar.appendChild(rightGroup);
+
+                singleRow.appendChild(topBar);
+
+                // Fecha actual ubicada debajo abarcando todo el ancho del módulo
+                if (currentDate) singleRow.appendChild(currentDate);
 
                 header.appendChild(singleRow);
             }
@@ -1180,31 +1202,43 @@
     }
 
     @media (max-width: 768px) {
-        /* Pestaña interactiva para móvil */
+        /* Espaciado del buscador Biblio */
+        section.max-w-2xl {
+            margin-bottom: 22px !important; /* Más separación hacia Herramientas */
+        }
+
+        /* Pestaña interactiva para móvil: más amplia (estilo buscador), verde pastel claro y tacto cómodo */
         #tools-accordion-toggle {
             display: flex;
             align-items: center;
             justify-content: space-between;
             width: 100%;
             max-width: 768px;
-            margin: 0 auto 10px auto;
-            padding: 10px 14px;
-            background: #ffffff;
-            border: 1.5px solid #cbd5e1;
-            border-radius: 14px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+            margin: 0 auto 24px auto; /* 24px de separación hacia los calendarios inferiores */
+            padding: 14px 18px; /* Altura amplia similar a la caja del buscador */
+            min-height: 54px;
+            background: #dcfce7; /* Verde pastel claro */
+            border: 2px solid #86efac;
+            border-radius: 16px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             cursor: pointer;
+            box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
 
         #tools-accordion-toggle:active {
-            background-color: #f8fafc;
+            background-color: #bbf7d0;
+        }
+
+        #tools-accordion-toggle span.text-slate-700 {
+            font-size: 13.5px !important;
+            color: #14532d !important; /* Verde oscuro para contraste legible */
         }
 
         /* Ocultar la cuadrícula de tarjetas en móvil por defecto */
         section.max-w-7xl {
             display: none;
-            margin-bottom: 14px !important;
+            margin-bottom: 24px !important;
         }
 
         /* Cuando la pestaña está activa, se muestra la cuadrícula */
@@ -1587,7 +1621,8 @@
         </main>
 
         <footer class="mt-16 py-6 border-t border-slate-200 text-center">
-            <p class="text-[11px] font-black text-black-400 tracking-[0.4em]">© ADRIÁN DÍAZ GIRÁLDEZ | AYUNTAMIENTO DE HUELVA</p>
+            <p class="text-[11px] font-black text-black-400 tracking-[0.4em]">© ADRIÁN DÍAZ GIRÁLDEZ</p>
+            <p class="text-[11px] font-black text-slate-800 tracking-[0.25em] uppercase">AYUNTAMIENTO DE HUELVA</p>
             <p class="text-[10px] font-black text-slate-400 tracking-[0.4em]">www.huelva.es | banda.municipal@huelva.es</p>
         </footer>
     </div>
