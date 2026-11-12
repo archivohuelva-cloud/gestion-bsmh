@@ -696,7 +696,9 @@
             if (window.Sortable) {
                 new Sortable(container, { 
                     animation: 150, 
-                    handle: '.cursor-move', 
+                    handle: '.cursor-move',
+                    filter: 'input, select, textarea, button',
+                    preventOnFilter: false,
                     onEnd: () => {
                         const newOrder = [];
                         container.querySelectorAll('[data-id]').forEach(row => {
