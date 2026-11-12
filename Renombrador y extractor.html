@@ -30,10 +30,11 @@
         
         .search-dropdown { position: relative; width: 100%; }
         .search-results { 
-            position: absolute; bottom: 100%; left: 0; right: 0; z-index: 999; 
-            background: white; border: 2px solid #cbd5e1; border-radius: 0.5rem;
-            max-height: calc(100vh - 170px); overflow-y: auto; box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
-            display: none; margin-bottom: 4px;
+            position: fixed; top: 0; right: 0; width: 350px; bottom: 140px; z-index: 9999; 
+            background: white; border-left: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;
+            border-radius: 0;
+            overflow-y: auto; box-shadow: -5px 10px 25px rgba(0,0,0,0.25);
+            display: none;
         }
         .search-item { padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; border-bottom: 1px solid #f1f5f9; }
         .search-item:hover { background-color: #2563eb; color: white; }
@@ -176,11 +177,11 @@
                         <div class="grid grid-cols-2 gap-2">
                             <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-blue-50">
                                 <input type="checkbox" id="check-p-ini" onchange="markRange('ini')">
-                                <span class="text-xs font-bold">Pág. Inicial</span>
+                                <span class="text-xs font-bold">Pág. Inicial (/)</span>
                             </label>
                             <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-blue-50">
                                 <input type="checkbox" id="check-p-fin" onchange="markRange('fin')">
-                                <span class="text-xs font-bold">Pág. Final</span>
+                                <span class="text-xs font-bold">Pág. Final (*)</span>
                             </label>
                         </div>
                         <div class="text-[11px] text-gray-500 italic mt-1">Rango actual: <span id="range-display" class="font-bold text-blue-600">Ninguno</span></div>
@@ -206,7 +207,7 @@
                             <input type="text" id="ext-inst-search" placeholder="Escribir para buscar..." 
                                 class="w-full border-2 border-gray-300 rounded-lg p-2.5 text-sm font-bold focus:border-blue-500 outline-none bg-white shadow-sm"
                                 onfocus="showExtSearchResults()" oninput="filterExtSearchResults(this.value)"
-                                onkeydown="if(event.key === 'Enter') { event.preventDefault(); addToQueue(); }">
+                                onkeydown="handleExtSearchKeydown(event)">
                             <div id="ext-inst-results" class="search-results"></div>
                         </div>
                     </div>
@@ -384,6 +385,28 @@
         function initKeyboardEvents() {
             window.addEventListener('keydown', (e) => {
                 if (document.getElementById('extractor-workspace').style.display === 'flex') {
+                    const isWriting = (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+
+                    // Atajos teclado numérico para Rango Inicial (/) y Final (*)
+                    if (e.key === '/') {
+                        if (!isWriting) {
+                            e.preventDefault();
+                            const chk = document.getElementById('check-p-ini');
+                            chk.checked = !chk.checked;
+                            markRange('ini');
+                            return;
+                        }
+                    }
+                    if (e.key === '*') {
+                        if (!isWriting) {
+                            e.preventDefault();
+                            const chk = document.getElementById('check-p-fin');
+                            chk.checked = !chk.checked;
+                            markRange('fin');
+                            return;
+                        }
+                    }
+
                     if (e.key === 'ArrowRight') changeExtPage(1);
                     if (e.key === 'ArrowLeft') changeExtPage(-1);
                     if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoExt(); }
@@ -397,7 +420,7 @@
                     }
                     
                     if (e.key === 'Delete') {
-                        if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                        if (!isWriting) {
                             e.preventDefault();
                             deleteCurrentPage();
                         }
@@ -961,6 +984,8 @@
             }
         }
 
+        let extKeyboardActiveIdx = -1;
+
         function showExtSearchResults() {
             const resultsDiv = document.getElementById('ext-inst-results');
             resultsDiv.style.display = 'block';
@@ -971,9 +996,10 @@
             const resultsDiv = document.getElementById('ext-inst-results');
             const q = query.toLowerCase();
             const yaEnCola = state.ext_queue.map(item => item.nombre);
+            extKeyboardActiveIdx = -1;
             
-            let html = `<div class="search-item font-bold text-blue-600" onclick="selectExtInst('GUION')">GUION</div>`;
-            html += `<div class="search-item font-bold text-orange-600" onclick="addNewInstrumentToLB()">+ AÑADIR NUEVO INSTRUMENTO...</div>`;
+            let html = `<div class="search-item font-bold text-blue-600" data-inst="GUION" onclick="selectExtInst('GUION')">GUION</div>`;
+            html += `<div class="search-item font-bold text-orange-600" data-inst="__ADD__" onclick="addNewInstrumentToLB()">+ AÑADIR NUEVO INSTRUMENTO...</div>`;
             html += `<hr class="my-1">`;
 
             const filtrados = state.df_base
@@ -981,9 +1007,66 @@
                 .filter(inst => inst && !yaEnCola.includes(inst) && inst.toLowerCase().includes(q));
 
             filtrados.forEach(inst => {
-                html += `<div class="search-item" onclick="selectExtInst('${inst}')">${inst}</div>`;
+                html += `<div class="search-item" data-inst="${inst}" onclick="selectExtInst('${inst}')">${inst}</div>`;
             });
             resultsDiv.innerHTML = html;
+        }
+
+        function handleExtSearchKeydown(e) {
+            const resultsDiv = document.getElementById('ext-inst-results');
+            const isOpen = resultsDiv && resultsDiv.style.display !== 'none';
+            const items = resultsDiv ? Array.from(resultsDiv.querySelectorAll('.search-item')) : [];
+
+            if (e.key === 'ArrowDown') {
+                if (!isOpen) {
+                    showExtSearchResults();
+                    return;
+                }
+                e.preventDefault();
+                if (items.length === 0) return;
+                extKeyboardActiveIdx = (extKeyboardActiveIdx + 1) % items.length;
+                updateKeyboardActiveItem(items);
+                return;
+            }
+
+            if (e.key === 'ArrowUp') {
+                if (!isOpen) return;
+                e.preventDefault();
+                if (items.length === 0) return;
+                extKeyboardActiveIdx = (extKeyboardActiveIdx - 1 + items.length) % items.length;
+                updateKeyboardActiveItem(items);
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (isOpen && extKeyboardActiveIdx >= 0 && extKeyboardActiveIdx < items.length) {
+                    items[extKeyboardActiveIdx].click();
+                } else if (state.ext_selected_inst) {
+                    addToQueue();
+                }
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                if (resultsDiv) resultsDiv.style.display = 'none';
+            }
+        }
+
+        function updateKeyboardActiveItem(items) {
+            items.forEach((it, idx) => {
+                if (idx === extKeyboardActiveIdx) {
+                    it.classList.add('bg-blue-600', 'text-white');
+                    it.scrollIntoView({ block: 'nearest' });
+                    const instName = it.getAttribute('data-inst');
+                    if (instName && instName !== '__ADD__') {
+                        state.ext_selected_inst = instName;
+                        document.getElementById('ext-inst-search').value = instName;
+                    }
+                } else {
+                    it.classList.remove('bg-blue-600', 'text-white');
+                }
+            });
         }
 
         async function addNewInstrumentToLB() {
