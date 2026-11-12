@@ -32,7 +32,7 @@
         .search-results { 
             position: absolute; bottom: 100%; left: 0; right: 0; z-index: 999; 
             background: white; border: 2px solid #cbd5e1; border-radius: 0.5rem;
-            max-height: 250px; overflow-y: auto; box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
+            max-height: calc(100vh - 170px); overflow-y: auto; box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
             display: none; margin-bottom: 4px;
         }
         .search-item { padding: 0.75rem 1rem; cursor: pointer; font-size: 0.875rem; border-bottom: 1px solid #f1f5f9; }
@@ -148,9 +148,13 @@
                         <span class="font-mono">Página <span id="ext-current-page">1</span> de <span id="ext-total-pages">1</span></span>
                         <button onclick="changeExtPage(1)" class="bg-gray-700 px-3 py-1 rounded hover:bg-gray-600"><i class="fas fa-chevron-right"></i></button>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex items-center gap-3">
                         <button onclick="undoExt()" title="Deshacer (Ctrl+Z)" class="bg-gray-700 p-2 rounded hover:bg-gray-600"><i class="fas fa-undo"></i></button>
                         <button onclick="redoExt()" title="Rehacer (Ctrl+Y)" class="bg-gray-700 p-2 rounded hover:bg-gray-600"><i class="fas fa-redo"></i></button>
+                        <button onclick="openQueueModal()" class="relative bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold flex items-center gap-2 transition shadow" title="Ver cola de impresión">
+                            <i class="fas fa-print text-lg"></i>
+                            <span id="ext-queue-badge" class="bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full">0</span>
+                        </button>
                     </div>
                 </div>
                 <div class="canvas-container" id="ext-canvas-container">
@@ -158,12 +162,17 @@
                 </div>
             </div>
 
-            <aside id="extractor-sidebar">
-                <div class="p-4 border-b bg-gray-50">
-                    <h3 class="font-bold text-gray-700 uppercase text-xs mb-4">Panel de Extracción</h3>
-                    
-                    <div class="space-y-3 mb-6">
-                        <label class="block text-xs font-black text-blue-600 uppercase">Definir Rango</label>
+            <aside id="extractor-sidebar" class="flex flex-col h-full bg-white">
+                <div class="p-4 border-b bg-gray-50 flex items-center justify-between">
+                    <h3 class="font-bold text-gray-700 uppercase text-xs">Panel de Extracción</h3>
+                    <button onclick="openQueueModal()" class="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1">
+                        <i class="fas fa-print"></i> Cola (<span id="ext-sidebar-count">0</span>)
+                    </button>
+                </div>
+
+                <div class="p-4 space-y-4">
+                    <div>
+                        <label class="block text-xs font-black text-blue-600 uppercase mb-2">Definir Rango</label>
                         <div class="grid grid-cols-2 gap-2">
                             <label class="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-blue-50">
                                 <input type="checkbox" id="check-p-ini" onchange="markRange('ini')">
@@ -174,10 +183,10 @@
                                 <span class="text-xs font-bold">Pág. Final</span>
                             </label>
                         </div>
-                        <div class="text-[10px] text-gray-500 italic">Rango actual: <span id="range-display" class="font-bold text-blue-600">Ninguno</span></div>
+                        <div class="text-[11px] text-gray-500 italic mt-1">Rango actual: <span id="range-display" class="font-bold text-blue-600">Ninguno</span></div>
                     </div>
 
-                    <div class="mb-6">
+                    <div>
                         <label class="block text-xs font-black text-gray-600 uppercase mb-2">Rango Estándar</label>
                         <div class="flex flex-col gap-2">
                             <div class="flex gap-2">
@@ -187,12 +196,15 @@
                             <button onclick="applyStdRange(true)" class="w-full bg-blue-100 text-blue-700 text-[10px] font-bold py-1 rounded hover:bg-blue-200 border border-blue-200">APLICAR A TODOS</button>
                         </div>
                     </div>
+                </div>
 
-                    <div class="mb-6">
+                <!-- Zona inferior expandida con buscador y botones -->
+                <div class="flex-1 flex flex-col justify-end p-4 border-t bg-gray-50">
+                    <div class="mb-3">
                         <label class="block text-xs font-black text-blue-600 uppercase mb-2">Vincular Instrumento</label>
-                        <div class="search-dropdown" id="ext-inst-dropdown-container">
+                        <div class="search-dropdown relative" id="ext-inst-dropdown-container">
                             <input type="text" id="ext-inst-search" placeholder="Escribir para buscar..." 
-                                class="w-full border-2 border-gray-200 rounded-lg p-2 text-sm font-bold focus:border-blue-500 outline-none"
+                                class="w-full border-2 border-gray-300 rounded-lg p-2.5 text-sm font-bold focus:border-blue-500 outline-none bg-white shadow-sm"
                                 onfocus="showExtSearchResults()" oninput="filterExtSearchResults(this.value)"
                                 onkeydown="if(event.key === 'Enter') { event.preventDefault(); addToQueue(); }">
                             <div id="ext-inst-results" class="search-results"></div>
@@ -200,26 +212,44 @@
                     </div>
 
                     <div class="flex gap-2">
-                        <button onclick="addToQueue()" class="flex-1 bg-green-600 text-white font-bold py-2 rounded shadow hover:bg-green-700 transition">
-                            <i class="fas fa-plus mr-1"></i> AÑADIR A COLA
+                        <button onclick="addToQueue()" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-plus"></i> AÑADIR A COLA
                         </button>
-                        <button onclick="deleteCurrentPage()" class="bg-red-100 text-red-600 px-3 py-2 rounded hover:bg-red-200" title="Eliminar página actual">
+                        <button onclick="deleteCurrentPage()" class="bg-red-100 text-red-600 px-4 py-3 rounded-lg hover:bg-red-200 transition" title="Eliminar página actual">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </div>
+            </aside>
+        </div>
 
-                <div class="flex-1 overflow-y-auto p-4">
-                    <h4 class="font-bold text-xs text-gray-400 uppercase mb-3">Cola de Impresión</h4>
-                    <div id="ext-queue-list" class="space-y-2"></div>
+        <!-- MODAL PANTALLA COMPLETA: COLA DE IMPRESIÓN Y REORDENACIÓN -->
+        <div id="ext-queue-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 z-[250] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                <div class="p-4 bg-gray-800 text-white flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-print text-xl text-blue-400"></i>
+                        <h2 class="text-xl font-bold">Cola de Extracción</h2>
+                        <span id="queue-modal-badge" class="bg-blue-600 text-xs px-2.5 py-1 rounded-full font-bold">0 archivos</span>
+                    </div>
+                    <button onclick="closeQueueModal()" class="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
                 </div>
-
-                <div class="p-4 border-t bg-gray-50">
-                    <button onclick="prepareExport()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 transition">
-                        <i class="fas fa-file-archive mr-2"></i> EXPORTAR .ZIP
+                <div class="p-3 bg-blue-50 text-blue-800 text-xs flex items-center justify-between border-b border-blue-100">
+                    <span><i class="fas fa-info-circle mr-1"></i> Puedes arrastrar los elementos con el icono <i class="fas fa-grip-vertical mx-1"></i> para reordenarlos manualmente si no están en orden.</span>
+                    <span class="text-gray-500 italic">Clic en el ojo para previsualizar</span>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4 bg-gray-100" id="ext-queue-modal-list">
+                    <!-- Se llena dinámicamente -->
+                </div>
+                <div class="p-4 bg-white border-t flex justify-between items-center">
+                    <button onclick="closeQueueModal()" class="px-5 py-2.5 rounded-lg border border-gray-300 font-bold text-gray-700 hover:bg-gray-100">
+                        Cerrar
+                    </button>
+                    <button onclick="prepareExport()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2">
+                        <i class="fas fa-file-archive"></i> EXPORTAR .ZIP
                     </button>
                 </div>
-            </aside>
+            </div>
         </div>
 
         <div id="view-editorLB" class="hidden p-8 max-w-4xl mx-auto">
@@ -382,7 +412,7 @@
         };
         const hideLoading = () => document.getElementById('loading-overlay').classList.add('hidden');
         const toast = (msg, icon = 'success') => {
-            Swal.fire({ toast: true, position: 'top-end', icon: icon, title: msg, showConfirmButton: false, timer: 3000 });
+            Swal.fire({ toast: true, position: 'center', icon: icon, title: msg, showConfirmButton: false, timer: 1800 });
         };
 
         function normalizarParaComparar(texto) {
@@ -1073,37 +1103,114 @@
         }
 
         function renderExtQueue() {
-            const container = document.getElementById('ext-queue-list');
+            const total = state.ext_queue.length;
+            const badge = document.getElementById('ext-queue-badge');
+            const sideCount = document.getElementById('ext-sidebar-count');
+            const modalBadge = document.getElementById('queue-modal-badge');
+            if (badge) badge.innerText = total;
+            if (sideCount) sideCount.innerText = total;
+            if (modalBadge) modalBadge.innerText = `${total} archivos`;
+            renderExtQueueModalList();
+        }
+
+        function openQueueModal() {
+            renderExtQueueModalList();
+            document.getElementById('ext-queue-modal').classList.remove('hidden');
+        }
+
+        function closeQueueModal() {
+            document.getElementById('ext-queue-modal').classList.add('hidden');
+        }
+
+        function renderExtQueueModalList() {
+            const container = document.getElementById('ext-queue-modal-list');
+            if (!container) return;
             container.innerHTML = '';
-            const ordenBase = state.df_base.map(r => r[state.logicMode]);
-            const sortedQueue = [...state.ext_queue].sort((a, b) => {
-                const normA = (a.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                const normB = (b.nombre || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                const isA = normA.includes("GUION");
-                const isB = normB.includes("GUION");
-                if (isA && !isB) return -1;
-                if (!isA && isB) return 1;
-                return ordenBase.indexOf(a.nombre) - ordenBase.indexOf(b.nombre);
-            });
-            sortedQueue.forEach((item, i) => {
-                container.insertAdjacentHTML('beforeend', `
-                    <div class="queue-item flex justify-between items-center">
-                        <div>
-                            <div class="font-bold text-blue-800">${item.nombre}</div>
-                            <div class="text-[10px] text-gray-500">Págs: ${item.pags.join(', ')}</div>
-                        </div>
-                        <button onclick="removeFromQueue(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+
+            if (state.ext_queue.length === 0) {
+                container.innerHTML = `
+                    <div class="h-64 flex flex-col items-center justify-center text-gray-400">
+                        <i class="fas fa-inbox text-5xl mb-2"></i>
+                        <p class="font-bold">No hay archivos en la cola todavía</p>
                     </div>
-                `);
+                `;
+                return;
+            }
+
+            state.ext_queue.forEach((item, i) => {
+                const rowHtml = `
+                    <div class="bg-white p-3 mb-2 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between gap-4 cursor-move" data-queue-idx="${i}">
+                        <div class="flex items-center gap-3">
+                            <span class="text-gray-400 px-2 cursor-grab"><i class="fas fa-grip-vertical"></i></span>
+                            <span class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">${i + 1}</span>
+                            <div>
+                                <div class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                    ${item.nombre}
+                                    <button onclick="previewExtQueueItem(${i})" class="text-blue-500 hover:text-blue-700 text-sm" title="Previsualizar páginas extraídas">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="text-xs text-gray-500">Páginas originales: <span class="font-semibold text-blue-600">${item.pags.join(', ')}</span> (${item.pags.length} pág${item.pags.length > 1 ? 's' : ''})</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="previewExtQueueItem(${i})" class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold text-xs hover:bg-blue-100 transition flex items-center gap-1">
+                                <i class="fas fa-eye"></i> Previa
+                            </button>
+                            <button onclick="removeFromQueue(${i})" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition" title="Quitar de la cola y devolver páginas">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', rowHtml);
             });
+
+            if (window.Sortable) {
+                new Sortable(container, {
+                    animation: 150,
+                    handle: '.cursor-move',
+                    filter: 'button, i',
+                    preventOnFilter: false,
+                    onEnd: (evt) => {
+                        const [moved] = state.ext_queue.splice(evt.oldIndex, 1);
+                        state.ext_queue.splice(evt.newIndex, 0, moved);
+                        renderExtQueue();
+                    }
+                });
+            }
+        }
+
+        async function previewExtQueueItem(queueIdx) {
+            const item = state.ext_queue[queueIdx];
+            if (!item || !item.pags || item.pags.length === 0) return;
+            showLoading("Cargando vista previa...");
+            try {
+                const subDoc = await PDFLib.PDFDocument.create();
+                const origDoc = await PDFLib.PDFDocument.load(state.ext_pdf_bytes);
+                const copiedPages = await subDoc.copyPages(origDoc, item.pags.map(p => p - 1));
+                copiedPages.forEach(p => subDoc.addPage(p));
+                const subBytes = await subDoc.save();
+
+                state.currentModalPdfDoc = await pdfjsLib.getDocument({data: subBytes}).promise;
+                state.currentModalPage = 1;
+                document.getElementById('modal-title').innerText = `Previa: ${item.nombre}`;
+                await updateModalContent(state.currentModalPdfDoc);
+                document.getElementById('pdf-modal').style.display = 'flex';
+            } catch (err) {
+                console.error(err);
+                toast("Error al abrir previa", "error");
+            }
+            hideLoading();
         }
 
         function removeFromQueue(idx) {
             saveState();
             const item = state.ext_queue.splice(idx, 1)[0];
-            state.ext_pages_pool = [...state.ext_pages_pool, ...item.pags].sort((a,b) => a-b);
+            state.ext_pages_pool = [...state.ext_pages_pool, ...item.pags].sort((a,b) => a - b);
             updateExtViewer();
             renderExtQueue();
+            toast("Páginas devueltas al documento");
         }
 
         async function prepareExport() {
