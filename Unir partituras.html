@@ -659,11 +659,88 @@
             if (e.target === clearModal) cancelClearBtn.click();
         };
 
-        generateBtn.onclick = () => {
+        async function buildPdfBytes(items, isDoubleSided) {
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            for (const item of items) {
+                const fileArrayBuffer = await item.file.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer);
+                const pageCount = pdfDoc.getPageCount();
+
+                for (let c = 0; c < item.copies; c++) {
+                    const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                    let lastCopiedPage = null;
+
+                    copiedPages.forEach(p => {
+                        mergedPdf.addPage(p);
+                        lastCopiedPage = p;
+                    });
+
+                    if (isDoubleSided && pageCount % 2 !== 0) {
+                        if (lastCopiedPage) {
+                            const { width, height } = lastCopiedPage.getSize();
+                            mergedPdf.addPage([width, height]);
+                        } else {
+                            mergedPdf.addPage();
+                        }
+                    }
+                }
+            }
+            return await mergedPdf.save();
+        }
+
+        function triggerDownload(bytes, fileName) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            link.download = fileName.toLowerCase().endsWith('.pdf') ? fileName : fileName + '.pdf';
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+        }
+
+        generateBtn.onclick = async () => {
             if (uploadedFiles.length === 0) return;
-            
-            if (uploadedFolderName) {
-                defaultFileName = uploadedFolderName;
+
+            // Agrupar por carpetas
+            const folderGroups = new Map();
+            uploadedFiles.forEach(item => {
+                const folder = item.folder || 'Archivos sueltos';
+                if (!folderGroups.has(folder)) folderGroups.set(folder, []);
+                folderGroups.get(folder).push(item);
+            });
+
+            // Si hay múltiples carpetas, genera y descarga 1 PDF por cada carpeta automáticamente
+            if (folderGroups.size > 1) {
+                const originalHtml = generateBtn.innerHTML;
+                generateBtn.disabled = true;
+                generateBtn.innerHTML = "Generando...";
+                const isDoubleSided = doubleSidedCheckbox.checked;
+
+                const entries = Array.from(folderGroups.entries());
+                const processNext = async (index) => {
+                    if (index >= entries.length) {
+                        generateBtn.disabled = false;
+                        generateBtn.innerHTML = originalHtml;
+                        return;
+                    }
+                    const [folderName, items] = entries[index];
+                    try {
+                        const bytes = await buildPdfBytes(items, isDoubleSided);
+                        triggerDownload(bytes, folderName);
+                        setTimeout(() => processNext(index + 1), 350);
+                    } catch (e) {
+                        console.error(e);
+                        alert('Error al generar PDF: ' + e.message);
+                        generateBtn.disabled = false;
+                        generateBtn.innerHTML = originalHtml;
+                    }
+                };
+                processNext(0);
+                return;
+            }
+
+            // Si solo hay 1 carpeta o archivos sueltos, abre el modal de nombre como siempre
+            const singleFolderName = Array.from(folderGroups.keys())[0];
+            if (uploadedFolderName || (singleFolderName && singleFolderName !== 'Archivos sueltos')) {
+                defaultFileName = uploadedFolderName || singleFolderName;
                 defaultNameDisplay.innerText = defaultFileName + ".pdf";
                 radioDefault.checked = true;
                 radioCustom.checked = false;
@@ -677,7 +754,7 @@
                 customNameContainer.classList.remove('hidden');
                 customNameInput.value = "Partituras Unificadas";
             }
-            
+
             downloadModal.classList.remove('hidden');
         };
 
@@ -701,48 +778,18 @@
             
             let finalName = radioDefault.checked ? defaultFileName : customNameInput.value.trim();
             if(!finalName) finalName = "Partituras Unificadas";
-            if(!finalName.toLowerCase().endsWith('.pdf')) finalName += ".pdf";
 
             const originalHtml = generateBtn.innerHTML;
             generateBtn.disabled = true;
             generateBtn.innerHTML = "Generando...";
-
             const isDoubleSided = doubleSidedCheckbox.checked;
 
             try {
-                const mergedPdf = await PDFLib.PDFDocument.create();
-                for (const item of uploadedFiles) {
-                    const fileArrayBuffer = await item.file.arrayBuffer();
-                    const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer);
-                    const pageCount = pdfDoc.getPageCount();
-
-                    for (let c = 0; c < item.copies; c++) {
-                        const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                        let lastCopiedPage = null;
-
-                        copiedPages.forEach(p => {
-                            mergedPdf.addPage(p);
-                            lastCopiedPage = p; 
-                        });
-
-                        if (isDoubleSided && pageCount % 2 !== 0) {
-                            if (lastCopiedPage) {
-                                const { width, height } = lastCopiedPage.getSize();
-                                mergedPdf.addPage([width, height]);
-                            } else {
-                                mergedPdf.addPage();
-                            }
-                        }
-                    }
-                }
-                
-                const bytes = await mergedPdf.save();
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-                link.download = finalName;
-                link.click();
+                const bytes = await buildPdfBytes(uploadedFiles, isDoubleSided);
+                triggerDownload(bytes, finalName);
             } catch (e) {
-                alert('Error al generar PDF');
+                console.error(e);
+                alert('Error al generar PDF: ' + e.message);
             } finally {
                 generateBtn.disabled = false;
                 generateBtn.innerHTML = originalHtml;
