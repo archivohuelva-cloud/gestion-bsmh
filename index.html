@@ -840,21 +840,14 @@
                                 <!-- Lista con altura ampliada -->
                                 <div id="reminders-list" class="max-h-[60vh] overflow-y-auto mb-3 pr-1 space-y-1"></div>
                                 
-                                <!-- Input con selector de origen (WhatsApp / Email) -->
-                                <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 pt-2 border-t border-slate-100 shrink-0">
-                                    <input type="text" id="reminder-input" placeholder="Nuevo recordatorio o enlace..." class="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" onkeypress="if(event.key === 'Enter') addReminder()">
-                                    
-                                    <!-- Botones de selección de etiqueta (WhatsApp / Email) -->
-                                    <div class="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 shrink-0">
-                                        <button type="button" id="source-tag-wa" onclick="toggleSourceTag('whatsapp')" title="Origen WhatsApp" class="p-1.5 rounded-md text-slate-400 hover:text-green-600 transition-colors">
-                                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.765.782 2.791.783 3.181 0 5.767-2.587 5.768-5.766.001-3.182-2.585-5.769-5.768-5.769zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-12.416c-5.514 0-10 4.486-10 10 0 1.763.459 3.42 1.263 4.866l-1.343 4.908 5.039-1.321c1.396.762 2.99 1.191 4.685 1.191 5.514 0 10-4.486 10-10s-4.486-10-10-10z"/></svg>
-                                        </button>
-                                        <button type="button" id="source-tag-mail" onclick="toggleSourceTag('email')" title="Origen @Email" class="p-1.5 rounded-md text-slate-400 hover:text-blue-600 transition-colors">
-                                            <svg class="w-5 h-5 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                                        </button>
-                                    </div>
-
-                                    <button onclick="addReminder()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow transition-colors shrink-0">+</button>
+                                <!-- Botones inferiores: Nueva carpeta y Añadir recordatorio -->
+                                <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-100 shrink-0">
+                                    <button type="button" onclick="createReminderFolder(event)" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                                        <span>📁</span> Nueva carpeta
+                                    </button>
+                                    <button type="button" onclick="openNewReminderModal(event)" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow transition-colors flex items-center justify-center gap-2">
+                                        <span>+</span> Añadir recordatorio
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1275,6 +1268,26 @@
     }
 </script>
 
+<!-- MODAL NUEVA CARPETA -->
+<div id="folder-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[4px] z-[2000] hidden flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="font-bold text-slate-800 text-base">📁 Nueva Carpeta</h3>
+            <button type="button" onclick="closeFolderModal(event)" class="text-slate-400 hover:text-slate-600 transition text-2xl font-semibold leading-none">&times;</button>
+        </div>
+        <div class="p-6">
+            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nombre de la carpeta:</label>
+            <input type="text" id="new-folder-name" placeholder="Ej: Conciertos, Partituras..." 
+                class="w-full text-sm border-2 border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition text-slate-700"
+                onkeypress="if(event.key === 'Enter') confirmCreateFolder(event)">
+        </div>
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <button type="button" onclick="confirmCreateFolder(event)" class="px-5 py-2 text-sm font-bold bg-[#0000bd] text-white hover:bg-blue-800 rounded-xl shadow-md transition">Crear</button>
+            <button type="button" onclick="closeFolderModal(event)" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL EDITAR RECORDATORIO (MULTILÍNEA Y ORIGEN) -->
 <div id="edit-reminder-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[4px] z-[2000] hidden flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col transform transition-all">
@@ -1283,7 +1296,7 @@
                 <span class="text-amber-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-pen"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
                 </span>
-                <h3 class="font-bold text-slate-800 text-base">Editar Recordatorio</h3>
+                <h3 id="edit-modal-title" class="font-bold text-slate-800 text-base">Editar Recordatorio</h3>
             </div>
             <button type="button" onclick="closeEditModal(event)" class="text-slate-400 hover:text-slate-600 transition text-2xl font-semibold leading-none">&times;</button>
         </div>
@@ -1304,7 +1317,13 @@
                 </div>
             </div>
 
-            <textarea id="edit-reminder-textarea" rows="6" 
+            <div class="mb-3">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Carpeta:</label>
+                <select id="edit-reminder-folder" class="w-full text-sm border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-blue-500 bg-white text-slate-700 font-medium">
+                    <option value="">Sin carpeta (General)</option>
+                </select>
+            </div>
+            <textarea id="edit-reminder-textarea" rows="10" 
                 class="w-full text-sm border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition resize-y text-slate-700 leading-relaxed" 
                 placeholder="Escribe tu recordatorio aquí..."></textarea>
         </div>
@@ -1840,7 +1859,8 @@
             return {
                 text: text,
                 completed: !!rawItem.completed,
-                source: source
+                source: source,
+                folder: rawItem.folder || ""
             };
         }
 
@@ -1852,7 +1872,8 @@
             return {
                 text: `${prefix}${item.text}`,
                 completed: item.completed,
-                source: item.source
+                source: item.source,
+                folder: item.folder || ""
             };
         }
 
@@ -1958,57 +1979,173 @@
             }
         }
 
+        let savedFolders = JSON.parse(localStorage.getItem('bsmh_reminder_folders')) || [];
+        let openFolders = JSON.parse(localStorage.getItem('bsmh_open_folders')) || {};
+
+        function getAllFolders() {
+            const set = new Set(savedFolders);
+            reminders.forEach(r => { if (r.folder) set.add(r.folder); });
+            return Array.from(set);
+        }
+
+        function createReminderFolder(event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('reminders-dropdown');
+            if (dropdown) dropdown.classList.remove('show');
+            const modal = document.getElementById('folder-modal');
+            const input = document.getElementById('new-folder-name');
+            input.value = '';
+            modal.classList.remove('hidden');
+            setTimeout(() => input.focus(), 50);
+        }
+
+        function closeFolderModal(event) {
+            if (event) event.stopPropagation();
+            document.getElementById('folder-modal').classList.add('hidden');
+            const dropdown = document.getElementById('reminders-dropdown');
+            const overlay = document.getElementById('reminders-overlay');
+            if (dropdown) dropdown.classList.add('show');
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function confirmCreateFolder(event) {
+            if (event) event.stopPropagation();
+            const input = document.getElementById('new-folder-name');
+            const clean = input.value.trim();
+            if (clean) {
+                if (!savedFolders.includes(clean)) {
+                    savedFolders.push(clean);
+                    localStorage.setItem('bsmh_reminder_folders', JSON.stringify(savedFolders));
+                }
+                openFolders[clean] = true;
+                localStorage.setItem('bsmh_open_folders', JSON.stringify(openFolders));
+                renderReminders();
+            }
+            closeFolderModal(event);
+        }
+
+        function toggleFolderOpen(folderName, event) {
+            if (event) event.stopPropagation();
+            openFolders[folderName] = !openFolders[folderName];
+            localStorage.setItem('bsmh_open_folders', JSON.stringify(openFolders));
+            renderReminders();
+        }
+
+        function deleteReminderFolder(folderName, event) {
+            if (event) event.stopPropagation();
+            if (!confirm(`¿Eliminar la carpeta "${folderName}"? Las notas pasarán a "Sin carpeta".`)) return;
+            reminders.forEach(r => { if (r.folder === folderName) r.folder = ""; });
+            savedFolders = savedFolders.filter(f => f !== folderName);
+            localStorage.setItem('bsmh_reminder_folders', JSON.stringify(savedFolders));
+            renderReminders();
+            saveReminders();
+        }
+
+        function createReminderElement(r, i) {
+            const div = document.createElement('div');
+            div.className = 'reminder-item';
+            div.draggable = true;
+            div.dataset.index = i;
+
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragenter', handleDragEnter);
+            div.addEventListener('dragleave', handleDragLeave);
+            div.addEventListener('dragend', handleDragEnd);
+
+            let sourceBadge = '';
+            if (r.source === 'whatsapp') {
+                sourceBadge = `<span title="Origen WhatsApp" class="inline-flex items-center text-green-500 mr-2 shrink-0"><svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.765.782 2.791.783 3.181 0 5.767-2.587 5.768-5.766.001-3.182-2.585-5.769-5.768-5.769zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-12.416c-5.514 0-10 4.486-10 10 0 1.763.459 3.42 1.263 4.866l-1.343 4.908 5.039-1.321c1.396.762 2.99 1.191 4.685 1.191 5.514 0 10-4.486 10-10s-4.486-10-10-10z"/></svg></span>`;
+            } else if (r.source === 'email') {
+                sourceBadge = `<span title="Origen @Email" class="inline-flex items-center text-blue-600 mr-2 shrink-0"><svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>`;
+            }
+
+            div.innerHTML = `
+                <div class="drag-handle" title="Arrastrar para reordenar o mover a carpeta">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
+                </div>
+                <input type="checkbox" class="reminder-checkbox shrink-0" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
+                ${sourceBadge}
+                <span class="reminder-text ${r.completed ? 'completed' : ''}">${formatReminderText(r.text)}</span>
+                <button type="button" onclick="editReminder(${i}, event)" class="text-amber-500 hover:text-amber-600 transition-colors p-1 ml-1 cursor-pointer shrink-0 flex items-center justify-center" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg></button>
+                <button type="button" onclick="deleteReminder(${i}, event)" class="text-red-500 hover:text-red-700 transition-colors p-1 ml-1 cursor-pointer shrink-0 flex items-center justify-center" title="Eliminar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+            `;
+            return div;
+        }
+
         function renderReminders() {
             const list = document.getElementById('reminders-list');
             list.innerHTML = '';
             let count = 0;
-            
-            reminders.forEach((r, i) => {
-                if(!r.completed) count++;
-                const div = document.createElement('div');
-                div.className = 'reminder-item';
-                div.draggable = true;
-                div.dataset.index = i;
+            reminders.forEach(r => { if(!r.completed) count++; });
 
-                div.addEventListener('dragstart', handleDragStart);
-                div.addEventListener('dragover', handleDragOver);
-                div.addEventListener('drop', handleDrop);
-                div.addEventListener('dragenter', handleDragEnter);
-                div.addEventListener('dragleave', handleDragLeave);
-                div.addEventListener('dragend', handleDragEnd);
-
-                let sourceBadge = '';
-                if (r.source === 'whatsapp') {
-                    sourceBadge = `
-                        <span title="Origen WhatsApp" class="inline-flex items-center text-green-500 mr-2 shrink-0">
-                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.765.782 2.791.783 3.181 0 5.767-2.587 5.768-5.766.001-3.182-2.585-5.769-5.768-5.769zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.099.824zm-3.392-12.416c-5.514 0-10 4.486-10 10 0 1.763.459 3.42 1.263 4.866l-1.343 4.908 5.039-1.321c1.396.762 2.99 1.191 4.685 1.191 5.514 0 10-4.486 10-10s-4.486-10-10-10z"/></svg>
-                        </span>`;
-                } else if (r.source === 'email') {
-                    sourceBadge = `
-                        <span title="Origen @Email" class="inline-flex items-center text-blue-600 mr-2 shrink-0">
-                            <svg class="w-4 h-4 fill-none stroke-current" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                        </span>`;
+            // 1. Zona general arriba (Sin carpeta) - permite soltar para sacar de una carpeta
+            const generalZone = document.createElement('div');
+            generalZone.className = 'min-h-[30px] mb-2';
+            generalZone.ondragover = (e) => e.preventDefault();
+            generalZone.ondrop = (e) => {
+                e.preventDefault();
+                if (dragStartIndex !== undefined && reminders[dragStartIndex] && reminders[dragStartIndex].folder) {
+                    reminders[dragStartIndex].folder = "";
+                    renderReminders();
+                    saveReminders();
                 }
-
-                div.innerHTML = `
-                    <div class="drag-handle" title="Arrastrar para reordenar">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm3 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
-                        </svg>
-                    </div>
-                    <input type="checkbox" class="reminder-checkbox shrink-0" ${r.completed ? 'checked' : ''} onchange="toggleReminder(${i})">
-                    ${sourceBadge}
-                    <span class="reminder-text ${r.completed ? 'completed' : ''}">${formatReminderText(r.text)}</span>
-                    <button type="button" onclick="editReminder(${i}, event)" class="text-amber-500 hover:text-amber-600 transition-colors p-1 ml-1 cursor-pointer shrink-0 flex items-center justify-center" title="Editar">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
-                    </button>
-                    <button type="button" onclick="deleteReminder(${i}, event)" class="text-red-500 hover:text-red-700 transition-colors p-1 ml-1 cursor-pointer shrink-0 flex items-center justify-center" title="Eliminar">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    </button>
-                `;
-                list.appendChild(div);
+            };
+            reminders.forEach((r, i) => {
+                if (!r.folder) generalZone.appendChild(createReminderElement(r, i));
             });
-            
+            list.appendChild(generalZone);
+
+            // 2. Renderizar carpetas debajo
+            const folders = getAllFolders();
+            folders.forEach(folderName => {
+                const isOpen = !!openFolders[folderName];
+                const folderItems = reminders.map((r, i) => ({ r, i })).filter(item => item.r.folder === folderName);
+
+                const folderBox = document.createElement('div');
+                folderBox.className = 'mb-2 border border-amber-200 bg-amber-50/40 rounded-xl overflow-hidden';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between px-3 py-2 cursor-pointer select-none hover:bg-amber-100/60 transition-colors';
+                header.onclick = (e) => toggleFolderOpen(folderName, e);
+                header.ondragover = (e) => { e.preventDefault(); header.classList.add('bg-amber-200'); };
+                header.ondragleave = () => header.classList.remove('bg-amber-200');
+                header.ondrop = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    header.classList.remove('bg-amber-200');
+                    if (dragStartIndex !== undefined && reminders[dragStartIndex]) {
+                        reminders[dragStartIndex].folder = folderName;
+                        openFolders[folderName] = true;
+                        renderReminders();
+                        saveReminders();
+                    }
+                };
+
+                header.innerHTML = `
+                    <div class="flex items-center gap-2 font-bold text-slate-700 text-sm">
+                        <span class="text-xs text-slate-400">${isOpen ? '▼' : '▶'}</span>
+                        <span>📁 ${folderName}</span>
+                        <span class="text-[11px] bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-full font-bold">${folderItems.length}</span>
+                    </div>
+                    <button type="button" onclick="deleteReminderFolder('${folderName.replace(/'/g, "\\'")}', event)" class="text-xs text-red-500 hover:text-red-700 px-2 py-1" title="Eliminar carpeta">✕</button>
+                `;
+                folderBox.appendChild(header);
+
+                if (isOpen) {
+                    const body = document.createElement('div');
+                    body.className = 'px-3 pb-2 bg-white border-t border-amber-100';
+                    if (folderItems.length === 0) {
+                        body.innerHTML = '<p class="text-xs text-slate-400 italic py-2">Arrastra aquí un recordatorio...</p>';
+                    } else {
+                        folderItems.forEach(({ r, i }) => body.appendChild(createReminderElement(r, i)));
+                    }
+                    folderBox.appendChild(body);
+                }
+                list.appendChild(folderBox);
+            });
+
             document.getElementById('reminders-count').innerText = count;
 
             const badge = document.getElementById('reminders-badge');
@@ -2094,19 +2231,55 @@
             if (dropdown) dropdown.classList.add('show');
         }
 
+        function populateFolderSelect(selectedFolder) {
+            const select = document.getElementById('edit-reminder-folder');
+            if (!select) return;
+            select.innerHTML = '<option value="">Sin carpeta (General)</option>';
+            getAllFolders().forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = `📁 ${f}`;
+                if (f === selectedFolder) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function openNewReminderModal(event) {
+            if (event) event.stopPropagation();
+            const modal = document.getElementById('edit-reminder-modal');
+            const textarea = document.getElementById('edit-reminder-textarea');
+            const indexInput = document.getElementById('edit-reminder-index');
+            const title = document.getElementById('edit-modal-title');
+            const dropdown = document.getElementById('reminders-dropdown');
+
+            if (dropdown) dropdown.classList.remove('show');
+            if (title) title.textContent = 'Nuevo Recordatorio';
+
+            indexInput.value = '';
+            textarea.value = '';
+            populateFolderSelect('');
+            editSelectedSourceTag = null;
+            toggleEditSourceTag(null);
+
+            modal.classList.remove('hidden');
+            textarea.focus();
+        }
+
         function editReminder(i, event) {
             if (event) event.stopPropagation();
             const modal = document.getElementById('edit-reminder-modal');
             const textarea = document.getElementById('edit-reminder-textarea');
             const indexInput = document.getElementById('edit-reminder-index');
+            const title = document.getElementById('edit-modal-title');
             const dropdown = document.getElementById('reminders-dropdown');
 
             if (dropdown) dropdown.classList.remove('show');
+            if (title) title.textContent = 'Editar Recordatorio';
 
             indexInput.value = i;
             textarea.value = reminders[i].text;
+            populateFolderSelect(reminders[i].folder || '');
             
-            // Cargar el origen actual en los botones del modal de edición
             editSelectedSourceTag = null;
             if (reminders[i].source) {
                 toggleEditSourceTag(reminders[i].source);
@@ -2137,10 +2310,21 @@
             if (event) event.stopPropagation();
             const index = document.getElementById('edit-reminder-index').value;
             const newText = document.getElementById('edit-reminder-textarea').value.trim();
+            const folder = document.getElementById('edit-reminder-folder')?.value || "";
 
-            if (newText !== "" && index !== "") {
-                reminders[index].text = newText;
-                reminders[index].source = editSelectedSourceTag || null;
+            if (newText !== "") {
+                if (index !== "") {
+                    reminders[index].text = newText;
+                    reminders[index].source = editSelectedSourceTag || null;
+                    reminders[index].folder = folder;
+                } else {
+                    reminders.push({
+                        text: newText,
+                        completed: false,
+                        source: editSelectedSourceTag || null,
+                        folder: folder
+                    });
+                }
                 renderReminders();
                 saveReminders();
             }
