@@ -276,6 +276,7 @@
         const defaultNameDisplay = document.getElementById('defaultNameDisplay');
 
         let uploadedFiles = [];
+        let originalUploadedFiles = [];
         let collapsedFolders = {};
         let defaultFileName = "Repertorio_BSMH";
         let uploadedFolderName = null;
@@ -395,22 +396,32 @@
 
         function applyBSMHRules() {
             if (!bsmhCheckbox.checked) {
-                uploadedFiles.forEach(item => item.copies = 1);
+                if (originalUploadedFiles.length > 0) {
+                    uploadedFiles = originalUploadedFiles.map(item => ({ ...item, copies: 1 }));
+                } else {
+                    uploadedFiles.forEach(item => item.copies = 1);
+                }
                 return;
             }
 
-            // Ordenar reglas de más específica (más larga) a más general para evitar falsos positivos
+            if (originalUploadedFiles.length === 0 && uploadedFiles.length > 0) {
+                originalUploadedFiles = uploadedFiles.map(item => ({ ...item }));
+            }
+
+            const sourceFiles = originalUploadedFiles.length > 0 ? originalUploadedFiles : uploadedFiles;
             const sortedRoster = [...bsmhRoster].sort((a, b) => b.name.length - a.name.length);
 
-            uploadedFiles = uploadedFiles.filter(item => {
-                const fileName = normalizeText(item.name);
-                const match = sortedRoster.find(r => fileName.includes(normalizeText(r.name)));
-                if (match) {
-                    item.copies = match.copies;
-                    return true;
-                }
-                return false;
-            });
+            uploadedFiles = sourceFiles
+                .map(item => ({ ...item }))
+                .filter(item => {
+                    const fileName = normalizeText(item.name);
+                    const match = sortedRoster.find(r => fileName.includes(normalizeText(r.name)));
+                    if (match) {
+                        item.copies = match.copies;
+                        return true;
+                    }
+                    return false;
+                });
         }
 
         // Lógica del Modal de Plantilla
@@ -573,9 +584,11 @@
                 };
             }));
 
-            uploadedFiles = [...uploadedFiles, ...newFiles].sort((a, b) => {
+            const baseList = bsmhCheckbox.checked && originalUploadedFiles.length > 0 ? originalUploadedFiles : uploadedFiles;
+            uploadedFiles = [...baseList, ...newFiles].sort((a, b) => {
                 return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
             });
+            originalUploadedFiles = uploadedFiles.map(item => ({ ...item }));
             
             if (bsmhCheckbox.checked) {
                 applyBSMHRules();
@@ -731,6 +744,7 @@ const mainContainer = document.getElementById('mainContainer');
 
         window.removeFolder = (folderName) => {
             uploadedFiles = uploadedFiles.filter(f => (f.folder || 'Archivos sueltos') !== folderName);
+            originalUploadedFiles = originalUploadedFiles.filter(f => (f.folder || 'Archivos sueltos') !== folderName);
             delete collapsedFolders[folderName];
             if (bsmhCheckbox.checked) applyBSMHRules();
             renderList();
@@ -761,6 +775,7 @@ const mainContainer = document.getElementById('mainContainer');
 
         window.removeFile = (id) => {
             uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+            originalUploadedFiles = originalUploadedFiles.filter(f => f.id !== id);
             if (bsmhCheckbox.checked) applyBSMHRules();
             renderList();
         };
@@ -794,6 +809,7 @@ const mainContainer = document.getElementById('mainContainer');
 
         confirmClearBtn.onclick = () => {
             uploadedFiles = [];
+            originalUploadedFiles = [];
             uploadedFolderName = null;
             renderList();
             fileInput.value = '';
