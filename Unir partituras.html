@@ -645,11 +645,13 @@ const mainContainer = document.getElementById('mainContainer');
         clearBtn.onclick = () => {
             if (uploadedFiles.length > 0) {
                 clearModal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
             }
         };
 
         cancelClearBtn.onclick = () => {
             clearModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         };
 
         confirmClearBtn.onclick = () => {
@@ -658,6 +660,7 @@ const mainContainer = document.getElementById('mainContainer');
             renderList();
             fileInput.value = '';
             clearModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
         };
 
         clearModal.onclick = (e) => {
@@ -805,6 +808,10 @@ const mainContainer = document.getElementById('mainContainer');
             if (e.key === 'Enter' && !downloadModal.classList.contains('hidden')) {
                 e.preventDefault();
                 acceptDownloadBtn.click();
+            }
+            if (e.key === 'Enter' && !clearModal.classList.contains('hidden')) {
+                e.preventDefault();
+                confirmClearBtn.click();
             }
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
                 if (uploadedFiles.length > 0) {
