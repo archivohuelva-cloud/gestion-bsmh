@@ -28,11 +28,6 @@
             user-select: none;
             touch-action: manipulation;
         }
-        #pdfList {
-            display: flex;
-            flex-direction: column;
-            gap: 0.4rem;
-        }
         .order-input::-webkit-inner-spin-button,
         .order-input::-webkit-outer-spin-button {
             -webkit-appearance: none;
@@ -45,7 +40,7 @@
 </head>
 <body class="bg-gray-100 min-h-screen font-sans no-select text-gray-800">
 
-    <div class="max-w-xl mx-auto px-4 py-12">
+    <div id="mainContainer" class="max-w-xl mx-auto px-4 py-12 transition-all duration-300">
         <!-- Header (Sin fecha/hora) -->
         <header class="mb-6 text-center">
             <h1 class="text-2xl font-bold text-gray-800 mb-1">Unificador de Partituras BSMHuelva</h1>
@@ -490,6 +485,16 @@
                 groupMap.get(folderName).items.push({ item, globalIndex });
             });
 
+const mainContainer = document.getElementById('mainContainer');
+            if (groups.length > 1) {
+                mainContainer.classList.remove('max-w-xl');
+                mainContainer.classList.add('max-w-7xl');
+                pdfList.className = 'grid grid-cols-1 md:grid-cols-2 gap-4 items-start';
+            } else {
+                mainContainer.classList.remove('max-w-7xl');
+                mainContainer.classList.add('max-w-xl');
+                pdfList.className = 'flex flex-col gap-1.5';
+            }
             groups.forEach(group => {
                 const isCollapsed = !!collapsedFolders[group.name];
                 const folderWrapper = document.createElement('div');
