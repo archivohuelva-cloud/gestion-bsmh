@@ -230,7 +230,38 @@
             </div>
         </div>
     </div>
-
+<!-- Batch Print Modal -->
+    <div id="batchPrintModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div class="p-4 border-b bg-emerald-50">
+                <h3 id="batchPrintTitle" class="font-bold text-emerald-900 text-base">Impresión por lotes</h3>
+            </div>
+            <div class="p-5 bg-white space-y-4">
+                <p id="batchPrintMessage" class="text-sm text-gray-700 leading-relaxed"></p>
+                
+                <!-- Selector para 3 o más páginas -->
+                <div id="batchDuplexOptions" class="hidden space-y-2 pt-2 border-t border-gray-100">
+                    <p class="text-xs font-bold text-gray-600">Seleccione el tipo de impresión:</p>
+                    <label class="flex items-center p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="batchDuplex" value="single" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500" checked>
+                        <span class="ml-2.5 text-xs font-semibold text-gray-700">A una cara</span>
+                    </label>
+                    <label class="flex items-center p-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="batchDuplex" value="double" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                        <span class="ml-2.5 text-xs font-semibold text-gray-700">A doble cara (añade pág. en blanco en impares)</span>
+                    </label>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                <button id="cancelBatchPrintBtn" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors text-sm">
+                    Cancelar
+                </button>
+                <button id="confirmBatchPrintBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md shadow-emerald-200 transition-all text-sm">
+                    Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
 <!-- Clear List Modal -->
     <div id="clearModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
@@ -830,8 +861,9 @@ const mainContainer = document.getElementById('mainContainer');
         async function buildPdfBytes(items, isDoubleSided) {
             const mergedPdf = await PDFLib.PDFDocument.create();
             for (const item of items) {
+                await new Promise(r => setTimeout(r, 0));
                 const fileArrayBuffer = await item.file.arrayBuffer();
-                const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer);
+                const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer, { ignoreEncryption: true });
                 const pageCount = pdfDoc.getPageCount();
 
                 for (let c = 0; c < item.copies; c++) {
@@ -980,64 +1012,146 @@ const mainContainer = document.getElementById('mainContainer');
                 }
             }
         });
-printBtn.onclick = async () => {
+const batchPrintModal = document.getElementById('batchPrintModal');
+        const batchPrintTitle = document.getElementById('batchPrintTitle');
+        const batchPrintMessage = document.getElementById('batchPrintMessage');
+        const batchDuplexOptions = document.getElementById('batchDuplexOptions');
+        const cancelBatchPrintBtn = document.getElementById('cancelBatchPrintBtn');
+        const confirmBatchPrintBtn = document.getElementById('confirmBatchPrintBtn');
+
+        function openPdfForPrint(bytes) {
+            const blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            const printWindow = window.open(blobUrl, '_blank');
+            if (printWindow) {
+                printWindow.onload = () => {
+                    try {
+                        printWindow.print();
+                    } catch (err) {}
+                };
+            }
+        }
+
+        async function buildA3LandscapePdfBytes(items) {
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            const a3Width = 1190.55;  // 420mm en puntos
+            const a3Height = 841.89;  // 297mm en puntos
+            const halfW = a3Width / 2;
+
+            for (const item of items) {
+                await new Promise(r => setTimeout(r, 0));
+                const fileArrayBuffer = await item.file.arrayBuffer();
+                const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer, { ignoreEncryption: true });
+                const [emb1] = await mergedPdf.embedPdf(pdfDoc, [0]);
+                const [emb2] = await mergedPdf.embedPdf(pdfDoc, [1]);
+
+                const scale1 = Math.min(halfW / emb1.width, a3Height / emb1.height);
+                const w1 = emb1.width * scale1;
+                const h1 = emb1.height * scale1;
+
+                const scale2 = Math.min(halfW / emb2.width, a3Height / emb2.height);
+                const w2 = emb2.width * scale2;
+                const h2 = emb2.height * scale2;
+
+                for (let c = 0; c < item.copies; c++) {
+                    const a3Page = mergedPdf.addPage([a3Width, a3Height]);
+                    // Página 1 a la izquierda
+                    a3Page.drawPage(emb1, {
+                        x: (halfW - w1) / 2,
+                        y: (a3Height - h1) / 2,
+                        width: w1,
+                        height: h1
+                    });
+                    // Página 2 a la derecha
+                    a3Page.drawPage(emb2, {
+                        x: halfW + (halfW - w2) / 2,
+                        y: (a3Height - h2) / 2,
+                        width: w2,
+                        height: h2
+                    });
+                }
+            }
+            return await mergedPdf.save();
+        }
+
+        function showBatchStep(step, batch2, batch3) {
+            if (step === 2 && batch2.length > 0) {
+                const totalCopies = batch2.reduce((sum, i) => sum + i.copies, 0);
+                batchPrintTitle.innerText = 'Impresión en A3 Horizontal (2 páginas)';
+                batchPrintMessage.innerHTML = `Se va a proceder a imprimir <strong>${totalCopies} copia${totalCopies !== 1 ? 's' : ''}</strong> (${batch2.length} partichela${batch2.length !== 1 ? 's' : ''} de 2 páginas) en <strong>A3 horizontal</strong> (pág. 1 a la izquierda y pág. 2 a la derecha).`;
+                batchDuplexOptions.classList.add('hidden');
+                batchPrintModal.classList.remove('hidden');
+
+                confirmBatchPrintBtn.onclick = async () => {
+                    confirmBatchPrintBtn.disabled = true;
+                    confirmBatchPrintBtn.innerText = 'Preparando...';
+                    try {
+                        const bytes = await buildA3LandscapePdfBytes(batch2);
+                        openPdfForPrint(bytes);
+                    } catch (e) {
+                        alert('Error al preparar el lote A3');
+                    } finally {
+                        confirmBatchPrintBtn.disabled = false;
+                        confirmBatchPrintBtn.innerText = 'Imprimir';
+                        batchPrintModal.classList.add('hidden');
+                        if (batch3.length > 0) showBatchStep(3, batch2, batch3);
+                    }
+                };
+            } else if ((step === 2 || step === 3) && batch3.length > 0) {
+                const totalCopies = batch3.reduce((sum, i) => sum + i.copies, 0);
+                batchPrintTitle.innerText = 'Impresión en A4 (3 o más páginas)';
+                batchPrintMessage.innerHTML = `Se va a proceder a imprimir <strong>${totalCopies} copia${totalCopies !== 1 ? 's' : ''}</strong> (${batch3.length} partichela${batch3.length !== 1 ? 's' : ''} de 3 o más páginas) en <strong>A4</strong>.`;
+                batchDuplexOptions.classList.remove('hidden');
+                batchPrintModal.classList.remove('hidden');
+
+                confirmBatchPrintBtn.onclick = async () => {
+                    const isDouble = document.querySelector('input[name="batchDuplex"]:checked').value === 'double';
+                    confirmBatchPrintBtn.disabled = true;
+                    confirmBatchPrintBtn.innerText = 'Preparando...';
+                    try {
+                        const bytes = await buildPdfBytes(batch3, isDouble);
+                        openPdfForPrint(bytes);
+                    } catch (e) {
+                        alert('Error al preparar el lote de 3+ páginas');
+                    } finally {
+                        confirmBatchPrintBtn.disabled = false;
+                        confirmBatchPrintBtn.innerText = 'Imprimir';
+                        batchPrintModal.classList.add('hidden');
+                    }
+                };
+            }
+        }
+
+        cancelBatchPrintBtn.onclick = () => {
+            batchPrintModal.classList.add('hidden');
+        };
+
+        printBtn.onclick = async () => {
             if (uploadedFiles.length === 0) return;
 
-            const originalHtml = printBtn.innerHTML;
-            printBtn.disabled = true;
-            printBtn.innerHTML = "Preparando...";
+            const batch1 = uploadedFiles.filter(f => f.pageCount === 1);
+            const batch2 = uploadedFiles.filter(f => f.pageCount === 2);
+            const batch3 = uploadedFiles.filter(f => f.pageCount >= 3);
 
-            const isDoubleSided = doubleSidedCheckbox.checked;
-
-            try {
-                const mergedPdf = await PDFLib.PDFDocument.create();
-                for (const item of uploadedFiles) {
-                    const fileArrayBuffer = await item.file.arrayBuffer();
-                    const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer);
-                    const pageCount = pdfDoc.getPageCount();
-
-                    for (let c = 0; c < item.copies; c++) {
-                        const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                        let lastCopiedPage = null;
-
-                        copiedPages.forEach(p => {
-                            mergedPdf.addPage(p);
-                            lastCopiedPage = p;
-                        });
-
-                        if (isDoubleSided && pageCount % 2 !== 0) {
-                            if (lastCopiedPage) {
-                                const { width, height } = lastCopiedPage.getSize();
-                                mergedPdf.addPage([width, height]);
-                            } else {
-                                mergedPdf.addPage();
-                            }
-                        }
-                    }
+            if (batch1.length > 0) {
+                const originalHtml = printBtn.innerHTML;
+                printBtn.disabled = true;
+                printBtn.innerHTML = 'Preparando A4...';
+                try {
+                    const bytes = await buildPdfBytes(batch1, false);
+                    openPdfForPrint(bytes);
+                } catch (e) {
+                    console.error(e);
+alert('Error al preparar la impresión en A4: ' + (e.message || e));
+                } finally {
+                    printBtn.disabled = false;
+                    printBtn.innerHTML = originalHtml;
                 }
+            }
 
-                const bytes = await mergedPdf.save();
-                const blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = blobUrl;
-                document.body.appendChild(iframe);
-
-                const printWindow = window.open(blobUrl, '_blank');
-                if (printWindow) {
-                    printWindow.onload = () => {
-                        try {
-                            printWindow.print();
-                        } catch (err) {
-                            // Si el navegador bloquea el print automático, el PDF ya queda abierto en la pestaña para imprimirlo
-                        }
-                    };
-                }
-            } catch (e) {
-                alert('Error al preparar la impresión');
-            } finally {
-                printBtn.disabled = false;
-                printBtn.innerHTML = originalHtml;
+            if (batch2.length > 0) {
+                showBatchStep(2, batch2, batch3);
+            } else if (batch3.length > 0) {
+                showBatchStep(3, batch2, batch3);
             }
         };
         previewModal.onclick = (e) => { if (e.target === previewModal) closeModal.click(); };
