@@ -234,6 +234,7 @@
         const defaultNameDisplay = document.getElementById('defaultNameDisplay');
 
         let uploadedFiles = [];
+        let collapsedFolders = {};
         let defaultFileName = "Repertorio_BSMH";
         let uploadedFolderName = null;
 
@@ -250,8 +251,8 @@
         });
 
         function syncInternalStateWithDOM() {
-            const currentOrderIds = Array.from(pdfList.children).map(el => el.dataset.id);
-            uploadedFiles = currentOrderIds.map(id => uploadedFiles.find(f => f.id === id));
+            const currentOrderIds = Array.from(pdfList.querySelectorAll('[data-id]')).map(el => el.dataset.id);
+            uploadedFiles = currentOrderIds.map(id => uploadedFiles.find(f => f.id === id)).filter(Boolean);
         }
 
         fileInput.addEventListener('change', (e) => {
@@ -311,11 +312,12 @@
             }
         });
 
-        async function scanFiles(entry) {
+        async function scanFiles(entry, folderName = null) {
             let files = [];
             if (entry.isFile) {
                 const file = await new Promise((resolve) => entry.file(resolve));
                 if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    file._folderName = folderName || 'Archivos sueltos';
                     files.push(file);
                 }
             } else if (entry.isDirectory) {
@@ -324,7 +326,7 @@
                     directoryReader.readEntries(resolve);
                 });
                 
-                const promises = entries.map(childEntry => scanFiles(childEntry));
+                const promises = entries.map(childEntry => scanFiles(childEntry, entry.name));
                 const results = await Promise.all(promises);
                 files = results.flat();
             }
@@ -433,7 +435,8 @@
                     file: file,
                     copies: 1,
                     name: file.name,
-                    pageCount: pageCount
+                    pageCount: pageCount,
+                    folder: file._folderName || 'Archivos sueltos'
                 };
             }));
 
@@ -473,55 +476,122 @@
             }
 
             pdfList.innerHTML = '';
-            uploadedFiles.forEach((item, index) => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center bg-white border border-gray-200 p-2.5 rounded-lg shadow-sm hover:border-blue-300 transition-all cursor-move group min-h-[3.25rem]';
-                row.dataset.id = item.id;
-                
-                row.innerHTML = `
-                    <div class="flex items-center gap-2 mr-3">
-                        <div class="text-gray-300 group-hover:text-blue-400 p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8h16M4 16h16" />
-                            </svg>
-                        </div>
-                        <input type="number" value="${index + 1}" min="1" max="${uploadedFiles.length}"
-                            class="no-drag order-input w-10 text-center font-bold text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded py-1 focus:ring-1 focus:ring-blue-400 outline-none"
-                            onchange="manualMove('${item.id}', this.value)">
-                    </div>
 
-                    <div class="flex-grow min-w-0 flex items-center pr-2">
-                        <!-- Nombre del archivo con fuente aumentada -->
-                        <p class="font-semibold text-gray-800 text-sm leading-tight truncate" title="${item.name}">${item.name}</p>
-                        <span class="ml-2 text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded shadow-sm flex-shrink-0" title="Número de páginas">${item.pageCount} pág.</span>
-                    </div>
+            // Agrupar archivos por carpeta manteniendo el orden
+            const groups = [];
+            const groupMap = new Map();
+            uploadedFiles.forEach((item, globalIndex) => {
+                const folderName = item.folder || 'Archivos sueltos';
+                if (!groupMap.has(folderName)) {
+                    const group = { name: folderName, items: [] };
+                    groupMap.set(folderName, group);
+                    groups.push(group);
+                }
+                groupMap.get(folderName).items.push({ item, globalIndex });
+            });
 
-                    <div class="flex items-center gap-3">
-                        <!-- Icono Ojo (Ver) en azul -->
-                        <button onclick="event.stopPropagation(); openPreview('${item.id}')" class="no-drag text-blue-600 hover:text-blue-800 p-1.5 transition-colors rounded-lg hover:bg-blue-50" title="Ver PDF">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                        </button>
-                        
-                        <div class="no-drag flex items-center bg-gray-50 border border-gray-200 rounded overflow-hidden h-8">
-                            <button onclick="event.stopPropagation(); updateCopies('${item.id}', -1)" class="w-6 h-full flex items-center justify-center hover:bg-red-50 hover:text-red-600 text-gray-400 font-bold text-xs"> - </button>
-                            <span class="w-6 text-center text-xs font-bold text-blue-700">${item.copies}</span>
-                            <button onclick="event.stopPropagation(); updateCopies('${item.id}', 1)" class="w-6 h-full flex items-center justify-center hover:bg-green-50 hover:text-green-600 text-gray-400 font-bold text-xs"> + </button>
-                        </div>
+            groups.forEach(group => {
+                const isCollapsed = !!collapsedFolders[group.name];
+                const folderWrapper = document.createElement('div');
+                folderWrapper.className = 'border border-amber-200 bg-amber-50/70 rounded-xl overflow-hidden shadow-sm mb-2';
 
-                        <!-- Icono Papelera (Eliminar) en rojo -->
-                        <button onclick="event.stopPropagation(); removeFile('${item.id}')" class="no-drag text-red-500 hover:text-red-700 p-1.5 transition-colors rounded-lg hover:bg-red-50" title="Eliminar de la lista">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
+                // Cabecera de la carpeta (estilo Recordatorios)
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between px-3 py-2 bg-amber-100/70 hover:bg-amber-100 cursor-pointer select-none transition-colors';
+                header.onclick = () => toggleFolder(group.name);
+
+                header.innerHTML = `
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-gray-500 text-xs transition-transform">${isCollapsed ? '▶' : '▼'}</span>
+                        <span class="text-base leading-none">📁</span>
+                        <span class="font-bold text-gray-800 text-sm truncate" title="${group.name}">${group.name}</span>
+                        <span class="bg-amber-200/80 text-amber-900 text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">${group.items.length}</span>
                     </div>
+                    <button onclick="event.stopPropagation(); removeFolder('${group.name.replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-600 p-1 rounded transition-colors" title="Quitar carpeta">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 `;
-                pdfList.appendChild(row);
+
+                const itemsContainer = document.createElement('div');
+                itemsContainer.className = `p-2 space-y-1.5 bg-white/80 ${isCollapsed ? 'hidden' : ''}`;
+
+                group.items.forEach(({ item, globalIndex }) => {
+                    const row = document.createElement('div');
+                    row.className = 'flex items-center bg-white border border-gray-200 p-2.5 rounded-lg shadow-sm hover:border-blue-300 transition-all cursor-move group min-h-[3.25rem]';
+                    row.dataset.id = item.id;
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2 mr-3">
+                            <div class="text-gray-300 group-hover:text-blue-400 p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 8h16M4 16h16" />
+                                </svg>
+                            </div>
+                            <input type="number" value="${globalIndex + 1}" min="1" max="${uploadedFiles.length}"
+                                class="no-drag order-input w-10 text-center font-bold text-xs bg-blue-50 text-blue-700 border border-blue-100 rounded py-1 focus:ring-1 focus:ring-blue-400 outline-none"
+                                onchange="manualMove('${item.id}', this.value)">
+                        </div>
+
+                        <div class="flex-grow min-w-0 flex items-center pr-2">
+                            <p class="font-semibold text-gray-800 text-sm leading-tight truncate" title="${item.name}">${item.name}</p>
+                            <span class="ml-2 text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded shadow-sm flex-shrink-0" title="Número de páginas">${item.pageCount} pág.</span>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button onclick="event.stopPropagation(); openPreview('${item.id}')" class="no-drag text-blue-600 hover:text-blue-800 p-1.5 transition-colors rounded-lg hover:bg-blue-50" title="Ver PDF">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </button>
+                            
+                            <div class="no-drag flex items-center bg-gray-50 border border-gray-200 rounded overflow-hidden h-8">
+                                <button onclick="event.stopPropagation(); updateCopies('${item.id}', -1)" class="w-6 h-full flex items-center justify-center hover:bg-red-50 hover:text-red-600 text-gray-400 font-bold text-xs"> - </button>
+                                <span class="w-6 text-center text-xs font-bold text-blue-700">${item.copies}</span>
+                                <button onclick="event.stopPropagation(); updateCopies('${item.id}', 1)" class="w-6 h-full flex items-center justify-center hover:bg-green-50 hover:text-green-600 text-gray-400 font-bold text-xs"> + </button>
+                            </div>
+
+                            <button onclick="event.stopPropagation(); removeFile('${item.id}')" class="no-drag text-red-500 hover:text-red-700 p-1.5 transition-colors rounded-lg hover:bg-red-50" title="Eliminar de la lista">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(row);
+                });
+
+                folderWrapper.appendChild(header);
+                folderWrapper.appendChild(itemsContainer);
+                pdfList.appendChild(folderWrapper);
+
+                new Sortable(itemsContainer, {
+                    animation: 200,
+                    ghostClass: 'sortable-ghost',
+                    forceFallback: true,
+                    filter: '.no-drag',
+                    preventOnFilter: false,
+                    onEnd: function() {
+                        syncInternalStateWithDOM();
+                        renderList();
+                    }
+                });
             });
         }
+
+        window.toggleFolder = (folderName) => {
+            collapsedFolders[folderName] = !collapsedFolders[folderName];
+            renderList();
+        };
+
+        window.removeFolder = (folderName) => {
+            uploadedFiles = uploadedFiles.filter(f => (f.folder || 'Archivos sueltos') !== folderName);
+            delete collapsedFolders[folderName];
+            if (bsmhCheckbox.checked) applyBSMHRules();
+            renderList();
+        };
 
         window.manualMove = (id, newPos) => {
             let targetIdx = parseInt(newPos) - 1;
@@ -683,6 +753,12 @@
             if (e.key === 'Enter' && !downloadModal.classList.contains('hidden')) {
                 e.preventDefault();
                 acceptDownloadBtn.click();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+                if (uploadedFiles.length > 0) {
+                    e.preventDefault();
+                    printBtn.click();
+                }
             }
         });
 printBtn.onclick = async () => {
