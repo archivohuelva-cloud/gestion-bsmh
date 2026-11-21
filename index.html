@@ -135,7 +135,7 @@
         .reminder-checkbox:checked::after {
             content: "✓"; color: white; font-size: 12px;
         }
-        .reminder-text { font-size: 14px; flex: 1; }
+        .reminder-text { font-size: 14px; flex: 1; text-align: left; }
         .reminder-text.completed { text-decoration: line-through; color: #94a3b8; }
         .reminder-delete { color: #ef4444; font-size: 18px; margin-left: 8px; cursor: pointer; }
 
@@ -811,8 +811,8 @@
 </script>
 
         <!-- Cabecera -->
-        <header class="flex flex-col md:flex-row justify-between items-start mb-4 gap-4">
-            <div class="flex flex-col">
+        <header class="flex flex-col md:flex-row md:relative justify-between items-start mb-4 gap-4">
+            <div class="flex flex-col md:flex-1">
                 <h1 class="text-2xl font-black tracking-tight text-slate-900 leading-tight">Banda Sinfónica Municipal de Huelva</h1>
                 <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">SUPER BIBLIO | Plataforma de Gestión Interna | Since 2026</p>
             </div>
@@ -859,22 +859,7 @@
                             </div>
                         </div>
 
-<div class="flex items-center gap-4 text-left md:text-right w-full md:w-auto justify-between md:justify-end">
-                <div id="radio-player-container" class="hidden md:flex items-center gap-3 border-r border-slate-200 pr-4">
-                    <div class="flex flex-col items-end leading-none mr-1">
-                        <span class="text-[9px] font-black text-[#0000bd] uppercase tracking-tighter">Swiss Classic</span>
-                        <span id="radio-status" class="text-[8px] font-bold text-slate-400 uppercase transition-colors">Listo</span>
-                    </div>
-                    <audio id="radio-audio" preload="none" crossorigin="anonymous"></audio>
-                    <button id="radio-toggle" onclick="toggleRadio()" class="radio-control w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[#0000bd] hover:bg-[#0000bd] hover:text-white transition-all shadow-sm">
-                        <svg id="play-icon" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        <svg id="pause-icon" class="hidden" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-                    </button>
-                    <div class="flex items-center gap-2 group">
-                        <svg width="12" height="12" fill="currentColor" class="text-slate-400" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-                        <input type="range" id="radio-volume" min="0" max="1" step="0.1" value="0.5" oninput="changeVolume(this.value)" class="w-16 h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer">
-                    </div>
-                </div>
+<div class="flex items-center gap-4 text-left md:text-right w-full md:w-auto md:flex-1 justify-between md:justify-end">
             
             <div class="flex items-center gap-6 text-left md:text-right w-full md:w-auto justify-between md:justify-end">
                 <!-- Widget del Tiempo -->
