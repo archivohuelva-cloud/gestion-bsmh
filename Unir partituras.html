@@ -113,6 +113,12 @@
                     </svg>
                     Generar PDF Final
                 </button>
+                <button id="printBtn" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-bold shadow-md shadow-emerald-200 transition-all flex items-center justify-center gap-2 text-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Imprimir
+                </button>
             </div>
         </div>
 
@@ -177,7 +183,25 @@
             </div>
         </div>
     </div>
-
+<!-- Clear List Modal -->
+    <div id="clearModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+            <div class="p-4 border-b bg-gray-50">
+                <h3 class="font-bold text-gray-800 text-base">Confirmar acción</h3>
+            </div>
+            <div class="p-5 bg-white">
+                <p class="text-sm text-gray-600">¿Está seguro de que desea vaciar la lista?</p>
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-3">
+                <button id="cancelClearBtn" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors text-sm">
+                    Cancelar
+                </button>
+                <button id="confirmClearBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md shadow-red-200 transition-all text-sm">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
     <script>
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
@@ -188,6 +212,10 @@
         const pageCounter = document.getElementById('pageCounter');
         const generateBtn = document.getElementById('generateBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const printBtn = document.getElementById('printBtn');
+        const clearModal = document.getElementById('clearModal');
+        const cancelClearBtn = document.getElementById('cancelClearBtn');
+        const confirmClearBtn = document.getElementById('confirmClearBtn');
         const previewModal = document.getElementById('previewModal');
         const closeModal = document.getElementById('closeModal');
         const modalTitle = document.getElementById('modalTitle');
@@ -540,12 +568,25 @@
         };
 
         clearBtn.onclick = () => {
-            if (uploadedFiles.length > 0 && confirm('¿Vaciar lista?')) {
-                uploadedFiles = [];
-                uploadedFolderName = null;
-                renderList();
-                fileInput.value = '';
+            if (uploadedFiles.length > 0) {
+                clearModal.classList.remove('hidden');
             }
+        };
+
+        cancelClearBtn.onclick = () => {
+            clearModal.classList.add('hidden');
+        };
+
+        confirmClearBtn.onclick = () => {
+            uploadedFiles = [];
+            uploadedFolderName = null;
+            renderList();
+            fileInput.value = '';
+            clearModal.classList.add('hidden');
+        };
+
+        clearModal.onclick = (e) => {
+            if (e.target === clearModal) cancelClearBtn.click();
         };
 
         generateBtn.onclick = () => {
@@ -644,7 +685,66 @@
                 acceptDownloadBtn.click();
             }
         });
+printBtn.onclick = async () => {
+            if (uploadedFiles.length === 0) return;
 
+            const originalHtml = printBtn.innerHTML;
+            printBtn.disabled = true;
+            printBtn.innerHTML = "Preparando...";
+
+            const isDoubleSided = doubleSidedCheckbox.checked;
+
+            try {
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                for (const item of uploadedFiles) {
+                    const fileArrayBuffer = await item.file.arrayBuffer();
+                    const pdfDoc = await PDFLib.PDFDocument.load(fileArrayBuffer);
+                    const pageCount = pdfDoc.getPageCount();
+
+                    for (let c = 0; c < item.copies; c++) {
+                        const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                        let lastCopiedPage = null;
+
+                        copiedPages.forEach(p => {
+                            mergedPdf.addPage(p);
+                            lastCopiedPage = p;
+                        });
+
+                        if (isDoubleSided && pageCount % 2 !== 0) {
+                            if (lastCopiedPage) {
+                                const { width, height } = lastCopiedPage.getSize();
+                                mergedPdf.addPage([width, height]);
+                            } else {
+                                mergedPdf.addPage();
+                            }
+                        }
+                    }
+                }
+
+                const bytes = await mergedPdf.save();
+                const blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = blobUrl;
+                document.body.appendChild(iframe);
+
+                const printWindow = window.open(blobUrl, '_blank');
+                if (printWindow) {
+                    printWindow.onload = () => {
+                        try {
+                            printWindow.print();
+                        } catch (err) {
+                            // Si el navegador bloquea el print automático, el PDF ya queda abierto en la pestaña para imprimirlo
+                        }
+                    };
+                }
+            } catch (e) {
+                alert('Error al preparar la impresión');
+            } finally {
+                printBtn.disabled = false;
+                printBtn.innerHTML = originalHtml;
+            }
+        };
         previewModal.onclick = (e) => { if (e.target === previewModal) closeModal.click(); };
         downloadModal.onclick = (e) => { if (e.target === downloadModal) cancelDownloadBtn.click(); };
     </script>
