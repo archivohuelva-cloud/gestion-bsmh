@@ -1338,6 +1338,38 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 }
 
 /* ═══════════════════════════════════════
+   VENTANA EMERGENTE FLOTANTE DE NOTAS (COMPACTA Y CUADRADA)
+═══════════════════════════════════════ */
+.notes-floating-popup {
+  position: fixed;
+  display: none;
+  width: 290px;
+  max-width: 90vw;
+  background: #1c1c1e;
+  color: #ffffff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15);
+  z-index: 10000;
+  pointer-events: none;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-sizing: border-box;
+}
+
+.notes-floating-popup-body {
+  font-size: 15px;
+  color: #f3f4f6;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* ═══════════════════════════════════════
    TOAST NOTIFICATION
 ═══════════════════════════════════════ */
 .toast {
@@ -2202,7 +2234,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <button type="button" class="sala-preset-btn" data-sala="GRAN TEATRO" style="background:var(--bg-gran-teatro);color:var(--gran-teatro)">GRAN TEATRO</button>
             <button type="button" class="sala-preset-btn" data-sala="LAZARETO" style="background:var(--bg-lazareto);color:var(--lazareto)">LAZARETO</button>
             <button type="button" class="sala-preset-btn" data-sala="SANTA FE" style="background:var(--bg-santa-fe);color:var(--santa-fe)">SANTA FE</button>
-            <button type="button" class="sala-preset-btn" data-sala="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">+ Otra</button>
+            <button type="button" class="sala-preset-btn" data-sala="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">Otra</button>
           </div>
           <input type="text" id="sala-input" placeholder="Nombre de la sala…" style="margin-top:6px" />
         </div>
@@ -2217,7 +2249,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
             <button type="button" class="sala-preset-btn" data-actuacion="ACTO" style="background:var(--bg-btn-acto);color:var(--btn-acto)">ACTO</button>
             <button type="button" class="sala-preset-btn" data-actuacion="PROCESIÓN" style="background:var(--bg-btn-procesion);color:var(--btn-procesion)">PROCESIÓN</button>
             <button type="button" class="sala-preset-btn" data-actuacion="GRABACIÓN" style="background:var(--bg-btn-grabacion);color:var(--btn-grabacion)">GRABACIÓN</button>
-            <button type="button" class="sala-preset-btn" data-actuacion="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">+ Otra</button>
+            <button type="button" class="sala-preset-btn" data-actuacion="_CUSTOM_" style="background:var(--bg-custom);color:var(--custom)">Otra</button>
           </div>
           <input type="text" id="actuacion-input" placeholder="Nombre o detalle de la actuación…" style="margin-top:6px" />
         </div>
@@ -2640,6 +2672,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
       <button type="button" class="btn-action primary" onclick="applyQuickJump()">Ir</button>
     </div>
   </div>
+</div>
+
+<!-- VENTANA EMERGENTE FLOTANTE PARA NOTAS (COMPACTA Y CUADRADA) -->
+<div class="notes-floating-popup" id="notes-floating-popup">
+  <div class="notes-floating-popup-body" id="notes-floating-popup-body"></div>
 </div>
 
 <!-- TOAST -->
@@ -3987,7 +4024,7 @@ function renderMonthCell(d, otherMonth) {
       timeLabel = ` ${formatTimeH(ev.timeStart)}`;
     }
 
-    const noteDot = ev.notes ? `<span class="note-indicator-dot" title="Tiene notas"></span>` : '';
+    const noteDot = ev.notes ? `<span class="note-indicator-dot"></span>` : '';
 
     evHTML += `<div class="event-chip ${expiredClass}" draggable="true" data-id="${ev.id}" data-context-date="${ds}" style="background:${style.bg};color:${style.color};border:1px solid ${style.color};">
       <span style="overflow:hidden;text-overflow:ellipsis;">${title}${timeLabel}</span>
@@ -6032,19 +6069,36 @@ function openEditModal(id) {
     setSala(ev.sala);
   }
 
-  // 3. Restaurar Fechas y Horas
+  // 3. Restaurar Fechas y Horas registradas exactamente como se guardaron
   document.getElementById('date-start').value = ev.dateStart || '';
   document.getElementById('date-end').value = ev.dateEnd || ev.dateStart || '';
-  document.getElementById('time-start').value = ev.timeStart || '09:15';
+  
+  // Normalizar estrictamente a formato HH:MM (requerido por input[type="time"])
+  const formatInputTime = (rawTime) => {
+    if (!rawTime) return '';
+    const clean = String(rawTime).replace(/h$/i, '').trim();
+    const parts = clean.split(':');
+    if (parts.length >= 2) {
+      const h = String(parts[0]).padStart(2, '0');
+      const m = String(parts[1]).padStart(2, '0');
+      return `${h}:${m}`;
+    }
+    return clean;
+  };
+
+  const cleanStart = formatInputTime(ev.timeStart);
+  const cleanEnd = formatInputTime(ev.timeEnd);
+
+  document.getElementById('time-start').value = cleanStart || (currentMode === 'sala' ? '09:15' : '20:00');
   
   const deabTimeStartEl = document.getElementById('deab-time-start');
-  if (deabTimeStartEl) deabTimeStartEl.value = ev.timeStart || '08:30';
+  if (deabTimeStartEl) deabTimeStartEl.value = cleanStart || '08:30';
 
-  document.getElementById('time-end').value = ev.timeEnd || '';
+  document.getElementById('time-end').value = cleanEnd;
   document.getElementById('event-notes').value = ev.notes || '';
 
-  // 4. Configurar switches de rangos
-  isHourRange = !!ev.timeEnd;
+  // 4. Configurar interruptores de rango de horas y rango de días
+  isHourRange = !!cleanEnd;
   updateHourRangeUI();
 
   if (ev.dateEnd && ev.dateEnd !== ev.dateStart) {
@@ -6059,7 +6113,7 @@ function openEditModal(id) {
     document.getElementById('date-label-start').textContent = 'Fecha';
   }
 
-  // Si es evento especial de todo el día, ocultar bloque de horas
+  // 5. Si es evento especial de todo el día, ocultar bloque de horas
   const hoursWrapper = document.getElementById('hours-config-wrapper');
   if (hoursWrapper && (ev.guardado === 'si' || ev.festivo === 'si' || ev.vacaciones === 'si')) {
     hoursWrapper.style.display = 'none';
@@ -7424,6 +7478,62 @@ function highlightDayInCalendar(targetDateStr) {
     });
   }, 5000);
 }
+
+/* ═══════════════════════════════════════
+   CONTROLADOR DE VENTANA EMERGENTE FLOTANTE (HOVER NOTAS)
+═══════════════════════════════════════ */
+document.addEventListener('mouseover', (e) => {
+  const target = e.target.closest('[data-id]');
+  if (!target) return;
+
+  const evId = target.dataset.id;
+  const ev = events.find(item => item.id === evId);
+  if (!ev || !ev.notes || !ev.notes.trim()) return;
+
+  const popup = document.getElementById('notes-floating-popup');
+  const popupBody = document.getElementById('notes-floating-popup-body');
+  if (!popup || !popupBody) return;
+
+  popupBody.textContent = ev.notes.trim();
+  popup.style.display = 'block';
+
+  const updatePopupPos = (clientX, clientY) => {
+    const popWidth = popup.offsetWidth || 320;
+    const popHeight = popup.offsetHeight || 190;
+    const gap = 16;
+
+    let left = clientX + gap;
+    let top = clientY - (popHeight / 2);
+
+    // Evitar que se desborde a la derecha de la pantalla
+    if (left + popWidth > window.innerWidth - 12) {
+      left = clientX - popWidth - gap;
+    }
+    // Evitar que se salga por arriba o por abajo
+    if (top < 12) top = 12;
+    if (top + popHeight > window.innerHeight - 12) {
+      top = window.innerHeight - popHeight - 12;
+    }
+
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+  };
+
+  updatePopupPos(e.clientX, e.clientY);
+
+  const moveHandler = (moveEvent) => {
+    updatePopupPos(moveEvent.clientX, moveEvent.clientY);
+  };
+
+  const leaveHandler = () => {
+    popup.style.display = 'none';
+    target.removeEventListener('mousemove', moveHandler);
+    target.removeEventListener('mouseleave', leaveHandler);
+  };
+
+  target.addEventListener('mousemove', moveHandler);
+  target.addEventListener('mouseleave', leaveHandler);
+});
 
 /* ═══════════════════════════════════════
    INIT (CARGA INICIAL FORZADA CON OVERLAY)
