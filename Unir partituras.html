@@ -41,10 +41,16 @@
 <body class="bg-gray-100 min-h-screen font-sans no-select text-gray-800">
 
     <div id="mainContainer" class="max-w-xl mx-auto px-4 py-12 transition-all duration-300">
-        <!-- Header (Sin fecha/hora) -->
-        <header class="mb-6 text-center">
-            <h1 class="text-2xl font-bold text-gray-800 mb-1">UNIFICADOR DE PARTITURAS</h1>
-            <p class="text-sm text-gray-600 italic">Unir en 1 solo PDF múltiples partichelas individuales</p>
+        <!-- Header con botón Volver arriba -->
+        <header class="mb-6 relative flex flex-col items-center justify-center">
+            <button onclick="window.history.back()" class="self-start sm:absolute sm:left-0 mb-3 sm:mb-0 px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg font-semibold text-xs shadow transition-all flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m12 8-4 4 4 4"/><path d="M16 12H8"/></svg>
+                <span>Volver</span>
+            </button>
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-800 mb-1">UNIFICADOR DE PARTITURAS</h1>
+                <p class="text-sm text-gray-600 italic">Unir en 1 solo PDF múltiples partichelas individuales</p>
+            </div>
         </header>
 
         <!-- Dropzone -->
@@ -65,10 +71,14 @@
             <div class="flex items-center justify-between mb-3 px-2 bg-gray-200 p-2 rounded-lg">
                 <div class="flex items-center gap-3">
                     <h2 class="text-sm font-bold text-gray-700">Lista</h2>
-                    <div id="fileCounterContainer" class="flex gap-1 flex-wrap">
+                    <div id="fileCounterContainer" class="flex gap-1 flex-wrap items-center">
+                        <span id="folderCounter" class="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm hidden">0 Carpetas</span>
                         <span id="fileCounter" class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">0 PDFs</span>
                         <span id="copyCounter" class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">0 Copias</span>
                         <span id="pageCounter" class="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">0 Páginas</span>
+                        <button type="button" id="openFilterModalBtn" onclick="openInstrumentFilterModal()" class="ml-2 bg-purple-700 hover:bg-purple-800 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow-sm transition-colors flex items-center gap-1">
+                            🎷 Seleccionar Instrumento(s)
+                        </button>
                     </div>
                 </div>
                 <span class="text-[10px] text-gray-500 italic">Reordenar</span>
@@ -262,7 +272,57 @@
             </div>
         </div>
     </div>
-<!-- Clear List Modal -->
+<!-- Modal Seleccionar Instrumentos de la Plantilla -->
+    <div id="instrumentFilterModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b bg-purple-50 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-purple-900 text-base">Filtrar por Instrumento</h3>
+                    <p class="text-[11px] text-purple-700">Selecciona partichelas coincidentes en todas las carpetas subidas.</p>
+                </div>
+                <button onclick="closeInstrumentFilterModal()" class="text-gray-400 hover:text-red-500 p-1 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-3 bg-gray-50 border-b space-y-2">
+                <div class="flex flex-wrap gap-1.5 items-center justify-between">
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="toggleAllFilterCheckboxes(true)" class="px-2.5 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-[11px] font-bold text-gray-700 rounded transition-colors shadow-sm">
+                            Seleccionar todo
+                        </button>
+                        <button type="button" onclick="toggleAllFilterCheckboxes(false)" class="px-2.5 py-1 bg-white border border-gray-300 hover:bg-gray-100 text-[11px] font-bold text-gray-700 rounded transition-colors shadow-sm">
+                            Deseleccionar todo
+                        </button>
+                    </div>
+                    <button type="button" onclick="resetToAllOriginalFiles()" class="px-2.5 py-1 bg-red-50 border border-red-200 hover:bg-red-100 text-[11px] font-bold text-red-600 rounded transition-colors shadow-sm">
+                        Restaurar todos los PDFs
+                    </button>
+                </div>
+                <!-- Barra para agregar refuerzos o músicos externos -->
+                <div class="flex gap-2 items-center pt-1 border-t border-gray-200">
+                    <input type="text" id="extraInstrumentInput" placeholder="Añadir refuerzo/externo (ej: Trompa 2, Clarinete Requinto...)" class="flex-grow border border-purple-200 rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 focus:border-purple-500 outline-none bg-white">
+                    <button type="button" onclick="addExtraInstrumentFilter()" class="px-3 py-1.5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex-shrink-0 flex items-center gap-1">
+                        + Añadir Refuerzo
+                    </button>
+                </div>
+            </div>
+            <div id="instrumentFilterList" class="p-3 overflow-y-auto flex-grow space-y-1 bg-white grid grid-cols-1 sm:grid-cols-2 gap-1.5 items-start">
+                <!-- Se inyectan instrumentos con checkboxes -->
+            </div>
+            <div class="p-3 border-t bg-gray-50 flex justify-end gap-2 items-center">
+                <button type="button" onclick="closeInstrumentFilterModal()" class="px-4 py-1.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-semibold text-xs transition-colors">
+                    Cancelar
+                </button>
+                <button type="button" onclick="applyInstrumentFilter()" class="px-4 py-1.5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-lg shadow transition-colors">
+                    Aplicar Filtro
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear List Modal -->
     <div id="clearModal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
             <div class="p-4 border-b bg-gray-50">
@@ -673,6 +733,17 @@
                 groupMap.get(folderName).items.push({ item, globalIndex });
             });
 
+            const folderCounter = document.getElementById('folderCounter');
+            const realFoldersCount = groups.filter(g => g.name !== 'Archivos sueltos').length;
+            if (folderCounter) {
+                if (realFoldersCount > 0) {
+                    folderCounter.innerText = `${realFoldersCount} Carpeta${realFoldersCount !== 1 ? 's' : ''}`;
+                    folderCounter.classList.remove('hidden');
+                } else {
+                    folderCounter.classList.add('hidden');
+                }
+            }
+
 const mainContainer = document.getElementById('mainContainer');
             const listLayout = document.getElementById('listLayout');
             const rightSidebar = document.getElementById('rightSidebar');
@@ -908,61 +979,52 @@ const mainContainer = document.getElementById('mainContainer');
         generateBtn.onclick = async () => {
             if (uploadedFiles.length === 0) return;
 
-            // Agrupar por carpetas
-            const folderGroups = new Map();
-            uploadedFiles.forEach(item => {
-                const folder = item.folder || 'Archivos sueltos';
-                if (!folderGroups.has(folder)) folderGroups.set(folder, []);
-                folderGroups.get(folder).push(item);
-            });
-
-            // Si hay múltiples carpetas, genera y descarga 1 PDF por cada carpeta automáticamente
-            if (folderGroups.size > 1) {
-                const originalHtml = generateBtn.innerHTML;
-                generateBtn.disabled = true;
-                generateBtn.innerHTML = "Generando...";
-                const isDoubleSided = doubleSidedCheckbox.checked;
-
-                const entries = Array.from(folderGroups.entries());
-                const processNext = async (index) => {
-                    if (index >= entries.length) {
-                        generateBtn.disabled = false;
-                        generateBtn.innerHTML = originalHtml;
-                        return;
-                    }
-                    const [folderName, items] = entries[index];
-                    try {
-                        const bytes = await buildPdfBytes(items, isDoubleSided);
-                        triggerDownload(bytes, folderName);
-                        setTimeout(() => processNext(index + 1), 350);
-                    } catch (e) {
-                        console.error(e);
-                        alert('Error al generar PDF: ' + e.message);
-                        generateBtn.disabled = false;
-                        generateBtn.innerHTML = originalHtml;
-                    }
-                };
-                processNext(0);
-                return;
+            // 1. Detección del nombre base de la carpeta
+            const uniqueFolders = [...new Set(uploadedFiles.map(i => i.folder).filter(f => f && f !== 'Archivos sueltos'))];
+            let baseName = "Partituras";
+            if (uploadedFolderName) {
+                baseName = uploadedFolderName;
+            } else if (uniqueFolders.length === 1) {
+                baseName = uniqueFolders[0];
+            } else if (uniqueFolders.length > 1) {
+                baseName = uniqueFolders[0];
             }
 
-            // Si solo hay 1 carpeta o archivos sueltos, abre el modal de nombre como siempre
-            const singleFolderName = Array.from(folderGroups.keys())[0];
-            if (uploadedFolderName || (singleFolderName && singleFolderName !== 'Archivos sueltos')) {
-                defaultFileName = uploadedFolderName || singleFolderName;
-                defaultNameDisplay.innerText = defaultFileName + ".pdf";
-                radioDefault.checked = true;
-                radioCustom.checked = false;
-                customNameContainer.classList.add('hidden');
-                customNameInput.value = defaultFileName;
+            // 2. Detección del instrumento o instrumentos seleccionados
+            let matchedInstruments = [];
+            const activeFilterChecks = Array.from(document.querySelectorAll('.inst-filter-check:checked')).map(cb => cb.value.trim());
+
+            if (activeFilterChecks.length > 0) {
+                matchedInstruments = activeFilterChecks;
             } else {
-                defaultFileName = "Partituras Unificadas";
-                defaultNameDisplay.innerText = "Varios_archivos.pdf";
-                radioDefault.checked = false;
-                radioCustom.checked = true;
-                customNameContainer.classList.remove('hidden');
-                customNameInput.value = "Partituras Unificadas";
+                // Si no se filtró por modal, detectamos si todos los archivos coinciden con algún instrumento de la plantilla o refuerzos
+                const allRosterCandidates = [
+                    ...bsmhRoster.map(i => i.name),
+                    ...(typeof extraFilterInstruments !== 'undefined' ? extraFilterInstruments : [])
+                ].sort((a, b) => b.length - a.length);
+
+                const foundSet = new Set();
+                uploadedFiles.forEach(file => {
+                    const normFileName = normalizeText(file.name);
+                    const match = allRosterCandidates.find(inst => normFileName.includes(normalizeText(inst)));
+                    if (match) foundSet.add(match);
+                });
+                matchedInstruments = Array.from(foundSet);
             }
+
+            // 3. Montar el nombre automático: Carpeta - (Instrumento)
+            if (matchedInstruments.length > 0) {
+                const instSuffix = matchedInstruments.slice(0, 3).join(', ') + (matchedInstruments.length > 3 ? '...' : '');
+                defaultFileName = `${baseName} - (${instSuffix})`;
+            } else {
+                defaultFileName = baseName;
+            }
+
+            defaultNameDisplay.innerText = defaultFileName + ".pdf";
+            radioDefault.checked = true;
+            radioCustom.checked = false;
+            customNameContainer.classList.add('hidden');
+            customNameInput.value = defaultFileName;
 
             downloadModal.classList.remove('hidden');
         };
@@ -1165,6 +1227,119 @@ alert('Error al preparar la impresión en A4: ' + (e.message || e));
         };
         previewModal.onclick = (e) => { if (e.target === previewModal) closeModal.click(); };
         downloadModal.onclick = (e) => { if (e.target === downloadModal) cancelDownloadBtn.click(); };
+
+        // Lógica de Filtro por Instrumentos y Refuerzos
+        const instrumentFilterModal = document.getElementById('instrumentFilterModal');
+        const instrumentFilterList = document.getElementById('instrumentFilterList');
+        let extraFilterInstruments = [];
+
+        function renderFilterItems() {
+            instrumentFilterList.innerHTML = '';
+            const allItems = [
+                ...bsmhRoster.map(i => ({ name: i.name, isExtra: false })),
+                ...extraFilterInstruments.map(name => ({ name, isExtra: true }))
+            ];
+
+            if (allItems.length === 0) {
+                instrumentFilterList.innerHTML = '<p class="col-span-2 text-center text-xs text-gray-500 py-4">No hay instrumentos disponibles. Escribe un refuerzo arriba para añadirlo.</p>';
+                return;
+            }
+
+            allItems.forEach(inst => {
+                const label = document.createElement('label');
+                label.className = `flex items-center justify-between gap-2 p-2 rounded cursor-pointer select-none transition-colors text-xs font-medium border ${inst.isExtra ? 'bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-purple-50'}`;
+                
+                label.innerHTML = `
+                    <div class="flex items-center gap-2 min-w-0">
+                        <input type="checkbox" value="${inst.name}" ${inst.isExtra ? 'checked' : ''} class="inst-filter-check w-4 h-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500 cursor-pointer">
+                        <span class="truncate" title="${inst.name}">${inst.name}</span>
+                        ${inst.isExtra ? '<span class="text-[9px] bg-amber-200 text-amber-800 font-bold px-1.5 py-0.2 rounded">Refuerzo</span>' : ''}
+                    </div>
+                    ${inst.isExtra ? `<button type="button" onclick="event.stopPropagation(); removeExtraInstrumentFilter('${inst.name.replace(/'/g, "\\'")}')" class="text-red-400 hover:text-red-600 p-0.5 text-xs" title="Quitar refuerzo">✕</button>` : ''}
+                `;
+                instrumentFilterList.appendChild(label);
+            });
+        }
+
+        window.openInstrumentFilterModal = function() {
+            renderFilterItems();
+            instrumentFilterModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            const inputRef = document.getElementById('extraInstrumentInput');
+            if (inputRef) {
+                inputRef.value = '';
+                inputRef.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addExtraInstrumentFilter();
+                    }
+                };
+            }
+        };
+
+        window.addExtraInstrumentFilter = function() {
+            const input = document.getElementById('extraInstrumentInput');
+            const val = input ? input.value.trim() : '';
+            if (!val) return;
+
+            const normVal = normalizeText(val);
+            const existsInRoster = bsmhRoster.some(i => normalizeText(i.name) === normVal);
+            const existsInExtra = extraFilterInstruments.some(i => normalizeText(i) === normVal);
+
+            if (!existsInRoster && !existsInExtra) {
+                extraFilterInstruments.unshift(val);
+            }
+            if (input) input.value = '';
+            renderFilterItems();
+        };
+
+        window.removeExtraInstrumentFilter = function(name) {
+            extraFilterInstruments = extraFilterInstruments.filter(item => item !== name);
+            renderFilterItems();
+        };
+
+        window.closeInstrumentFilterModal = function() {
+            instrumentFilterModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        window.toggleAllFilterCheckboxes = function(checked) {
+            document.querySelectorAll('.inst-filter-check').forEach(cb => cb.checked = checked);
+        };
+
+        window.applyInstrumentFilter = function() {
+            const selectedInsts = Array.from(document.querySelectorAll('.inst-filter-check:checked')).map(cb => normalizeText(cb.value));
+            if (selectedInsts.length === 0) {
+                alert('Selecciona al menos un instrumento o pulsa Cancelar.');
+                return;
+            }
+
+            if (originalUploadedFiles.length === 0 && uploadedFiles.length > 0) {
+                originalUploadedFiles = uploadedFiles.map(f => ({ ...f }));
+            }
+
+            const baseList = originalUploadedFiles.length > 0 ? originalUploadedFiles : uploadedFiles;
+            uploadedFiles = baseList.filter(item => {
+                const normName = normalizeText(item.name);
+                return selectedInsts.some(inst => normName.includes(inst));
+            }).map(item => ({ ...item }));
+
+            closeInstrumentFilterModal();
+            renderList();
+        };
+
+        window.resetToAllOriginalFiles = function() {
+            if (originalUploadedFiles.length > 0) {
+                uploadedFiles = originalUploadedFiles.map(f => ({ ...f }));
+            }
+            if (bsmhCheckbox.checked) {
+                applyBSMHRules();
+            }
+            closeInstrumentFilterModal();
+            renderList();
+        };
+
+        instrumentFilterModal.onclick = (e) => { if (e.target === instrumentFilterModal) closeInstrumentFilterModal(); };
     </script>
 </body>
 </html>
