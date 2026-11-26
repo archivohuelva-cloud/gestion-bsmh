@@ -368,24 +368,71 @@
             }
         });
 
+        let globalUndoStack = [];
+        let globalRedoStack = [];
+
         function undoAction() {
-            const p = pagesData[currentIndex];
-            if (p && p.history.length > 1) { 
-                p.redoStack.push(p.history.pop());
-                applyState(p, p.history[p.history.length - 1]); 
-                render(); 
-                updateUI(); 
+            if (globalUndoStack.length === 0) return;
+            const action = globalUndoStack.pop();
+
+            if (action.type === 'delete') {
+                pagesData.splice(action.index, 0, action.page);
+                currentIndex = action.index;
+                globalRedoStack.push(action);
+                toolsContainer.style.opacity = '1';
+                toolsContainer.style.pointerEvents = 'auto';
+                exportBtn.disabled = false;
+                updateUI();
+                render();
+            } else if (action.type === 'edit') {
+                const p = pagesData[action.index];
+                if (p && p.history.length > 1) {
+                    currentIndex = action.index;
+                    p.redoStack.push(p.history.pop());
+                    applyState(p, p.history[p.history.length - 1]);
+                    globalRedoStack.push(action);
+                    render();
+                    updateUI();
+                }
             }
         }
 
         function redoAction() {
-            const p = pagesData[currentIndex];
-            if (p && p.redoStack.length > 0) { 
-                const next = p.redoStack.pop();
-                p.history.push(next); 
-                applyState(p, next); 
-                render(); 
-                updateUI(); 
+            if (globalRedoStack.length === 0) return;
+            const action = globalRedoStack.pop();
+
+            if (action.type === 'delete') {
+                pagesData.splice(action.index, 1);
+                if (currentIndex >= pagesData.length) {
+                    currentIndex = Math.max(0, pagesData.length - 1);
+                }
+                globalUndoStack.push(action);
+                if (pagesData.length === 0) {
+                    toolsContainer.style.opacity = '0.5';
+                    toolsContainer.style.pointerEvents = 'none';
+                    exportBtn.disabled = true;
+                    pageNumEl.innerText = "0";
+                    pageCountEl.innerText = "0";
+                    prevPageBtn.disabled = true;
+                    nextPageBtn.disabled = true;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    updateUI();
+                    render();
+                }
+            } else if (action.type === 'edit') {
+                const p = pagesData[action.index];
+                if (p && p.redoStack.length > 0) {
+                    currentIndex = action.index;
+                    const next = p.redoStack.pop();
+                    p.history.push(next);
+                    applyState(p, next);
+                    globalUndoStack.push(action);
+                    render();
+                    updateUI();
+                }
             }
         }
 
@@ -434,6 +481,9 @@
             p.history.push(state);
             p.redoStack = [];
             if (p.history.length > 50) p.history.shift();
+            globalUndoStack.push({ type: 'edit', index: currentIndex });
+            globalRedoStack = [];
+            if (globalUndoStack.length > 50) globalUndoStack.shift();
         }
 
         newProcessBtn.onclick = () => {
@@ -450,12 +500,23 @@
         // Función para eliminar la página actual (sin confirmación)
         deletePageBtn.onclick = () => {
             if (pagesData.length === 0) return;
-            pagesData.splice(currentIndex, 1);
+            const deletedPage = pagesData.splice(currentIndex, 1)[0];
+            globalUndoStack.push({ type: 'delete', page: deletedPage, index: currentIndex });
+            globalRedoStack = [];
             if (currentIndex >= pagesData.length) {
                 currentIndex = Math.max(0, pagesData.length - 1);
             }
             if (pagesData.length === 0) {
-                newProcessBtn.click();
+                toolsContainer.style.opacity = '0.5';
+                toolsContainer.style.pointerEvents = 'none';
+                exportBtn.disabled = true;
+                pageNumEl.innerText = "0";
+                pageCountEl.innerText = "0";
+                prevPageBtn.disabled = true;
+                nextPageBtn.disabled = true;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "white";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
             } else {
                 updateUI();
                 render();
