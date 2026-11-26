@@ -1347,12 +1347,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   max-width: 90vw;
   background: #1c1c1e;
   color: #ffffff;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 12px;
   font-size: 15px;
   font-weight: 500;
-  line-height: 1.45;
-  white-space: pre-wrap;
+  line-height: 1.4;
   word-break: break-word;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15);
   z-index: 10000;
@@ -1362,9 +1361,23 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
   box-sizing: border-box;
 }
 
+.notes-floating-popup-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .notes-floating-popup-body {
-  font-size: 15px;
+  font-size: 14.5px;
   color: #f3f4f6;
+  white-space: pre-wrap;
   max-height: 260px;
   overflow-y: auto;
 }
@@ -2676,6 +2689,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-blue); }
 
 <!-- VENTANA EMERGENTE FLOTANTE PARA NOTAS (COMPACTA Y CUADRADA) -->
 <div class="notes-floating-popup" id="notes-floating-popup">
+  <div class="notes-floating-popup-header" id="notes-floating-popup-header"></div>
   <div class="notes-floating-popup-body" id="notes-floating-popup-body"></div>
 </div>
 
@@ -7491,8 +7505,15 @@ document.addEventListener('mouseover', (e) => {
   if (!ev || !ev.notes || !ev.notes.trim()) return;
 
   const popup = document.getElementById('notes-floating-popup');
+  const popupHeader = document.getElementById('notes-floating-popup-header');
   const popupBody = document.getElementById('notes-floating-popup-body');
   if (!popup || !popupBody) return;
+
+  if (popupHeader) {
+    const title = getEventTitle(ev);
+    const timeStr = (ev.festivo !== 'si' && ev.vacaciones !== 'si' && ev.guardado !== 'si' && ev.timeStart) ? formatTimeH(ev.timeStart) : '';
+    popupHeader.textContent = timeStr ? `${title} - ${timeStr}` : title;
+  }
 
   popupBody.textContent = ev.notes.trim();
   popup.style.display = 'block';
